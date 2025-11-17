@@ -3,8 +3,6 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Baby, Skull, Droplet, Syringe } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 
 import ExperimentSelector from "../components/data-entry/ExperimentSelector";
 import ReproductionEntry from "../components/data-entry/ReproductionEntry";

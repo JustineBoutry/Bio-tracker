@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Microscope, FlaskConical, Database, User as UserIcon, BarChart3, PenLine } from "lucide-react";
+import { Microscope, FlaskConical, Database, User, BarChart3, Edit3 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,7 +25,7 @@ const navigationItems = [
   {
     title: "Data Entry",
     url: createPageUrl("DataEntry"),
-    icon: PenLine,
+    icon: Edit3,
   },
   {
     title: "Dataset",
@@ -35,7 +35,7 @@ const navigationItems = [
   {
     title: "Individual History",
     url: createPageUrl("IndividualHistory"),
-    icon: UserIcon,
+    icon: User,
   },
   {
     title: "Dashboard",

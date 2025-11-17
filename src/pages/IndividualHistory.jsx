@@ -142,7 +142,11 @@ export default function IndividualHistory() {
                   onChange={(e) => setIndividualId(e.target.value)}
                   placeholder="Enter individual ID (e.g., IND_0001)"
                   className="pl-10"
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearch();
+                    }
+                  }}
                 />
               </div>
               <Button onClick={handleSearch} className="bg-blue-600 hover:bg-blue-700">
@@ -167,7 +171,7 @@ export default function IndividualHistory() {
                 <div>
                   <p className="text-sm text-slate-500 mb-1">Factors</p>
                   <div className="space-y-1">
-                    {Object.entries(selectedIndividual.factors).map(([k, v]) => (
+                    {Object.entries(selectedIndividual.factors || {}).map(([k, v]) => (
                       <Badge key={k} variant="secondary">
                         {k}: {v}
                       </Badge>
