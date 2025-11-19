@@ -9,6 +9,7 @@ export default function MatrixLayout({ factors, onGenerate }) {
   const [colFactors, setColFactors] = useState([]);
   const [cellCounts, setCellCounts] = useState({});
   const [defaultValue, setDefaultValue] = useState(50);
+  const [showSummary, setShowSummary] = useState(false);
 
   useEffect(() => {
     if (factors.length > 0 && rowFactors.length === 0 && colFactors.length === 0) {
@@ -127,6 +128,24 @@ export default function MatrixLayout({ factors, onGenerate }) {
     return Object.entries(combo)
       .map(([k, v]) => `${k}=${v}`)
       .join(', ');
+  };
+
+  const calculateRowTotals = () => {
+    return rowCombinations.map((rowCombo, idx) => {
+      const total = colCombinations.reduce((sum, colCombo) => {
+        return sum + getCellValue(rowCombo, colCombo);
+      }, 0);
+      return { combo: rowCombo, total };
+    });
+  };
+
+  const calculateColumnTotals = () => {
+    return colCombinations.map((colCombo, idx) => {
+      const total = rowCombinations.reduce((sum, rowCombo) => {
+        return sum + getCellValue(rowCombo, colCombo);
+      }, 0);
+      return { combo: colCombo, total };
+    });
   };
 
   if (factors.length === 0) return null;
@@ -257,9 +276,89 @@ export default function MatrixLayout({ factors, onGenerate }) {
                 Total cells: {rowCombinations.length * colCombinations.length} | 
                 Total individuals: {Object.values(cellCounts).reduce((sum, val) => sum + (val || 0), 0)}
               </div>
-              <Button onClick={handleGenerate} size="lg">
-                Generate All Individuals
-              </Button>
+              <div className="flex gap-3">
+                <Button onClick={() => setShowSummary(!showSummary)} variant="outline">
+                  {showSummary ? 'Hide' : 'Show'} Summary
+                </Button>
+                <Button onClick={handleGenerate} size="lg">
+                  Generate All Individuals
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {showSummary && rowFactors.length > 0 && colFactors.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Matrix Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-semibold mb-3">Total per Row</h3>
+                <div className="border rounded overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="border-b p-2 text-left">Row Category</th>
+                        <th className="border-b p-2 text-right">Total Individuals</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {calculateRowTotals().map((row, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          <td className="border-b p-2 font-mono text-xs">
+                            {formatComboLabel(row.combo)}
+                          </td>
+                          <td className="border-b p-2 text-right font-semibold">
+                            {row.total}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="bg-gray-100 font-bold">
+                        <td className="p-2">Total</td>
+                        <td className="p-2 text-right">
+                          {calculateRowTotals().reduce((sum, r) => sum + r.total, 0)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-3">Total per Column</h3>
+                <div className="border rounded overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="border-b p-2 text-left">Column Category</th>
+                        <th className="border-b p-2 text-right">Total Individuals</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {calculateColumnTotals().map((col, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          <td className="border-b p-2 font-mono text-xs">
+                            {formatComboLabel(col.combo)}
+                          </td>
+                          <td className="border-b p-2 text-right font-semibold">
+                            {col.total}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="bg-gray-100 font-bold">
+                        <td className="p-2">Total</td>
+                        <td className="p-2 text-right">
+                          {calculateColumnTotals().reduce((sum, c) => sum + c.total, 0)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
