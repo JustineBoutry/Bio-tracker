@@ -14,6 +14,8 @@ export default function Dataset() {
   const [editValues, setEditValues] = useState({});
   const [codeError, setCodeError] = useState(null);
   const [factorFilters, setFactorFilters] = useState({});
+  const [sortColumn, setSortColumn] = useState(null);
+  const [sortDirection, setSortDirection] = useState('asc');
 
   const { data: experiments = [] } = useQuery({
     queryKey: ['experiments'],
@@ -135,6 +137,43 @@ export default function Dataset() {
     }
   };
 
+  const naturalSort = (a, b) => {
+    const regex = /(\d+)|(\D+)/g;
+    const aParts = a.match(regex) || [];
+    const bParts = b.match(regex) || [];
+    
+    for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+      const aPart = aParts[i] || '';
+      const bPart = bParts[i] || '';
+      
+      const aIsNum = /^\d+$/.test(aPart);
+      const bIsNum = /^\d+$/.test(bPart);
+      
+      if (aIsNum && bIsNum) {
+        const diff = parseInt(aPart, 10) - parseInt(bPart, 10);
+        if (diff !== 0) return diff;
+      } else {
+        const cmp = aPart.localeCompare(bPart);
+        if (cmp !== 0) return cmp;
+      }
+    }
+    return 0;
+  };
+
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else {
+        setSortColumn(null);
+        setSortDirection('asc');
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
   const filteredIndividuals = individuals.filter(ind => {
     return Object.entries(factorFilters).every(([factorName, selectedValues]) => {
       if (!selectedValues || selectedValues.length === 0) return true;
@@ -143,8 +182,32 @@ export default function Dataset() {
     });
   });
 
+  const sortedIndividuals = sortColumn ? [...filteredIndividuals].sort((a, b) => {
+    let valA, valB;
+    
+    if (sortColumn === 'code') {
+      valA = a.individual_id || '';
+      valB = b.individual_id || '';
+      const result = naturalSort(valA, valB);
+      return sortDirection === 'asc' ? result : -result;
+    } else if (sortColumn.startsWith('factor_')) {
+      const factorName = sortColumn.replace('factor_', '');
+      valA = a.factors?.[factorName] || '';
+      valB = b.factors?.[factorName] || '';
+    } else {
+      valA = a[sortColumn] ?? '';
+      valB = b[sortColumn] ?? '';
+    }
+    
+    if (sortColumn !== 'code') {
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    }
+  }) : filteredIndividuals;
+
   const exportCSV = () => {
-    if (filteredIndividuals.length === 0) return;
+    if (sortedIndividuals.length === 0) return;
     
     const headers = ['Code', 'Alive', 'Death Date', 'First Reproduction', 'Last Reproduction', 
                      'Cumulative Offspring', 'Infected', 'Spores Count', 'Spores Volume', 
@@ -153,7 +216,7 @@ export default function Dataset() {
     const factorKeys = individuals[0]?.factors ? Object.keys(individuals[0].factors) : [];
     const allHeaders = [...factorKeys, ...headers];
     
-    const rows = filteredIndividuals.map(ind => {
+    const rows = sortedIndividuals.map(ind => {
       const factorValues = factorKeys.map(k => ind.factors?.[k] || '');
       const values = [
         ind.individual_id,
@@ -268,7 +331,7 @@ export default function Dataset() {
       {selectedExp && (
         <Card>
           <CardHeader>
-            <CardTitle>Individuals ({filteredIndividuals.length} of {individuals.length})</CardTitle>
+            <CardTitle>Individuals ({sortedIndividuals.length} of {individuals.length})</CardTitle>
           </CardHeader>
           <CardContent>
             {codeError && (
@@ -280,25 +343,81 @@ export default function Dataset() {
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50">
-                    <th className="p-2 text-left sticky left-0 bg-gray-50">Code</th>
+                    <th 
+                      className="p-2 text-left sticky left-0 bg-gray-50 cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('code')}
+                    >
+                      Code {sortColumn === 'code' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
                     {experiment?.factors && experiment.factors.map(factor => (
-                      <th key={factor.name} className="p-2 text-left">{factor.name}</th>
+                      <th 
+                        key={factor.name} 
+                        className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort(`factor_${factor.name}`)}
+                      >
+                        {factor.name} {sortColumn === `factor_${factor.name}` && (sortDirection === 'asc' ? '↑' : '↓')}
+                      </th>
                     ))}
-                    <th className="p-2 text-left">Alive</th>
-                    <th className="p-2 text-left">Death Date</th>
-                    <th className="p-2 text-left">First Repro</th>
-                    <th className="p-2 text-left">Last Repro</th>
-                    <th className="p-2 text-left">Offspring</th>
-                    <th className="p-2 text-left">Infected</th>
-                    <th className="p-2 text-left">Spores Count</th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('alive')}
+                    >
+                      Alive {sortColumn === 'alive' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('death_date')}
+                    >
+                      Death Date {sortColumn === 'death_date' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('first_reproduction_date')}
+                    >
+                      First Repro {sortColumn === 'first_reproduction_date' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('last_reproduction_date')}
+                    >
+                      Last Repro {sortColumn === 'last_reproduction_date' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('cumulative_offspring')}
+                    >
+                      Offspring {sortColumn === 'cumulative_offspring' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('infected')}
+                    >
+                      Infected {sortColumn === 'infected' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('spores_count')}
+                    >
+                      Spores Count {sortColumn === 'spores_count' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
                     <th className="p-2 text-left">Spores Volume</th>
-                    <th className="p-2 text-left">Red Signals</th>
-                    <th className="p-2 text-left">Red Confirmed</th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('red_signal_count')}
+                    >
+                      Red Signals {sortColumn === 'red_signal_count' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('red_confirmed')}
+                    >
+                      Red Confirmed {sortColumn === 'red_confirmed' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
                     <th className="p-2 text-left">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredIndividuals.map((ind) => (
+                  {sortedIndividuals.map((ind) => (
                     <tr key={ind.id} className="border-b hover:bg-gray-50">
                       {editingId === ind.id ? (
                         <>
