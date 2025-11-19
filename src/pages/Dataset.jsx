@@ -5,16 +5,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Plus, Trash2 } from "lucide-react";
 
 export default function Dataset() {
   const queryClient = useQueryClient();
   const [selectedExp, setSelectedExp] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editValues, setEditValues] = useState({});
+  const [codeError, setCodeError] = useState(null);
 
   const { data: experiments = [] } = useQuery({
     queryKey: ['experiments'],
     queryFn: () => base44.entities.Experiment.list(),
+  });
+
+  const { data: experiment } = useQuery({
+    queryKey: ['experiment', selectedExp],
+    queryFn: async () => {
+      const exps = await base44.entities.Experiment.filter({ id: selectedExp });
+      return exps[0];
+    },
+    enabled: !!selectedExp,
   });
 
   const { data: individuals = [] } = useQuery({
@@ -28,12 +39,69 @@ export default function Dataset() {
     onSuccess: () => {
       queryClient.invalidateQueries(['individuals']);
       setEditingId(null);
+      setCodeError(null);
+    },
+  });
+
+  const addIndividualMutation = useMutation({
+    mutationFn: async () => {
+      const exp = await base44.entities.Experiment.filter({ id: selectedExp });
+      const currentExperiment = exp[0];
+      
+      let newCode;
+      if (currentExperiment.code_generation_mode === 'numeric_id') {
+        const allInds = await base44.entities.Individual.filter({ experiment_id: selectedExp });
+        const prefix = currentExperiment.code_prefix || 'ID-';
+        const existingNumbers = allInds
+          .map(ind => ind.individual_id)
+          .filter(id => id.startsWith(prefix))
+          .map(id => parseInt(id.replace(prefix, '')))
+          .filter(num => !isNaN(num));
+        const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : (currentExperiment.code_starting_number || 1) - 1;
+        newCode = `${prefix}${maxNumber + 1}`;
+      } else {
+        const allInds = await base44.entities.Individual.filter({ experiment_id: selectedExp });
+        newCode = `IND-${String(allInds.length + 1).padStart(4, '0')}`;
+      }
+      
+      return base44.entities.Individual.create({
+        individual_id: newCode,
+        experiment_id: selectedExp,
+        factors: {},
+        alive: true,
+        infected: false,
+        red_signal_count: 0,
+        red_confirmed: false,
+        cumulative_offspring: 0
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['individuals']);
+      alert('Individual added!');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      const ind = individuals.find(i => i.id === id);
+      const events = await base44.entities.ReproductionEvent.filter({ individual_id: ind.individual_id });
+      for (const event of events) {
+        await base44.entities.ReproductionEvent.delete(event.id);
+      }
+      await base44.entities.Individual.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['individuals']);
+      alert('Individual deleted!');
     },
   });
 
   const startEdit = (ind) => {
     setEditingId(ind.id);
+    setCodeError(null);
     setEditValues({
+      individual_id: ind.individual_id,
+      factors: ind.factors || {},
       alive: ind.alive,
       first_reproduction_date: ind.first_reproduction_date || '',
       last_reproduction_date: ind.last_reproduction_date || '',
@@ -45,6 +113,25 @@ export default function Dataset() {
       red_signal_count: ind.red_signal_count || 0,
       red_confirmed: ind.red_confirmed || false
     });
+  };
+
+  const handleSave = async (ind) => {
+    if (editValues.individual_id !== ind.individual_id) {
+      const duplicate = individuals.find(i => 
+        i.id !== ind.id && i.individual_id === editValues.individual_id
+      );
+      if (duplicate) {
+        setCodeError('Code must be unique within this experiment');
+        return;
+      }
+    }
+    updateMutation.mutate({ id: ind.id, data: editValues });
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm('Are you sure you want to delete this individual? This will also delete all associated reproduction events.')) {
+      deleteMutation.mutate(id);
+    }
   };
 
   const exportCSV = () => {
@@ -108,6 +195,10 @@ export default function Dataset() {
           <Button onClick={exportCSV} disabled={!selectedExp || individuals.length === 0}>
             Export CSV
           </Button>
+          <Button onClick={() => addIndividualMutation.mutate()} disabled={!selectedExp}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Individual
+          </Button>
         </CardContent>
       </Card>
 
@@ -117,13 +208,18 @@ export default function Dataset() {
             <CardTitle>Individuals ({individuals.length})</CardTitle>
           </CardHeader>
           <CardContent>
+            {codeError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded mb-4">
+                {codeError}
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50">
                     <th className="p-2 text-left sticky left-0 bg-gray-50">Code</th>
-                    {individuals[0]?.factors && Object.keys(individuals[0].factors).map(factor => (
-                      <th key={factor} className="p-2 text-left">{factor}</th>
+                    {experiment?.factors && experiment.factors.map(factor => (
+                      <th key={factor.name} className="p-2 text-left">{factor.name}</th>
                     ))}
                     <th className="p-2 text-left">Alive</th>
                     <th className="p-2 text-left">Death Date</th>
@@ -141,11 +237,46 @@ export default function Dataset() {
                 <tbody>
                   {individuals.map((ind) => (
                     <tr key={ind.id} className="border-b hover:bg-gray-50">
-                      <td className="p-2 font-mono sticky left-0 bg-white">{ind.individual_id}</td>
-                      {ind.factors && Object.values(ind.factors).map((val, i) => (
-                        <td key={i} className="p-2">{val}</td>
-                      ))}
-                      
+                      {editingId === ind.id ? (
+                        <>
+                          <td className="p-2 sticky left-0 bg-white">
+                            <Input
+                              value={editValues.individual_id}
+                              onChange={(e) => 
+                                setEditValues({ ...editValues, individual_id: e.target.value })
+                              }
+                              className="w-32 font-mono"
+                            />
+                          </td>
+                          {experiment?.factors && experiment.factors.map(factor => (
+                            <td key={factor.name} className="p-2">
+                              <select
+                                className="w-full border rounded p-1"
+                                value={editValues.factors[factor.name] || ''}
+                                onChange={(e) => 
+                                  setEditValues({ 
+                                    ...editValues, 
+                                    factors: { ...editValues.factors, [factor.name]: e.target.value }
+                                  })
+                                }
+                              >
+                                <option value="">-</option>
+                                {factor.levels.map(level => (
+                                  <option key={level} value={level}>{level}</option>
+                                ))}
+                              </select>
+                            </td>
+                          ))}
+                        </>
+                      ) : (
+                        <>
+                          <td className="p-2 font-mono sticky left-0 bg-white">{ind.individual_id}</td>
+                          {experiment?.factors && experiment.factors.map(factor => (
+                            <td key={factor.name} className="p-2">{ind.factors?.[factor.name] || '-'}</td>
+                          ))}
+                        </>
+                      )}
+
                       {editingId === ind.id ? (
                         <>
                           <td className="p-2">
@@ -243,10 +374,13 @@ export default function Dataset() {
                           </td>
                           <td className="p-2">
                             <div className="flex gap-1">
-                              <Button size="sm" onClick={() => updateMutation.mutate({ id: ind.id, data: editValues })}>
+                              <Button size="sm" onClick={() => handleSave(ind)}>
                                 Save
                               </Button>
-                              <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>
+                              <Button size="sm" variant="outline" onClick={() => {
+                                setEditingId(null);
+                                setCodeError(null);
+                              }}>
                                 Cancel
                               </Button>
                             </div>
@@ -265,9 +399,18 @@ export default function Dataset() {
                           <td className="p-2">{ind.red_signal_count || 0}</td>
                           <td className="p-2">{ind.red_confirmed ? 'Yes' : 'No'}</td>
                           <td className="p-2">
-                            <Button size="sm" variant="outline" onClick={() => startEdit(ind)}>
-                              Edit
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button size="sm" variant="outline" onClick={() => startEdit(ind)}>
+                                Edit
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => handleDelete(ind.id)}
+                              >
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </Button>
+                            </div>
                           </td>
                         </>
                       )}

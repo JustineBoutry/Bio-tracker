@@ -16,6 +16,9 @@ export default function ExperimentSetup() {
   const experimentId = urlParams.get('id');
 
   const [factors, setFactors] = useState([]);
+  const [codeMode, setCodeMode] = useState('factor_based');
+  const [codePrefix, setCodePrefix] = useState('ID-');
+  const [codeStartingNumber, setCodeStartingNumber] = useState(1);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', experimentId],
@@ -29,6 +32,15 @@ export default function ExperimentSetup() {
   useEffect(() => {
     if (experiment?.factors) {
       setFactors(experiment.factors);
+    }
+    if (experiment?.code_generation_mode) {
+      setCodeMode(experiment.code_generation_mode);
+    }
+    if (experiment?.code_prefix) {
+      setCodePrefix(experiment.code_prefix);
+    }
+    if (experiment?.code_starting_number !== undefined) {
+      setCodeStartingNumber(experiment.code_starting_number);
     }
   }, [experiment]);
 
@@ -67,15 +79,30 @@ export default function ExperimentSetup() {
     alert('Factors saved!');
   };
 
+  const saveCodeSettings = async () => {
+    await base44.entities.Experiment.update(experimentId, {
+      code_generation_mode: codeMode,
+      code_prefix: codePrefix,
+      code_starting_number: codeStartingNumber
+    });
+    alert('Code generation settings saved!');
+  };
+
   const generateIndividualsMutation = useMutation({
     mutationFn: async (categories) => {
       const individuals = [];
-      let counter = 1;
+      let counter = codeStartingNumber;
 
       for (const category of categories) {
         for (let i = 0; i < category.count; i++) {
-          const codeParts = Object.values(category.combination);
-          const code = `${codeParts.join('-')}-${String(counter).padStart(3, '0')}`;
+          let code;
+          
+          if (codeMode === 'numeric_id') {
+            code = `${codePrefix}${counter}`;
+          } else {
+            const codeParts = Object.values(category.combination);
+            code = `${codeParts.join('-')}-${String(counter).padStart(3, '0')}`;
+          }
           
           individuals.push({
             individual_id: code,
@@ -85,7 +112,8 @@ export default function ExperimentSetup() {
             infected: false,
             red_signal_count: 0,
             red_confirmed: false,
-            cumulative_offspring: 0
+            cumulative_offspring: 0,
+            special_category: category.isSpecial ? category.specialName : null
           });
           counter++;
         }
@@ -119,7 +147,50 @@ export default function ExperimentSetup() {
         <>
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>1. Define Factors</CardTitle>
+              <CardTitle>1. Code Generation Mode</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium block mb-2">Mode</label>
+                <select 
+                  className="w-full border rounded p-2"
+                  value={codeMode}
+                  onChange={(e) => setCodeMode(e.target.value)}
+                >
+                  <option value="factor_based">Factor-based (e.g., Basket-Genotype-001)</option>
+                  <option value="numeric_id">Simple numeric ID</option>
+                </select>
+              </div>
+
+              {codeMode === 'numeric_id' && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium">Prefix</label>
+                    <Input
+                      value={codePrefix}
+                      onChange={(e) => setCodePrefix(e.target.value)}
+                      placeholder="ID-"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Starting Number</label>
+                    <Input
+                      type="number"
+                      value={codeStartingNumber}
+                      onChange={(e) => setCodeStartingNumber(parseInt(e.target.value) || 1)}
+                      min="1"
+                    />
+                  </div>
+                </>
+              )}
+
+              <Button onClick={saveCodeSettings}>Save Code Settings</Button>
+            </CardContent>
+          </Card>
+
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>2. Define Factors</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {factors.map((factor, fIndex) => (
