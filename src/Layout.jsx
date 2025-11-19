@@ -11,6 +11,8 @@ export default function Layout({ children }) {
           <Link to={createPageUrl("Experiments")}>Experiments</Link>
           <Link to={createPageUrl("DataEntry")}>Data Entry</Link>
           <Link to={createPageUrl("Dataset")}>Dataset</Link>
+          <Link to={createPageUrl("IndividualHistory")}>Individual History</Link>
+          <Link to={createPageUrl("Dashboard")}>Dashboard</Link>
         </div>
       </nav>
       {children}
