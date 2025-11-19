@@ -13,6 +13,7 @@ export default function Dataset() {
   const [editingId, setEditingId] = useState(null);
   const [editValues, setEditValues] = useState({});
   const [codeError, setCodeError] = useState(null);
+  const [factorFilters, setFactorFilters] = useState({});
 
   const { data: experiments = [] } = useQuery({
     queryKey: ['experiments'],
@@ -134,8 +135,16 @@ export default function Dataset() {
     }
   };
 
+  const filteredIndividuals = individuals.filter(ind => {
+    return Object.entries(factorFilters).every(([factorName, selectedValues]) => {
+      if (!selectedValues || selectedValues.length === 0) return true;
+      const indValue = ind.factors?.[factorName];
+      return selectedValues.includes(indValue);
+    });
+  });
+
   const exportCSV = () => {
-    if (individuals.length === 0) return;
+    if (filteredIndividuals.length === 0) return;
     
     const headers = ['Code', 'Alive', 'Death Date', 'First Reproduction', 'Last Reproduction', 
                      'Cumulative Offspring', 'Infected', 'Spores Count', 'Spores Volume', 
@@ -144,7 +153,7 @@ export default function Dataset() {
     const factorKeys = individuals[0]?.factors ? Object.keys(individuals[0].factors) : [];
     const allHeaders = [...factorKeys, ...headers];
     
-    const rows = individuals.map(ind => {
+    const rows = filteredIndividuals.map(ind => {
       const factorValues = factorKeys.map(k => ind.factors?.[k] || '');
       const values = [
         ind.individual_id,
@@ -202,10 +211,64 @@ export default function Dataset() {
         </CardContent>
       </Card>
 
+      {selectedExp && experiment && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Filter by Category</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {experiment.factors?.map(factor => {
+                const uniqueLevels = [...new Set(
+                  individuals.map(ind => ind.factors?.[factor.name]).filter(Boolean)
+                )];
+
+                return (
+                  <div key={factor.name}>
+                    <label className="text-sm font-medium block mb-1">{factor.name}</label>
+                    <select
+                      multiple
+                      className="w-full border rounded p-2 text-sm"
+                      size={Math.min(uniqueLevels.length + 1, 5)}
+                      value={factorFilters[factor.name] || []}
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.selectedOptions, option => option.value);
+                        setFactorFilters({
+                          ...factorFilters,
+                          [factor.name]: selected.length === 0 ? [] : selected
+                        });
+                      }}
+                    >
+                      <option value="">All</option>
+                      {uniqueLevels.map(level => (
+                        <option key={level} value={level}>{level}</option>
+                      ))}
+                    </select>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Hold Ctrl/Cmd to select multiple
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {Object.keys(factorFilters).some(k => factorFilters[k]?.length > 0) && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-4"
+                onClick={() => setFactorFilters({})}
+              >
+                Clear All Filters
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {selectedExp && (
         <Card>
           <CardHeader>
-            <CardTitle>Individuals ({individuals.length})</CardTitle>
+            <CardTitle>Individuals ({filteredIndividuals.length} of {individuals.length})</CardTitle>
           </CardHeader>
           <CardContent>
             {codeError && (
@@ -235,7 +298,7 @@ export default function Dataset() {
                   </tr>
                 </thead>
                 <tbody>
-                  {individuals.map((ind) => (
+                  {filteredIndividuals.map((ind) => (
                     <tr key={ind.id} className="border-b hover:bg-gray-50">
                       {editingId === ind.id ? (
                         <>
