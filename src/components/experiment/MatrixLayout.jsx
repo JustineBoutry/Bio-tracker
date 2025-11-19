@@ -10,6 +10,9 @@ export default function MatrixLayout({ factors, onGenerate }) {
   const [cellCounts, setCellCounts] = useState({});
   const [defaultValue, setDefaultValue] = useState(50);
   const [showSummary, setShowSummary] = useState(false);
+  const [specialCategories, setSpecialCategories] = useState([]);
+  const [newSpecialName, setNewSpecialName] = useState('');
+  const [newSpecialFactors, setNewSpecialFactors] = useState({});
 
   useEffect(() => {
     if (factors.length > 0 && rowFactors.length === 0 && colFactors.length === 0) {
@@ -41,15 +44,15 @@ export default function MatrixLayout({ factors, onGenerate }) {
     }
   };
 
-  const generateCombinations = (factorNames) => {
-    if (factorNames.length === 0) return [{}];
+  const generateCombinations = (factorNames, isSpecial = false, specialName = null) => {
+    if (factorNames.length === 0) return [{ _isSpecial: isSpecial, _specialName: specialName }];
     
     const selectedFactors = factors.filter(f => factorNames.includes(f.name));
     const combinations = [];
     
     const generate = (index, current) => {
       if (index === selectedFactors.length) {
-        combinations.push({ ...current });
+        combinations.push({ ...current, _isSpecial: isSpecial, _specialName: specialName });
         return;
       }
       const factor = selectedFactors[index];
@@ -62,8 +65,35 @@ export default function MatrixLayout({ factors, onGenerate }) {
     return combinations;
   };
 
-  const rowCombinations = generateCombinations(rowFactors);
-  const colCombinations = generateCombinations(colFactors);
+  const getNormalRowCombinations = () => generateCombinations(rowFactors);
+  const getNormalColCombinations = () => generateCombinations(colFactors);
+  
+  const getSpecialRowCombinations = () => {
+    const specials = [];
+    specialCategories.forEach(special => {
+      const enabledInRows = rowFactors.filter(rf => special.enabledFactors[rf]);
+      if (enabledInRows.length > 0 || rowFactors.length === 0) {
+        const combos = generateCombinations(enabledInRows, true, special.name);
+        specials.push(...combos);
+      }
+    });
+    return specials;
+  };
+
+  const getSpecialColCombinations = () => {
+    const specials = [];
+    specialCategories.forEach(special => {
+      const enabledInCols = colFactors.filter(cf => special.enabledFactors[cf]);
+      if (enabledInCols.length > 0 || colFactors.length === 0) {
+        const combos = generateCombinations(enabledInCols, true, special.name);
+        specials.push(...combos);
+      }
+    });
+    return specials;
+  };
+
+  const rowCombinations = [...getNormalRowCombinations(), ...getSpecialRowCombinations()];
+  const colCombinations = [...getNormalColCombinations(), ...getSpecialColCombinations()];
 
   const getCellKey = (rowCombo, colCombo) => {
     return JSON.stringify({ ...rowCombo, ...colCombo });
@@ -114,20 +144,56 @@ export default function MatrixLayout({ factors, onGenerate }) {
     const categories = [];
     rowCombinations.forEach(rowCombo => {
       colCombinations.forEach(colCombo => {
-        const combination = { ...rowCombo, ...colCombo };
         const count = getCellValue(rowCombo, colCombo);
         if (count > 0) {
-          categories.push({ combination, count });
+          const combination = { ...rowCombo, ...colCombo };
+          // Clean up metadata keys
+          const { _isSpecial, _specialName, ...cleanCombo } = combination;
+          const isSpecial = rowCombo._isSpecial || colCombo._isSpecial;
+          const specialName = rowCombo._specialName || colCombo._specialName;
+          
+          categories.push({ 
+            combination: cleanCombo, 
+            count,
+            isSpecial,
+            specialName
+          });
         }
       });
     });
     onGenerate(categories);
   };
 
+  const addSpecialCategory = () => {
+    if (!newSpecialName.trim()) return;
+    setSpecialCategories([...specialCategories, {
+      name: newSpecialName,
+      enabledFactors: newSpecialFactors
+    }]);
+    setNewSpecialName('');
+    setNewSpecialFactors({});
+  };
+
+  const removeSpecialCategory = (index) => {
+    setSpecialCategories(specialCategories.filter((_, i) => i !== index));
+  };
+
+  const toggleSpecialFactor = (factorName) => {
+    setNewSpecialFactors({
+      ...newSpecialFactors,
+      [factorName]: !newSpecialFactors[factorName]
+    });
+  };
+
   const formatComboLabel = (combo) => {
-    return Object.entries(combo)
-      .map(([k, v]) => `${k}=${v}`)
-      .join(', ');
+    const entries = Object.entries(combo).filter(([k]) => !k.startsWith('_'));
+    if (combo._isSpecial) {
+      if (entries.length === 0) {
+        return `[${combo._specialName}]`;
+      }
+      return `[${combo._specialName}] ${entries.map(([k, v]) => `${k}=${v}`).join(', ')}`;
+    }
+    return entries.map(([k, v]) => `${k}=${v}`).join(', ');
   };
 
   const calculateRowTotals = () => {
@@ -208,6 +274,74 @@ export default function MatrixLayout({ factors, onGenerate }) {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Add Special Category</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label>Category Name</Label>
+              <Input
+                value={newSpecialName}
+                onChange={(e) => setNewSpecialName(e.target.value)}
+                placeholder="e.g., Control"
+              />
+            </div>
+            
+            <div>
+              <Label className="block mb-2">Factor Toggles (ON = split by this factor)</Label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {factors.map(factor => (
+                  <label key={factor.name} className="flex items-center gap-2 border rounded p-2">
+                    <input
+                      type="checkbox"
+                      checked={newSpecialFactors[factor.name] || false}
+                      onChange={() => toggleSpecialFactor(factor.name)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">{factor.name}</span>
+                    <span className="text-xs text-gray-500 ml-auto">
+                      {newSpecialFactors[factor.name] ? 'ON' : 'OFF'}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <Button onClick={addSpecialCategory} disabled={!newSpecialName.trim()}>
+              Add Special Category
+            </Button>
+
+            {specialCategories.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <Label>Created Special Categories</Label>
+                {specialCategories.map((special, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 border rounded bg-gray-50">
+                    <div>
+                      <span className="font-semibold">{special.name}</span>
+                      <div className="text-xs text-gray-600 mt-1">
+                        ON: {Object.entries(special.enabledFactors)
+                          .filter(([_, enabled]) => enabled)
+                          .map(([name]) => name)
+                          .join(', ') || 'None'}
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => removeSpecialCategory(idx)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {rowFactors.length > 0 && colFactors.length > 0 && (
         <Card>
           <CardHeader>
@@ -222,7 +356,7 @@ export default function MatrixLayout({ factors, onGenerate }) {
                       {rowFactors.join(' / ')}
                     </th>
                     {colCombinations.map((colCombo, idx) => (
-                      <th key={idx} className="border p-2 bg-gray-50">
+                      <th key={idx} className={`border p-2 ${colCombo._isSpecial ? 'bg-blue-100' : 'bg-gray-50'}`}>
                         <div className="flex flex-col items-center gap-1 min-w-[100px]">
                           <span className="font-medium">{formatComboLabel(colCombo)}</span>
                           <Button 
@@ -240,8 +374,8 @@ export default function MatrixLayout({ factors, onGenerate }) {
                 </thead>
                 <tbody>
                   {rowCombinations.map((rowCombo, rowIdx) => (
-                    <tr key={rowIdx}>
-                      <td className="border p-2 bg-gray-50 font-medium sticky left-0 bg-gray-50 z-10">
+                    <tr key={rowIdx} className={rowCombo._isSpecial ? 'bg-blue-50' : ''}>
+                      <td className={`border p-2 font-medium sticky left-0 z-10 ${rowCombo._isSpecial ? 'bg-blue-100' : 'bg-gray-50'}`}>
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-sm">{formatComboLabel(rowCombo)}</span>
                           <Button 
