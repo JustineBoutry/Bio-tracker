@@ -70,25 +70,25 @@ export default function MatrixLayout({ factors, onGenerate }) {
   
   const getSpecialRowCombinations = () => {
     const specials = [];
-    specialCategories.forEach(special => {
-      const enabledInRows = rowFactors.filter(rf => special.enabledFactors[rf]);
-      if (enabledInRows.length > 0 || rowFactors.length === 0) {
+    if (rowFactors.length > 0) {
+      specialCategories.forEach(special => {
+        const enabledInRows = rowFactors.filter(rf => special.enabledFactors[rf]);
         const combos = generateCombinations(enabledInRows, true, special.name);
         specials.push(...combos);
-      }
-    });
+      });
+    }
     return specials;
   };
 
   const getSpecialColCombinations = () => {
     const specials = [];
-    specialCategories.forEach(special => {
-      const enabledInCols = colFactors.filter(cf => special.enabledFactors[cf]);
-      if (enabledInCols.length > 0 || colFactors.length === 0) {
+    if (colFactors.length > 0) {
+      specialCategories.forEach(special => {
+        const enabledInCols = colFactors.filter(cf => special.enabledFactors[cf]);
         const combos = generateCombinations(enabledInCols, true, special.name);
         specials.push(...combos);
-      }
-    });
+      });
+    }
     return specials;
   };
 
