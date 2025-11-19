@@ -7,16 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Search, Baby, Skull, Droplet, Syringe } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { useExperiment } from "../components/ExperimentContext";
 
 export default function IndividualHistory() {
-  const [selectedExp, setSelectedExp] = useState(null);
+  const { activeExperimentId } = useExperiment();
+  const selectedExp = activeExperimentId;
   const [individualId, setIndividualId] = useState('');
   const [selectedIndividual, setSelectedIndividual] = useState(null);
-
-  const { data: experiments = [] } = useQuery({
-    queryKey: ['experiments'],
-    queryFn: () => base44.entities.Experiment.filter({ individuals_generated: true }),
-  });
 
   const { data: individuals = [] } = useQuery({
     queryKey: ['individuals', selectedExp],
@@ -41,26 +38,6 @@ export default function IndividualHistory() {
     <div className="p-8 max-w-5xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Individual Life History</h1>
       
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Select Experiment</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <select 
-            className="w-full border rounded p-2"
-            value={selectedExp || ''}
-            onChange={(e) => setSelectedExp(e.target.value)}
-          >
-            <option value="">Choose experiment...</option>
-            {experiments.map((exp) => (
-              <option key={exp.id} value={exp.id}>
-                {exp.experiment_name}
-              </option>
-            ))}
-          </select>
-        </CardContent>
-      </Card>
-
       {selectedExp && (
         <Card className="mb-6">
           <CardHeader>
