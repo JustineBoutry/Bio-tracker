@@ -35,11 +35,20 @@ export default function Dataset() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Individual.update(id, data),
-    onSuccess: () => {
+    mutationFn: ({ id, data }) => {
+      const ind = individuals.find(i => i.id === id);
+      return base44.entities.Individual.update(id, data).then(() => ({ individual_id: ind.individual_id }));
+    },
+    onSuccess: async ({ individual_id }) => {
       queryClient.invalidateQueries(['individuals']);
       setEditingId(null);
       setCodeError(null);
+      
+      await base44.entities.LabNote.create({
+        experiment_id: selectedExp,
+        note: `Edited individual (ID: ${individual_id})`,
+        timestamp: new Date().toISOString(),
+      });
     },
   });
 
@@ -64,7 +73,7 @@ export default function Dataset() {
         newCode = `IND-${String(allInds.length + 1).padStart(4, '0')}`;
       }
       
-      return base44.entities.Individual.create({
+      const created = await base44.entities.Individual.create({
         individual_id: newCode,
         experiment_id: selectedExp,
         factors: {},
@@ -74,9 +83,18 @@ export default function Dataset() {
         red_confirmed: false,
         cumulative_offspring: 0
       });
+      
+      return created;
     },
-    onSuccess: () => {
+    onSuccess: async (created) => {
       queryClient.invalidateQueries(['individuals']);
+      
+      await base44.entities.LabNote.create({
+        experiment_id: selectedExp,
+        note: `Added individual (ID: ${created.individual_id})`,
+        timestamp: new Date().toISOString(),
+      });
+      
       alert('Individual added!');
     },
   });
@@ -89,9 +107,17 @@ export default function Dataset() {
         await base44.entities.ReproductionEvent.delete(event.id);
       }
       await base44.entities.Individual.delete(id);
+      return ind.individual_id;
     },
-    onSuccess: () => {
+    onSuccess: async (individual_id) => {
       queryClient.invalidateQueries(['individuals']);
+      
+      await base44.entities.LabNote.create({
+        experiment_id: selectedExp,
+        note: `Deleted individual (ID: ${individual_id})`,
+        timestamp: new Date().toISOString(),
+      });
+      
       alert('Individual deleted!');
     },
   });

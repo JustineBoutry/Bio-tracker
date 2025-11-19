@@ -125,10 +125,22 @@ export default function ExperimentSetup() {
         individuals_generated: true 
       });
       
-      return individuals.length;
+      return { count: individuals.length, individuals };
     },
-    onSuccess: (count) => {
+    onSuccess: async ({ count, individuals }) => {
       queryClient.invalidateQueries({ queryKey: ['experiment', experimentId] });
+      
+      const ids = individuals.map(ind => ind.individual_id);
+      const idsText = ids.length > 10 
+        ? `${ids.slice(0, 5).join(', ')}, ... ${ids.slice(-5).join(', ')}`
+        : ids.join(', ');
+      
+      await base44.entities.LabNote.create({
+        experiment_id: experimentId,
+        note: `Generated ${count} individuals (IDs: ${idsText})`,
+        timestamp: new Date().toISOString(),
+      });
+      
       alert(`Generated ${count} individuals!`);
     },
   });

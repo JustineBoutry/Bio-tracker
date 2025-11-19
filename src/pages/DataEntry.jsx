@@ -49,10 +49,12 @@ export default function DataEntry() {
   const reproductionMutation = useMutation({
     mutationFn: async () => {
       const today = new Date().toISOString().split('T')[0];
+      const ids = [];
       
       for (const id of selectedIds) {
         const ind = individuals.find(i => i.id === id);
         const offspring = offspringCounts[id] || 0;
+        ids.push(ind.individual_id);
         
         await base44.entities.ReproductionEvent.create({
           experiment_id: selectedExp,
@@ -67,9 +69,22 @@ export default function DataEntry() {
           cumulative_offspring: (ind.cumulative_offspring || 0) + offspring
         });
       }
+      
+      return ids;
     },
-    onSuccess: () => {
+    onSuccess: async (ids) => {
       queryClient.invalidateQueries(['individuals']);
+      
+      const idsText = ids.length > 10 
+        ? `${ids.slice(0, 5).join(', ')}, ... ${ids.slice(-5).join(', ')}`
+        : ids.join(', ');
+      
+      await base44.entities.LabNote.create({
+        experiment_id: selectedExp,
+        note: `Reproduction: updated ${ids.length} individuals (IDs: ${idsText})`,
+        timestamp: new Date().toISOString(),
+      });
+      
       setSelectedIds([]);
       setOffspringCounts({});
       setShowOffspringEntry(false);
@@ -80,15 +95,32 @@ export default function DataEntry() {
   const deathMutation = useMutation({
     mutationFn: async () => {
       const today = new Date().toISOString().split('T')[0];
+      const ids = [];
+      
       for (const id of selectedIds) {
+        const ind = individuals.find(i => i.id === id);
+        ids.push(ind.individual_id);
         await base44.entities.Individual.update(id, {
           alive: false,
           death_date: today
         });
       }
+      
+      return ids;
     },
-    onSuccess: () => {
+    onSuccess: async (ids) => {
       queryClient.invalidateQueries(['individuals']);
+      
+      const idsText = ids.length > 10 
+        ? `${ids.slice(0, 5).join(', ')}, ... ${ids.slice(-5).join(', ')}`
+        : ids.join(', ');
+      
+      await base44.entities.LabNote.create({
+        experiment_id: selectedExp,
+        note: `Death: ${ids.length} individuals marked dead (IDs: ${idsText})`,
+        timestamp: new Date().toISOString(),
+      });
+      
       setSelectedIds([]);
       alert('Deaths recorded!');
     },
@@ -96,17 +128,33 @@ export default function DataEntry() {
 
   const rednessMutation = useMutation({
     mutationFn: async () => {
+      const ids = [];
+      
       for (const id of selectedIds) {
         const ind = individuals.find(i => i.id === id);
+        ids.push(ind.individual_id);
         const newCount = (ind.red_signal_count || 0) + 1;
         await base44.entities.Individual.update(id, {
           red_signal_count: newCount,
           red_confirmed: newCount >= 3
         });
       }
+      
+      return ids;
     },
-    onSuccess: () => {
+    onSuccess: async (ids) => {
       queryClient.invalidateQueries(['individuals']);
+      
+      const idsText = ids.length > 10 
+        ? `${ids.slice(0, 5).join(', ')}, ... ${ids.slice(-5).join(', ')}`
+        : ids.join(', ');
+      
+      await base44.entities.LabNote.create({
+        experiment_id: selectedExp,
+        note: `Red signal: ${ids.length} individuals marked red (IDs: ${idsText})`,
+        timestamp: new Date().toISOString(),
+      });
+      
       setSelectedIds([]);
       alert('Red signals recorded!');
     },
@@ -115,12 +163,15 @@ export default function DataEntry() {
   const markNonInfectedMutation = useMutation({
     mutationFn: async () => {
       const ids = nonInfectedIds.split(/[\s,]+/).filter(id => id.trim());
+      const processedIds = [];
+      
       for (const individualId of ids) {
         const inds = await base44.entities.Individual.filter({ 
           experiment_id: selectedExp,
           individual_id: individualId.trim()
         });
         if (inds.length > 0) {
+          processedIds.push(individualId.trim());
           await base44.entities.Individual.update(inds[0].id, {
             infected: false,
             spores_count: null,
@@ -128,9 +179,22 @@ export default function DataEntry() {
           });
         }
       }
+      
+      return processedIds;
     },
-    onSuccess: () => {
+    onSuccess: async (ids) => {
       queryClient.invalidateQueries(['individuals']);
+      
+      const idsText = ids.length > 10 
+        ? `${ids.slice(0, 5).join(', ')}, ... ${ids.slice(-5).join(', ')}`
+        : ids.join(', ');
+      
+      await base44.entities.LabNote.create({
+        experiment_id: selectedExp,
+        note: `Infection: ${ids.length} individuals marked non-infected (IDs: ${idsText})`,
+        timestamp: new Date().toISOString(),
+      });
+      
       setNonInfectedIds('');
       alert('Marked as non-infected!');
     },
@@ -148,12 +212,15 @@ export default function DataEntry() {
 
   const saveInfectedMutation = useMutation({
     mutationFn: async () => {
+      const processedIds = [];
+      
       for (const [individualId, data] of Object.entries(sporeData)) {
         const inds = await base44.entities.Individual.filter({ 
           experiment_id: selectedExp,
           individual_id: individualId
         });
         if (inds.length > 0) {
+          processedIds.push(individualId);
           await base44.entities.Individual.update(inds[0].id, {
             infected: true,
             spores_volume: data.volume,
@@ -161,9 +228,22 @@ export default function DataEntry() {
           });
         }
       }
+      
+      return processedIds;
     },
-    onSuccess: () => {
+    onSuccess: async (ids) => {
       queryClient.invalidateQueries(['individuals']);
+      
+      const idsText = ids.length > 10 
+        ? `${ids.slice(0, 5).join(', ')}, ... ${ids.slice(-5).join(', ')}`
+        : ids.join(', ');
+      
+      await base44.entities.LabNote.create({
+        experiment_id: selectedExp,
+        note: `Infection: ${ids.length} individuals marked infected with spore data (IDs: ${idsText})`,
+        timestamp: new Date().toISOString(),
+      });
+      
       setInfectedIds('');
       setSporeData({});
       setShowSporeEntry(false);
