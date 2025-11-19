@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import MatrixLayout from "../components/experiment/MatrixLayout";
 
 export default function ExperimentSetup() {
   const navigate = useNavigate();
@@ -15,7 +16,6 @@ export default function ExperimentSetup() {
   const experimentId = urlParams.get('id');
 
   const [factors, setFactors] = useState([]);
-  const [categories, setCategories] = useState([]);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', experimentId],
@@ -29,27 +29,8 @@ export default function ExperimentSetup() {
   useEffect(() => {
     if (experiment?.factors) {
       setFactors(experiment.factors);
-      generateCategories(experiment.factors);
     }
   }, [experiment]);
-
-  const generateCategories = (factorsList) => {
-    if (!factorsList || factorsList.length === 0) return;
-    
-    const combinations = [];
-    const generate = (index, current) => {
-      if (index === factorsList.length) {
-        combinations.push({ combination: { ...current }, count: 50 });
-        return;
-      }
-      const factor = factorsList[index];
-      for (const level of factor.levels) {
-        generate(index + 1, { ...current, [factor.name]: level });
-      }
-    };
-    generate(0, {});
-    setCategories(combinations);
-  };
 
   const addFactor = () => {
     setFactors([...factors, { name: "", levels: [""] }]);
@@ -83,18 +64,11 @@ export default function ExperimentSetup() {
 
   const saveFactors = async () => {
     await base44.entities.Experiment.update(experimentId, { factors });
-    generateCategories(factors);
     alert('Factors saved!');
   };
 
-  const updateCategoryCount = (index, count) => {
-    const newCategories = [...categories];
-    newCategories[index].count = parseInt(count) || 0;
-    setCategories(newCategories);
-  };
-
   const generateIndividualsMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (categories) => {
       const individuals = [];
       let counter = 1;
 
@@ -195,37 +169,11 @@ export default function ExperimentSetup() {
             </CardContent>
           </Card>
 
-          {categories.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>2. Set Individual Counts per Category</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2 max-h-96 overflow-auto">
-                  {categories.map((cat, index) => (
-                    <div key={index} className="flex items-center gap-3 p-3 border rounded">
-                      <div className="flex-1 font-mono text-sm">
-                        {Object.entries(cat.combination).map(([k, v]) => `${k}:${v}`).join(', ')}
-                      </div>
-                      <Input
-                        type="number"
-                        value={cat.count}
-                        onChange={(e) => updateCategoryCount(index, e.target.value)}
-                        className="w-24"
-                        min="0"
-                      />
-                    </div>
-                  ))}
-                </div>
-                <Button 
-                  onClick={() => generateIndividualsMutation.mutate()}
-                  className="w-full"
-                  disabled={generateIndividualsMutation.isPending}
-                >
-                  Generate All Individuals
-                </Button>
-              </CardContent>
-            </Card>
+          {factors.length > 0 && (
+            <MatrixLayout 
+              factors={factors} 
+              onGenerate={(categories) => generateIndividualsMutation.mutate(categories)}
+            />
           )}
         </>
       ) : (
