@@ -5,14 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 
 export default function Dataset() {
   const queryClient = useQueryClient();
   const [selectedExp, setSelectedExp] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editValues, setEditValues] = useState({});
-  const [summaryFactors, setSummaryFactors] = useState([]);
 
   const { data: experiments = [] } = useQuery({
     queryKey: ['experiments'],
@@ -22,15 +20,6 @@ export default function Dataset() {
   const { data: individuals = [] } = useQuery({
     queryKey: ['individuals', selectedExp],
     queryFn: () => base44.entities.Individual.filter({ experiment_id: selectedExp }),
-    enabled: !!selectedExp,
-  });
-
-  const { data: experiment } = useQuery({
-    queryKey: ['experiment', selectedExp],
-    queryFn: async () => {
-      const exps = await base44.entities.Experiment.filter({ id: selectedExp });
-      return exps[0];
-    },
     enabled: !!selectedExp,
   });
 
@@ -56,23 +45,6 @@ export default function Dataset() {
       red_signal_count: ind.red_signal_count || 0,
       red_confirmed: ind.red_confirmed || false
     });
-  };
-
-  const getCategorySummary = () => {
-    if (summaryFactors.length === 0 || individuals.length === 0) return [];
-    
-    const categoryMap = {};
-    individuals.forEach(ind => {
-      const key = summaryFactors.map(f => `${f}=${ind.factors?.[f] || 'N/A'}`).join(', ');
-      if (!categoryMap[key]) {
-        categoryMap[key] = 0;
-      }
-      categoryMap[key]++;
-    });
-    
-    return Object.entries(categoryMap)
-      .map(([category, count]) => ({ category, count }))
-      .sort((a, b) => a.category.localeCompare(b.category));
   };
 
   const exportCSV = () => {
@@ -140,61 +112,10 @@ export default function Dataset() {
       </Card>
 
       {selectedExp && (
-        <>
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Category Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {experiment?.factors && experiment.factors.length > 0 ? (
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">Select factors for summary</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {experiment.factors.map(factor => (
-                        <label key={factor.name} className="flex items-center gap-2 border rounded px-3 py-2">
-                          <input
-                            type="checkbox"
-                            checked={summaryFactors.includes(factor.name)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSummaryFactors([...summaryFactors, factor.name]);
-                              } else {
-                                setSummaryFactors(summaryFactors.filter(f => f !== factor.name));
-                              }
-                            }}
-                            className="w-4 h-4"
-                          />
-                          <span className="text-sm">{factor.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {summaryFactors.length > 0 && (
-                    <div className="border rounded p-4">
-                      <h4 className="font-semibold mb-3">Individuals per category:</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                        {getCategorySummary().map((item, idx) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                            <span className="text-sm font-mono">{item.category}</span>
-                            <span className="font-semibold">{item.count}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-gray-500">No factors defined for this experiment</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Individuals ({individuals.length})</CardTitle>
-            </CardHeader>
+        <Card>
+          <CardHeader>
+            <CardTitle>Individuals ({individuals.length})</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">
@@ -357,7 +278,6 @@ export default function Dataset() {
             </div>
           </CardContent>
         </Card>
-        </>
       )}
     </div>
   );
