@@ -109,6 +109,32 @@ export default function MatrixLayout({ factors, onGenerate }) {
     setCellCounts(newCounts);
   };
 
+  const calculateRowTotal = (rowCombo) => {
+    let total = 0;
+    colCombinations.forEach(colCombo => {
+      total += getCellValue(rowCombo, colCombo);
+    });
+    return total;
+  };
+
+  const calculateColumnTotal = (colCombo) => {
+    let total = 0;
+    rowCombinations.forEach(rowCombo => {
+      total += getCellValue(rowCombo, colCombo);
+    });
+    return total;
+  };
+
+  const calculateGrandTotal = () => {
+    let total = 0;
+    rowCombinations.forEach(rowCombo => {
+      colCombinations.forEach(colCombo => {
+        total += getCellValue(rowCombo, colCombo);
+      });
+    });
+    return total;
+  };
+
   const handleGenerate = () => {
     const categories = [];
     rowCombinations.forEach(rowCombo => {
@@ -190,11 +216,72 @@ export default function MatrixLayout({ factors, onGenerate }) {
       </Card>
 
       {rowFactors.length > 0 && colFactors.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Individual Counts Matrix</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <h4 className="font-semibold mb-3">Row Totals</h4>
+                  <div className="border rounded overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="text-left p-2 border-b">Row category</th>
+                          <th className="text-right p-2 border-b">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rowCombinations.map((rowCombo, idx) => (
+                          <tr key={idx} className="border-b last:border-b-0">
+                            <td className="p-2">{formatComboLabel(rowCombo)}</td>
+                            <td className="p-2 text-right font-medium">{calculateRowTotal(rowCombo)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Column Totals</h4>
+                  <div className="border rounded overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="text-left p-2 border-b">Column category</th>
+                          <th className="text-right p-2 border-b">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {colCombinations.map((colCombo, idx) => (
+                          <tr key={idx} className="border-b last:border-b-0">
+                            <td className="p-2">{formatComboLabel(colCombo)}</td>
+                            <td className="p-2 text-right font-medium">{calculateColumnTotal(colCombo)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-semibold">Total individuals in this experiment (planned):</span>
+                  <span className="text-2xl font-bold text-blue-600">{calculateGrandTotal()}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Individual Counts Matrix</CardTitle>
+            </CardHeader>
+            <CardContent>
             <div className="overflow-x-auto">
               <table className="border-collapse border w-full text-sm">
                 <thead>
@@ -252,17 +339,14 @@ export default function MatrixLayout({ factors, onGenerate }) {
               </table>
             </div>
 
-            <div className="mt-6 flex justify-between items-center">
-              <div className="text-sm text-gray-600">
-                Total cells: {rowCombinations.length * colCombinations.length} | 
-                Total individuals: {Object.values(cellCounts).reduce((sum, val) => sum + (val || 0), 0)}
-              </div>
+            <div className="mt-6 flex justify-end">
               <Button onClick={handleGenerate} size="lg">
                 Generate All Individuals
               </Button>
             </div>
           </CardContent>
         </Card>
+        </>
       )}
     </div>
   );
