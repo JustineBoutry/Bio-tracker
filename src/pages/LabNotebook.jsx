@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Trash2, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, FileText } from "lucide-react";
 import { useExperiment } from "../components/ExperimentContext";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 export default function LabNotebook() {
   const queryClient = useQueryClient();
@@ -32,6 +33,111 @@ export default function LabNotebook() {
       setShowNoteForm(false);
       setNoteTitle("");
       setNoteText("");
+    },
+  });
+
+  const generateReportMutation = useMutation({
+    mutationFn: async (date) => {
+      const dateStr = format(date, 'yyyy-MM-dd');
+      
+      // Check if report already exists
+      const existing = notes.filter(n => n.type === 'daily_report' && n.report_date === dateStr);
+      if (existing.length > 0) {
+        // Delete existing reports for this date
+        for (const report of existing) {
+          await base44.entities.LabNote.delete(report.id);
+        }
+      }
+
+      // Get all individuals for this experiment
+      const allIndividuals = await base44.entities.Individual.filter({ 
+        experiment_id: activeExperimentId 
+      });
+
+      // Get all reproduction events for this date
+      const reproEvents = await base44.entities.ReproductionEvent.filter({ 
+        experiment_id: activeExperimentId,
+        event_date: dateStr
+      });
+
+      // Created individuals
+      const created = allIndividuals.filter(ind => 
+        ind.created_date && ind.created_date.startsWith(dateStr)
+      );
+
+      // Deaths
+      const deaths = allIndividuals.filter(ind => 
+        ind.death_date === dateStr
+      );
+
+      // Edited individuals (updated on this date, but not created on this date)
+      const edited = allIndividuals.filter(ind => 
+        ind.updated_date && ind.updated_date.startsWith(dateStr) &&
+        !(ind.created_date && ind.created_date.startsWith(dateStr))
+      );
+
+      // Infection updates (infected individuals updated on this date)
+      const infections = allIndividuals.filter(ind => 
+        ind.infected && 
+        ind.updated_date && ind.updated_date.startsWith(dateStr)
+      );
+
+      // Manual notes created on this date
+      const manualNotes = notes.filter(n => 
+        n.type === 'manual' && 
+        n.timestamp && n.timestamp.startsWith(dateStr)
+      );
+
+      // Build report
+      let reportText = `Daily Report – ${format(date, 'MMM d, yyyy')}\n\n`;
+      
+      if (created.length > 0) {
+        reportText += `• ${created.length} individuals created\n`;
+        reportText += `  IDs: ${created.map(i => i.individual_id).join(', ')}\n\n`;
+      }
+
+      if (edited.length > 0) {
+        reportText += `• ${edited.length} individuals edited\n`;
+        reportText += `  IDs: ${edited.map(i => i.individual_id).join(', ')}\n\n`;
+      }
+
+      if (deaths.length > 0) {
+        reportText += `• ${deaths.length} deaths recorded\n`;
+        reportText += `  IDs: ${deaths.map(i => i.individual_id).join(', ')}\n\n`;
+      }
+
+      if (reproEvents.length > 0) {
+        reportText += `• ${reproEvents.length} reproduction events\n`;
+        reportText += `  IDs: ${reproEvents.map(e => e.individual_id).join(', ')}\n\n`;
+      }
+
+      if (infections.length > 0) {
+        reportText += `• ${infections.length} infection updates\n`;
+        reportText += `  IDs: ${infections.map(i => i.individual_id).join(', ')}\n\n`;
+      }
+
+      if (manualNotes.length > 0) {
+        reportText += `• ${manualNotes.length} manual notes created\n\n`;
+      }
+
+      if (created.length === 0 && edited.length === 0 && deaths.length === 0 && 
+          reproEvents.length === 0 && infections.length === 0 && manualNotes.length === 0) {
+        reportText += 'No activity recorded for this day.\n';
+      }
+
+      // Create the report
+      await base44.entities.LabNote.create({
+        experiment_id: activeExperimentId,
+        title: 'Daily Report',
+        note: reportText,
+        timestamp: new Date(dateStr + 'T23:59:59').toISOString(),
+        type: 'daily_report',
+        report_date: dateStr
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['lab-notes']);
+      alert('Daily report generated!');
     },
   });
 
@@ -73,6 +179,7 @@ export default function LabNotebook() {
         title: noteTitle.trim() || null,
         note: noteText.trim(),
         timestamp: new Date().toISOString(),
+        type: 'manual',
       });
     }
   };
@@ -84,10 +191,18 @@ export default function LabNotebook() {
     setShowNoteForm(true);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Delete this note?')) {
-      deleteNoteMutation.mutate(id);
+  const handleDelete = (note) => {
+    const message = note.type === 'daily_report' 
+      ? 'Delete this daily report?' 
+      : 'Delete this note?';
+    if (window.confirm(message)) {
+      deleteNoteMutation.mutate(note.id);
     }
+  };
+
+  const handleGenerateReport = () => {
+    const today = new Date();
+    generateReportMutation.mutate(today);
   };
 
   const handleCancel = () => {
@@ -132,6 +247,10 @@ export default function LabNotebook() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Lab Notebook</h1>
         <div className="flex gap-2">
+          <Button onClick={handleGenerateReport} variant="outline">
+            <FileText className="w-4 h-4 mr-2" />
+            Generate Daily Report
+          </Button>
           <Button onClick={exportToCSV} variant="outline" disabled={notes.length === 0}>
             <Download className="w-4 h-4 mr-2" />
             Export CSV
@@ -189,29 +308,36 @@ export default function LabNotebook() {
           notes
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
             .map((note) => (
-              <Card key={note.id}>
+              <Card key={note.id} className={note.type === 'daily_report' ? 'bg-blue-50' : ''}>
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <div>
-                      {note.title && (
-                        <CardTitle className="mb-1">{note.title}</CardTitle>
-                      )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        {note.title && (
+                          <CardTitle>{note.title}</CardTitle>
+                        )}
+                        {note.type === 'daily_report' && (
+                          <Badge variant="secondary">Auto-generated</Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-gray-600">
                         {format(new Date(note.timestamp), 'MMM d, yyyy - HH:mm')}
                       </p>
                     </div>
                     <div className="flex gap-1">
+                      {note.type === 'manual' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEdit(note)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => handleEdit(note)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleDelete(note.id)}
+                        onClick={() => handleDelete(note)}
                       >
                         <Trash2 className="w-4 h-4 text-red-500" />
                       </Button>
