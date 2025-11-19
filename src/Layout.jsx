@@ -1,13 +1,13 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { useExperiment } from "./components/ExperimentContext";
+import { useExperiment, ExperimentProvider } from "./components/ExperimentContext";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 
-export default function Layout({ children, currentPageName }) {
+function LayoutContent({ children, currentPageName }) {
   const navigate = useNavigate();
   const { activeExperimentId, exitExperiment } = useExperiment();
 
@@ -113,5 +113,13 @@ export default function Layout({ children, currentPageName }) {
         {children}
       </div>
     </div>
+  );
+}
+
+export default function Layout({ children, currentPageName }) {
+  return (
+    <ExperimentProvider>
+      <LayoutContent children={children} currentPageName={currentPageName} />
+    </ExperimentProvider>
   );
 }
