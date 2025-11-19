@@ -4,16 +4,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, ArrowLeft } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import MatrixLayout from "../components/experiment/MatrixLayout";
+import { useExperiment } from "../components/ExperimentContext";
 
 export default function ExperimentSetup() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const urlParams = new URLSearchParams(window.location.search);
-  const experimentId = urlParams.get('id');
+  const { activeExperimentId } = useExperiment();
+  const experimentId = activeExperimentId;
 
   const [factors, setFactors] = useState([]);
   const [codeMode, setCodeMode] = useState('factor_based');
@@ -136,12 +137,7 @@ export default function ExperimentSetup() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <div className="flex items-center gap-4 mb-8">
-        <Button variant="outline" size="icon" onClick={() => navigate(createPageUrl("Experiments"))}>
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-        <h1 className="text-3xl font-bold">{experiment.experiment_name} - Setup</h1>
-      </div>
+      <h1 className="text-3xl font-bold mb-8">Experiment Setup</h1>
 
       {!experiment.individuals_generated ? (
         <>

@@ -6,21 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
+import { useExperiment } from "../components/ExperimentContext";
 
 export default function Dataset() {
   const queryClient = useQueryClient();
-  const [selectedExp, setSelectedExp] = useState(null);
+  const { activeExperimentId } = useExperiment();
+  const selectedExp = activeExperimentId;
   const [editingId, setEditingId] = useState(null);
   const [editValues, setEditValues] = useState({});
   const [codeError, setCodeError] = useState(null);
   const [factorFilters, setFactorFilters] = useState({});
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
-
-  const { data: experiments = [] } = useQuery({
-    queryKey: ['experiments'],
-    queryFn: () => base44.entities.Experiment.list(),
-  });
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -245,25 +242,9 @@ export default function Dataset() {
 
   return (
     <div className="p-8 max-w-full">
-      <h1 className="text-3xl font-bold mb-6">Dataset</h1>
-      
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Select Experiment</CardTitle>
-        </CardHeader>
-        <CardContent className="flex gap-4">
-          <select 
-            className="flex-1 border rounded p-2"
-            value={selectedExp || ''}
-            onChange={(e) => setSelectedExp(e.target.value)}
-          >
-            <option value="">Choose experiment...</option>
-            {experiments.map((exp) => (
-              <option key={exp.id} value={exp.id}>
-                {exp.experiment_name}
-              </option>
-            ))}
-          </select>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Dataset</h1>
+        <div className="flex gap-2">
           <Button onClick={exportCSV} disabled={!selectedExp || individuals.length === 0}>
             Export CSV
           </Button>
@@ -271,8 +252,8 @@ export default function Dataset() {
             <Plus className="w-4 h-4 mr-2" />
             Add Individual
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {selectedExp && experiment && (
         <Card className="mb-6">

@@ -1,4 +1,3 @@
-import Experiments from './pages/Experiments';
 import ExperimentSetup from './pages/ExperimentSetup';
 import DataEntry from './pages/DataEntry';
 import Dataset from './pages/Dataset';
@@ -9,7 +8,6 @@ import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Experiments": Experiments,
     "ExperimentSetup": ExperimentSetup,
     "DataEntry": DataEntry,
     "Dataset": Dataset,
@@ -19,7 +17,7 @@ export const PAGES = {
 }
 
 export const pagesConfig = {
-    mainPage: "Experiments",
+    mainPage: "ExperimentSetup",
     Pages: PAGES,
     Layout: __Layout,
 };

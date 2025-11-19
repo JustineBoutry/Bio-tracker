@@ -5,18 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Skull, Droplet, Syringe } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { Input } from "@/components/ui/input";
+import { useExperiment } from "../components/ExperimentContext";
 
 export default function Dashboard() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const initialExpId = urlParams.get('id');
-  
-  const [selectedExp, setSelectedExp] = useState(initialExpId || null);
+  const { activeExperimentId } = useExperiment();
+  const selectedExp = activeExperimentId;
   const [categoryFilters, setCategoryFilters] = useState({});
-
-  const { data: experiments = [] } = useQuery({
-    queryKey: ['experiments'],
-    queryFn: () => base44.entities.Experiment.filter({ individuals_generated: true }),
-  });
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -59,29 +53,6 @@ export default function Dashboard() {
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-      
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Select Experiment</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <select 
-            className="w-full border rounded p-2"
-            value={selectedExp || ''}
-            onChange={(e) => {
-              setSelectedExp(e.target.value);
-              setCategoryFilters({});
-            }}
-          >
-            <option value="">Choose experiment...</option>
-            {experiments.map((exp) => (
-              <option key={exp.id} value={exp.id}>
-                {exp.experiment_name}
-              </option>
-            ))}
-          </select>
-        </CardContent>
-      </Card>
 
       {experiment && (
         <>

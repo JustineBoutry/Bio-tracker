@@ -7,10 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useExperiment } from "../components/ExperimentContext";
 
 export default function DataEntry() {
   const queryClient = useQueryClient();
-  const [selectedExp, setSelectedExp] = useState(null);
+  const { activeExperimentId } = useExperiment();
+  const selectedExp = activeExperimentId;
   const [categoryFilters, setCategoryFilters] = useState({});
   const [selectedIds, setSelectedIds] = useState([]);
   const [offspringCounts, setOffspringCounts] = useState({});
@@ -20,11 +22,6 @@ export default function DataEntry() {
   const [infectedIds, setInfectedIds] = useState('');
   const [showSporeEntry, setShowSporeEntry] = useState(false);
   const [sporeData, setSporeData] = useState({});
-
-  const { data: experiments = [] } = useQuery({
-    queryKey: ['experiments'],
-    queryFn: () => base44.entities.Experiment.filter({ individuals_generated: true }),
-  });
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -187,30 +184,6 @@ export default function DataEntry() {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Data Entry</h1>
-      
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Select Experiment</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <select 
-            className="w-full border rounded p-2"
-            value={selectedExp || ''}
-            onChange={(e) => {
-              setSelectedExp(e.target.value);
-              setSelectedIds([]);
-              setCategoryFilters({});
-            }}
-          >
-            <option value="">Choose experiment...</option>
-            {experiments.map((exp) => (
-              <option key={exp.id} value={exp.id}>
-                {exp.experiment_name}
-              </option>
-            ))}
-          </select>
-        </CardContent>
-      </Card>
 
       {selectedExp && experiment?.factors && (
         <Card className="mb-6">
