@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -15,8 +14,8 @@ export default function ExperimentSetup() {
   const urlParams = new URLSearchParams(window.location.search);
   const experimentId = urlParams.get('id');
 
-  const [factors, setFactors] = useState([{ name: "Basket", levels: ["B1", "B2"] }]);
-  const [individualCount, setIndividualCount] = useState(50);
+  const [factors, setFactors] = useState([]);
+  const [categories, setCategories] = useState([]);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', experimentId],
@@ -30,54 +29,27 @@ export default function ExperimentSetup() {
   useEffect(() => {
     if (experiment?.factors) {
       setFactors(experiment.factors);
+      generateCategories(experiment.factors);
     }
   }, [experiment]);
 
-  const generateIndividualsMutation = useMutation({
-    mutationFn: async () => {
-      const individuals = [];
-      let counter = 1;
-
-      const generateCombinations = (index, current) => {
-        if (index === factors.length) {
-          for (let i = 0; i < individualCount; i++) {
-            individuals.push({
-              individual_id: `IND_${String(counter).padStart(4, '0')}`,
-              experiment_id: experimentId,
-              factors: { ...current },
-              alive: true,
-              infected: false,
-              red_signals_count: 0,
-              red_confirmed: false,
-              cumulative_offspring: 0
-            });
-            counter++;
-          }
-          return;
-        }
-        
-        const factor = factors[index];
-        for (const level of factor.levels) {
-          generateCombinations(index + 1, { ...current, [factor.name]: level });
-        }
-      };
-
-      generateCombinations(0, {});
-
-      await base44.entities.Individual.bulkCreate(individuals);
-      await base44.entities.Experiment.update(experimentId, { 
-        factors,
-        individuals_generated: true 
-      });
-      
-      return individuals.length;
-    },
-    onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: ['experiment', experimentId] });
-      alert(`Generated ${count} individuals!`);
-      navigate(createPageUrl("DataEntry"));
-    },
-  });
+  const generateCategories = (factorsList) => {
+    if (!factorsList || factorsList.length === 0) return;
+    
+    const combinations = [];
+    const generate = (index, current) => {
+      if (index === factorsList.length) {
+        combinations.push({ combination: { ...current }, count: 50 });
+        return;
+      }
+      const factor = factorsList[index];
+      for (const level of factor.levels) {
+        generate(index + 1, { ...current, [factor.name]: level });
+      }
+    };
+    generate(0, {});
+    setCategories(combinations);
+  };
 
   const addFactor = () => {
     setFactors([...factors, { name: "", levels: [""] }]);
@@ -109,6 +81,55 @@ export default function ExperimentSetup() {
     }
   };
 
+  const saveFactors = async () => {
+    await base44.entities.Experiment.update(experimentId, { factors });
+    generateCategories(factors);
+    alert('Factors saved!');
+  };
+
+  const updateCategoryCount = (index, count) => {
+    const newCategories = [...categories];
+    newCategories[index].count = parseInt(count) || 0;
+    setCategories(newCategories);
+  };
+
+  const generateIndividualsMutation = useMutation({
+    mutationFn: async () => {
+      const individuals = [];
+      let counter = 1;
+
+      for (const category of categories) {
+        for (let i = 0; i < category.count; i++) {
+          const codeParts = Object.values(category.combination);
+          const code = `${codeParts.join('-')}-${String(counter).padStart(3, '0')}`;
+          
+          individuals.push({
+            individual_id: code,
+            experiment_id: experimentId,
+            factors: category.combination,
+            alive: true,
+            infected: false,
+            red_signal_count: 0,
+            red_confirmed: false,
+            cumulative_offspring: 0
+          });
+          counter++;
+        }
+      }
+
+      await base44.entities.Individual.bulkCreate(individuals);
+      await base44.entities.Experiment.update(experimentId, { 
+        individuals_generated: true 
+      });
+      
+      return individuals.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['experiment', experimentId] });
+      alert(`Generated ${count} individuals!`);
+    },
+  });
+
   if (!experiment) return <div className="p-8">Loading...</div>;
 
   return (
@@ -117,22 +138,20 @@ export default function ExperimentSetup() {
         <Button variant="outline" size="icon" onClick={() => navigate(createPageUrl("Experiments"))}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Setup: {experiment.experiment_name}</h1>
-        </div>
+        <h1 className="text-3xl font-bold">{experiment.experiment_name} - Setup</h1>
       </div>
 
       {!experiment.individuals_generated ? (
         <>
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Define Factors</CardTitle>
+              <CardTitle>1. Define Factors</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {factors.map((factor, fIndex) => (
                 <div key={fIndex} className="border p-4 rounded space-y-3">
                   <div>
-                    <Label>Factor Name</Label>
+                    <label className="text-sm font-medium">Factor Name</label>
                     <Input
                       value={factor.name}
                       onChange={(e) => updateFactorName(fIndex, e.target.value)}
@@ -140,7 +159,7 @@ export default function ExperimentSetup() {
                     />
                   </div>
                   <div>
-                    <Label>Levels</Label>
+                    <label className="text-sm font-medium">Levels</label>
                     {factor.levels.map((level, lIndex) => (
                       <div key={lIndex} className="flex gap-2 mb-2">
                         <Input
@@ -166,43 +185,61 @@ export default function ExperimentSetup() {
                   </div>
                 </div>
               ))}
-              <Button variant="outline" onClick={addFactor}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Factor
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={addFactor}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Factor
+                </Button>
+                <Button onClick={saveFactors}>Save Factors</Button>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Generate Individuals</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Individuals per category</Label>
-                <Input
-                  type="number"
-                  value={individualCount}
-                  onChange={(e) => setIndividualCount(parseInt(e.target.value) || 0)}
-                  min="1"
-                />
-              </div>
-              <Button 
-                onClick={() => generateIndividualsMutation.mutate()}
-                className="w-full"
-              >
-                Generate Individuals
-              </Button>
-            </CardContent>
-          </Card>
+          {categories.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>2. Set Individual Counts per Category</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2 max-h-96 overflow-auto">
+                  {categories.map((cat, index) => (
+                    <div key={index} className="flex items-center gap-3 p-3 border rounded">
+                      <div className="flex-1 font-mono text-sm">
+                        {Object.entries(cat.combination).map(([k, v]) => `${k}:${v}`).join(', ')}
+                      </div>
+                      <Input
+                        type="number"
+                        value={cat.count}
+                        onChange={(e) => updateCategoryCount(index, e.target.value)}
+                        className="w-24"
+                        min="0"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <Button 
+                  onClick={() => generateIndividualsMutation.mutate()}
+                  className="w-full"
+                  disabled={generateIndividualsMutation.isPending}
+                >
+                  Generate All Individuals
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </>
       ) : (
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-lg mb-4">✓ Individuals generated</p>
-            <Button onClick={() => navigate(createPageUrl("DataEntry"))}>
-              Go to Data Entry
-            </Button>
+            <div className="flex gap-3 justify-center">
+              <Button onClick={() => navigate(createPageUrl("DataEntry"))}>
+                Go to Data Entry
+              </Button>
+              <Button variant="outline" onClick={() => navigate(createPageUrl("Dataset"))}>
+                View Dataset
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
