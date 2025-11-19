@@ -70,25 +70,41 @@ export default function MatrixLayout({ factors, onGenerate }) {
   
   const getSpecialRowCombinations = () => {
     const specials = [];
-    if (rowFactors.length > 0) {
-      specialCategories.forEach(special => {
-        const enabledInRows = rowFactors.filter(rf => special.enabledFactors[rf]);
+    specialCategories.forEach(special => {
+      const enabledInRows = rowFactors.filter(rf => special.enabledFactors[rf]);
+      const enabledInCols = colFactors.filter(cf => special.enabledFactors[cf]);
+      
+      // Only add to rows if it has enabled row factors OR if it only has column factors
+      if (enabledInRows.length > 0 && enabledInCols.length === 0) {
         const combos = generateCombinations(enabledInRows, true, special.name);
         specials.push(...combos);
-      });
-    }
+      } else if (enabledInRows.length === 0 && enabledInCols.length > 0) {
+        // Add one row for this special category (will be split across columns)
+        specials.push({ _isSpecial: true, _specialName: special.name });
+      } else if (enabledInRows.length === 0 && enabledInCols.length === 0) {
+        // No factors enabled - add one cell
+        specials.push({ _isSpecial: true, _specialName: special.name });
+      }
+    });
     return specials;
   };
 
   const getSpecialColCombinations = () => {
     const specials = [];
-    if (colFactors.length > 0) {
-      specialCategories.forEach(special => {
-        const enabledInCols = colFactors.filter(cf => special.enabledFactors[cf]);
+    specialCategories.forEach(special => {
+      const enabledInRows = rowFactors.filter(rf => special.enabledFactors[rf]);
+      const enabledInCols = colFactors.filter(cf => special.enabledFactors[cf]);
+      
+      // Only add to columns if it has enabled column factors AND also has row factors
+      if (enabledInCols.length > 0 && enabledInRows.length > 0) {
         const combos = generateCombinations(enabledInCols, true, special.name);
         specials.push(...combos);
-      });
-    }
+      } else if (enabledInCols.length > 0 && enabledInRows.length === 0) {
+        // Add to columns only
+        const combos = generateCombinations(enabledInCols, true, special.name);
+        specials.push(...combos);
+      }
+    });
     return specials;
   };
 
