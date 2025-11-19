@@ -35,11 +35,11 @@ export default function Dataset() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => {
-      const ind = individuals.find(i => i.id === id);
-      return base44.entities.Individual.update(id, data).then(() => ({ individual_id: ind.individual_id }));
+    mutationFn: async ({ id, data, individual_id }) => {
+      await base44.entities.Individual.update(id, data);
+      return individual_id;
     },
-    onSuccess: async ({ individual_id }) => {
+    onSuccess: async (individual_id) => {
       queryClient.invalidateQueries(['individuals']);
       setEditingId(null);
       setCodeError(null);
@@ -151,7 +151,11 @@ export default function Dataset() {
         return;
       }
     }
-    updateMutation.mutate({ id: ind.id, data: editValues });
+    updateMutation.mutate({ 
+      id: ind.id, 
+      data: editValues,
+      individual_id: editValues.individual_id 
+    });
   };
 
   const handleDelete = (id) => {
