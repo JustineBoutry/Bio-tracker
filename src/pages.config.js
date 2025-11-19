@@ -4,6 +4,7 @@ import Dataset from './pages/Dataset';
 import IndividualHistory from './pages/IndividualHistory';
 import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
+import LabNotebook from './pages/LabNotebook';
 import __Layout from './Layout.jsx';
 
 
@@ -14,6 +15,7 @@ export const PAGES = {
     "IndividualHistory": IndividualHistory,
     "Dashboard": Dashboard,
     "Home": Home,
+    "LabNotebook": LabNotebook,
 }
 
 export const pagesConfig = {
