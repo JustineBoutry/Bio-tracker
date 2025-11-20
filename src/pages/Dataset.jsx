@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Edit3 } from "lucide-react";
 import { useExperiment } from "../components/ExperimentContext";
 import CorrectDataForm from "../components/dataset/CorrectDataForm";
+import BulkRenameDialog from "../components/dataset/BulkRenameDialog";
 
 export default function Dataset() {
   const queryClient = useQueryClient();
@@ -19,6 +20,8 @@ export default function Dataset() {
   const [factorFilters, setFactorFilters] = useState({});
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
+  const [selectedForRename, setSelectedForRename] = useState([]);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -123,6 +126,30 @@ export default function Dataset() {
     },
   });
 
+  const bulkRenameMutation = useMutation({
+    mutationFn: async (newCodes) => {
+      const updates = [];
+      for (let i = 0; i < selectedForRename.length; i++) {
+        const ind = individuals.find(ind => ind.id === selectedForRename[i]);
+        await base44.entities.Individual.update(ind.id, { individual_id: newCodes[i] });
+        updates.push(`${ind.individual_id} → ${newCodes[i]}`);
+      }
+      return updates;
+    },
+    onSuccess: async (updates) => {
+      queryClient.invalidateQueries(['individuals']);
+      
+      await base44.entities.LabNote.create({
+        experiment_id: selectedExp,
+        note: `Bulk renamed ${updates.length} individuals`,
+        timestamp: new Date().toISOString(),
+      });
+      
+      setSelectedForRename([]);
+      alert('Codes renamed successfully!');
+    },
+  });
+
   const startEdit = (ind) => {
     setEditingId(ind.id);
     setCodeError(null);
@@ -163,6 +190,27 @@ export default function Dataset() {
     if (window.confirm('Are you sure you want to delete this individual? This will also delete all associated reproduction events.')) {
       deleteMutation.mutate(id);
     }
+  };
+
+  const toggleRenameSelection = (id) => {
+    setSelectedForRename(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkRename = (newCodes) => {
+    const existingCodes = individuals.map(i => i.individual_id);
+    const duplicates = newCodes.filter((code, idx) => {
+      const notSelf = individuals.filter(i => !selectedForRename.includes(i.id));
+      return notSelf.some(i => i.individual_id === code);
+    });
+
+    if (duplicates.length > 0) {
+      alert(`Some codes already exist: ${duplicates.join(', ')}`);
+      return;
+    }
+
+    bulkRenameMutation.mutate(newCodes);
   };
 
   const naturalSort = (a, b) => {
@@ -276,6 +324,15 @@ export default function Dataset() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Dataset</h1>
         <div className="flex gap-2">
+          {selectedForRename.length > 0 && (
+            <Button 
+              variant="outline"
+              onClick={() => setShowRenameDialog(true)}
+            >
+              <Edit3 className="w-4 h-4 mr-2" />
+              Bulk Rename ({selectedForRename.length})
+            </Button>
+          )}
           <Button onClick={exportCSV} disabled={!selectedExp || individuals.length === 0}>
             Export CSV
           </Button>
@@ -363,8 +420,20 @@ export default function Dataset() {
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50">
+                    <th className="p-2 text-left sticky left-0 bg-gray-50 w-10">
+                      <Checkbox
+                        checked={selectedForRename.length === sortedIndividuals.length && sortedIndividuals.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedForRename(sortedIndividuals.map(ind => ind.id));
+                          } else {
+                            setSelectedForRename([]);
+                          }
+                        }}
+                      />
+                    </th>
                     <th 
-                      className="p-2 text-left sticky left-0 bg-gray-50 cursor-pointer hover:bg-gray-100"
+                      className="p-2 text-left sticky left-10 bg-gray-50 cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('code')}
                     >
                       Code {sortColumn === 'code' && (sortDirection === 'asc' ? '↑' : '↓')}
@@ -439,9 +508,16 @@ export default function Dataset() {
                 <tbody>
                   {sortedIndividuals.map((ind) => (
                     <tr key={ind.id} className="border-b hover:bg-gray-50">
+                      <td className="p-2 sticky left-0 bg-white">
+                        <Checkbox
+                          checked={selectedForRename.includes(ind.id)}
+                          onCheckedChange={() => toggleRenameSelection(ind.id)}
+                          disabled={editingId === ind.id}
+                        />
+                      </td>
                       {editingId === ind.id ? (
                         <>
-                          <td className="p-2 sticky left-0 bg-white">
+                          <td className="p-2 sticky left-10 bg-white">
                             <Input
                               value={editValues.individual_id}
                               onChange={(e) => 
@@ -472,7 +548,7 @@ export default function Dataset() {
                         </>
                       ) : (
                         <>
-                          <td className="p-2 font-mono sticky left-0 bg-white">{ind.individual_id}</td>
+                          <td className="p-2 font-mono sticky left-10 bg-white">{ind.individual_id}</td>
                           {experiment?.factors && experiment.factors.map(factor => (
                             <td key={factor.name} className="p-2">{ind.factors?.[factor.name] || '-'}</td>
                           ))}
@@ -618,7 +694,14 @@ export default function Dataset() {
             </div>
           </CardContent>
         </Card>
-      )}
-    </div>
-  );
-}
+        )}
+
+        <BulkRenameDialog
+        open={showRenameDialog}
+        onClose={() => setShowRenameDialog(false)}
+        selectedIndividuals={selectedForRename.map(id => individuals.find(ind => ind.id === id))}
+        onRename={handleBulkRename}
+        />
+        </div>
+        );
+        }
