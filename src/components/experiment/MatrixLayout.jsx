@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { ArrowUp, ArrowDown } from "lucide-react";
 
 export default function MatrixLayout({ factors, onGenerate }) {
   const [rowFactors, setRowFactors] = useState([]);
@@ -13,6 +14,7 @@ export default function MatrixLayout({ factors, onGenerate }) {
   const [specialCategories, setSpecialCategories] = useState([]);
   const [newSpecialName, setNewSpecialName] = useState('');
   const [newSpecialFactors, setNewSpecialFactors] = useState({});
+  const [rowOrder, setRowOrder] = useState([]);
 
   useEffect(() => {
     if (factors.length > 0 && rowFactors.length === 0 && colFactors.length === 0) {
@@ -65,7 +67,10 @@ export default function MatrixLayout({ factors, onGenerate }) {
     return combinations;
   };
 
-  const getNormalRowCombinations = () => generateCombinations(rowFactors);
+  const getNormalRowCombinations = () => {
+    const combos = generateCombinations(rowFactors);
+    return combos;
+  };
   const getNormalColCombinations = () => generateCombinations(colFactors);
   
   const getSpecialRowCombinations = () => {
@@ -108,8 +113,37 @@ export default function MatrixLayout({ factors, onGenerate }) {
     return specials;
   };
 
-  const rowCombinations = [...getNormalRowCombinations(), ...getSpecialRowCombinations()];
+  const unorderedRowCombinations = [...getNormalRowCombinations(), ...getSpecialRowCombinations()];
   const colCombinations = [...getNormalColCombinations(), ...getSpecialColCombinations()];
+
+  // Apply row ordering
+  useEffect(() => {
+    if (unorderedRowCombinations.length > 0 && rowOrder.length === 0) {
+      setRowOrder(unorderedRowCombinations.map((_, idx) => idx));
+    } else if (rowOrder.length !== unorderedRowCombinations.length) {
+      setRowOrder(unorderedRowCombinations.map((_, idx) => idx));
+    }
+  }, [unorderedRowCombinations.length]);
+
+  const rowCombinations = rowOrder.length === unorderedRowCombinations.length
+    ? rowOrder.map(idx => unorderedRowCombinations[idx])
+    : unorderedRowCombinations;
+
+  const moveRowUp = (displayIndex) => {
+    if (displayIndex > 0) {
+      const newOrder = [...rowOrder];
+      [newOrder[displayIndex], newOrder[displayIndex - 1]] = [newOrder[displayIndex - 1], newOrder[displayIndex]];
+      setRowOrder(newOrder);
+    }
+  };
+
+  const moveRowDown = (displayIndex) => {
+    if (displayIndex < rowOrder.length - 1) {
+      const newOrder = [...rowOrder];
+      [newOrder[displayIndex], newOrder[displayIndex + 1]] = [newOrder[displayIndex + 1], newOrder[displayIndex]];
+      setRowOrder(newOrder);
+    }
+  };
 
   const getCellKey = (rowCombo, colCombo) => {
     return JSON.stringify({ ...rowCombo, ...colCombo });
@@ -369,7 +403,10 @@ export default function MatrixLayout({ factors, onGenerate }) {
                 <thead>
                   <tr>
                     <th className="border p-2 bg-gray-100 font-semibold sticky left-0 bg-gray-100 z-10">
-                      {rowFactors.join(' / ')}
+                      <div className="flex items-center gap-2">
+                        <span>⬍</span>
+                        <span>{rowFactors.join(' / ')}</span>
+                      </div>
                     </th>
                     {colCombinations.map((colCombo, idx) => (
                       <th key={idx} className={`border p-2 ${colCombo._isSpecial ? 'bg-blue-100' : 'bg-gray-50'}`}>
@@ -393,7 +430,29 @@ export default function MatrixLayout({ factors, onGenerate }) {
                     <tr key={rowIdx} className={rowCombo._isSpecial ? 'bg-blue-50' : ''}>
                       <td className={`border p-2 font-medium sticky left-0 z-10 ${rowCombo._isSpecial ? 'bg-blue-100' : 'bg-gray-50'}`}>
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm">{formatComboLabel(rowCombo)}</span>
+                          <div className="flex items-center gap-2">
+                            <div className="flex flex-col">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => moveRowUp(rowIdx)}
+                                disabled={rowIdx === 0}
+                                className="h-4 w-4 p-0"
+                              >
+                                <ArrowUp className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => moveRowDown(rowIdx)}
+                                disabled={rowIdx === rowCombinations.length - 1}
+                                className="h-4 w-4 p-0"
+                              >
+                                <ArrowDown className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <span className="text-sm">{formatComboLabel(rowCombo)}</span>
+                          </div>
                           <Button 
                             size="sm" 
                             variant="ghost" 
