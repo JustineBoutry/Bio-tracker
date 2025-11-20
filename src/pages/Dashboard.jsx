@@ -53,6 +53,40 @@ export default function Dashboard() {
     setCategoryFilters({ ...categoryFilters, [factor]: value });
   };
 
+  const toggleGraphFactor = (factorName) => {
+    setSelectedGraphFactors(prev => 
+      prev.includes(factorName) 
+        ? prev.filter(f => f !== factorName)
+        : [...prev, factorName]
+    );
+  };
+
+  const getChartData = () => {
+    if (!experiment?.factors || selectedGraphFactors.length === 0) return [];
+
+    const groups = {};
+    
+    allIndividuals.forEach(ind => {
+      const groupKey = selectedGraphFactors
+        .map(factor => ind.factors?.[factor] || 'Unknown')
+        .join(' - ');
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = { name: groupKey, alive: 0, dead: 0 };
+      }
+      
+      if (ind.alive) {
+        groups[groupKey].alive++;
+      } else {
+        groups[groupKey].dead++;
+      }
+    });
+
+    return Object.values(groups);
+  };
+
+  const chartData = getChartData();
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
