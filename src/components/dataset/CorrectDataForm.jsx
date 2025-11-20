@@ -38,7 +38,13 @@ export default function CorrectDataForm({ experimentId, experiment, individuals 
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      await base44.entities.Individual.update(selectedIndividual.id, formData);
+      const dataToSave = {
+        ...formData,
+        spores_count: formData.spores_count ? parseFloat(formData.spores_count) : null,
+        cumulative_offspring: parseInt(formData.cumulative_offspring) || 0,
+        red_signal_count: parseInt(formData.red_signal_count) || 0
+      };
+      await base44.entities.Individual.update(selectedIndividual.id, dataToSave);
       return formData.individual_id;
     },
     onSuccess: async (individual_id) => {
