@@ -53,40 +53,6 @@ export default function Dashboard() {
     setCategoryFilters({ ...categoryFilters, [factor]: value });
   };
 
-  const toggleGraphFactor = (factorName) => {
-    setSelectedGraphFactors(prev => 
-      prev.includes(factorName) 
-        ? prev.filter(f => f !== factorName)
-        : [...prev, factorName]
-    );
-  };
-
-  const getChartData = () => {
-    if (!experiment?.factors || selectedGraphFactors.length === 0) return [];
-
-    const groups = {};
-    
-    allIndividuals.forEach(ind => {
-      const groupKey = selectedGraphFactors
-        .map(factor => ind.factors?.[factor] || 'Unknown')
-        .join(' - ');
-      
-      if (!groups[groupKey]) {
-        groups[groupKey] = { name: groupKey, alive: 0, dead: 0 };
-      }
-      
-      if (ind.alive) {
-        groups[groupKey].alive++;
-      } else {
-        groups[groupKey].dead++;
-      }
-    });
-
-    return Object.values(groups);
-  };
-
-  const chartData = getChartData();
-
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
@@ -225,7 +191,7 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          <Card>
+          <Card className="mb-6">
             <CardHeader>
               <CardTitle>Reproduction Statistics</CardTitle>
             </CardHeader>
@@ -250,6 +216,50 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
+
+          {experiment.factors && experiment.factors.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Survival by Group</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <p className="text-sm font-medium mb-2">Select factors to group by:</p>
+                  <div className="flex flex-wrap gap-4">
+                    {experiment.factors.map(factor => (
+                      <div key={factor.name} className="flex items-center gap-2">
+                        <Checkbox
+                          checked={selectedGraphFactors.includes(factor.name)}
+                          onCheckedChange={() => toggleGraphFactor(factor.name)}
+                        />
+                        <label className="text-sm">{factor.name}</label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {selectedGraphFactors.length > 0 && chartData.length > 0 && (
+                  <div className="mt-6">
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                        <YAxis label={{ value: 'Number of Individuals', angle: -90, position: 'insideLeft' }} />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="alive" stackId="a" fill="#22c55e" name="Alive" />
+                        <Bar dataKey="dead" stackId="a" fill="#6b7280" name="Dead" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+                {selectedGraphFactors.length === 0 && (
+                  <p className="text-gray-500 text-center py-8">Select at least one factor to display the chart</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>
