@@ -250,19 +250,7 @@ export default function Dataset() {
         individual_id: newCodes[idx]
       }));
 
-      // Check for duplicates
-      const allCodes = individuals.map(ind => ind.individual_id);
-      const selectedIds = selectedForRename.map(id => 
-        individuals.find(i => i.id === id).individual_id
-      );
-      
-      for (const code of newCodes) {
-        if (allCodes.includes(code) && !selectedIds.includes(code)) {
-          throw new Error(`Duplicate code: ${code}`);
-        }
-      }
-
-      // Update all
+      // Update all without checking for duplicates
       for (const update of updates) {
         await base44.entities.Individual.update(update.id, {
           individual_id: update.individual_id
@@ -272,7 +260,7 @@ export default function Dataset() {
       return newCodes;
     },
     onSuccess: async (newCodes) => {
-      queryClient.invalidateQueries(['individuals']);
+      await queryClient.invalidateQueries(['individuals']);
       
       await base44.entities.LabNote.create({
         experiment_id: selectedExp,
@@ -280,9 +268,27 @@ export default function Dataset() {
         timestamp: new Date().toISOString(),
       });
       
+      // Check for duplicates after update
+      const updatedInds = await base44.entities.Individual.filter({ experiment_id: selectedExp });
+      const codeCounts = {};
+      updatedInds.forEach(ind => {
+        codeCounts[ind.individual_id] = (codeCounts[ind.individual_id] || 0) + 1;
+      });
+      
+      const duplicates = Object.entries(codeCounts)
+        .filter(([code, count]) => count > 1)
+        .map(([code, count]) => `Code "${code}" appears ${count} times`);
+      
       setSelectedForRename([]);
       setShowBulkRename(false);
-      alert('Codes updated successfully!');
+      
+      if (duplicates.length > 0) {
+        alert(
+          `Bulk rename completed. Warning: there are duplicate Codes in this experiment. Please review and fix them manually.\n\n${duplicates.join('\n')}`
+        );
+      } else {
+        alert('Codes updated successfully!');
+      }
     },
     onError: (error) => {
       alert(error.message || 'Error updating codes');
