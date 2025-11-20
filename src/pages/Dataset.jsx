@@ -19,6 +19,8 @@ export default function Dataset() {
   const [factorFilters, setFactorFilters] = useState({});
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkAddCount, setBulkAddCount] = useState(1);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -53,73 +55,103 @@ export default function Dataset() {
     },
   });
 
-  const addIndividualMutation = useMutation({
-    mutationFn: async () => {
+  const addIndividualsMutation = useMutation({
+    mutationFn: async (count) => {
       const exp = await base44.entities.Experiment.filter({ id: selectedExp });
       const currentExperiment = exp[0];
+      const allInds = await base44.entities.Individual.filter({ experiment_id: selectedExp });
       
-      let newCode;
+      const individualsToCreate = [];
+      let counter;
+      
       if (currentExperiment.code_generation_mode === 'numeric_id') {
-        const allInds = await base44.entities.Individual.filter({ experiment_id: selectedExp });
         const prefix = currentExperiment.code_prefix || 'ID-';
         const existingNumbers = allInds
           .map(ind => ind.individual_id)
           .filter(id => id.startsWith(prefix))
           .map(id => parseInt(id.replace(prefix, '')))
           .filter(num => !isNaN(num));
-        const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : (currentExperiment.code_starting_number || 1) - 1;
-        newCode = `${prefix}${maxNumber + 1}`;
+        counter = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : (currentExperiment.code_starting_number || 1);
+        
+        for (let i = 0; i < count; i++) {
+          individualsToCreate.push({
+            individual_id: `${prefix}${counter + i}`,
+            experiment_id: selectedExp,
+            factors: {},
+            alive: true,
+            infected: false,
+            red_signal_count: 0,
+            red_confirmed: false,
+            cumulative_offspring: 0
+          });
+        }
       } else {
-        const allInds = await base44.entities.Individual.filter({ experiment_id: selectedExp });
-        newCode = `IND-${String(allInds.length + 1).padStart(4, '0')}`;
+        counter = allInds.length + 1;
+        for (let i = 0; i < count; i++) {
+          individualsToCreate.push({
+            individual_id: `IND-${String(counter + i).padStart(4, '0')}`,
+            experiment_id: selectedExp,
+            factors: {},
+            alive: true,
+            infected: false,
+            red_signal_count: 0,
+            red_confirmed: false,
+            cumulative_offspring: 0
+          });
+        }
       }
       
-      const created = await base44.entities.Individual.create({
-        individual_id: newCode,
-        experiment_id: selectedExp,
-        factors: {},
-        alive: true,
-        infected: false,
-        red_signal_count: 0,
-        red_confirmed: false,
-        cumulative_offspring: 0
-      });
-      
-      return created;
+      await base44.entities.Individual.bulkCreate(individualsToCreate);
+      return individualsToCreate;
     },
     onSuccess: async (created) => {
       queryClient.invalidateQueries(['individuals']);
       
+      const ids = created.map(ind => ind.individual_id);
+      const idsText = ids.length > 10 
+        ? `${ids.slice(0, 5).join(', ')}, ... ${ids.slice(-5).join(', ')}`
+        : ids.join(', ');
+      
       await base44.entities.LabNote.create({
         experiment_id: selectedExp,
-        note: `Added individual (ID: ${created.individual_id})`,
+        note: `Added ${created.length} individuals (IDs: ${idsText})`,
         timestamp: new Date().toISOString(),
       });
       
-      alert('Individual added!');
+      setBulkAddCount(1);
+      alert(`${created.length} individuals added!`);
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id) => {
-      const ind = individuals.find(i => i.id === id);
-      const events = await base44.entities.ReproductionEvent.filter({ individual_id: ind.individual_id });
-      for (const event of events) {
-        await base44.entities.ReproductionEvent.delete(event.id);
+  const deleteSelectedMutation = useMutation({
+    mutationFn: async (ids) => {
+      const deletedIds = [];
+      for (const id of ids) {
+        const ind = individuals.find(i => i.id === id);
+        deletedIds.push(ind.individual_id);
+        const events = await base44.entities.ReproductionEvent.filter({ individual_id: ind.individual_id });
+        for (const event of events) {
+          await base44.entities.ReproductionEvent.delete(event.id);
+        }
+        await base44.entities.Individual.delete(id);
       }
-      await base44.entities.Individual.delete(id);
-      return ind.individual_id;
+      return deletedIds;
     },
-    onSuccess: async (individual_id) => {
+    onSuccess: async (individual_ids) => {
       queryClient.invalidateQueries(['individuals']);
+      
+      const idsText = individual_ids.length > 10 
+        ? `${individual_ids.slice(0, 5).join(', ')}, ... ${individual_ids.slice(-5).join(', ')}`
+        : individual_ids.join(', ');
       
       await base44.entities.LabNote.create({
         experiment_id: selectedExp,
-        note: `Deleted individual (ID: ${individual_id})`,
+        note: `Deleted ${individual_ids.length} individuals (IDs: ${idsText})`,
         timestamp: new Date().toISOString(),
       });
       
-      alert('Individual deleted!');
+      setSelectedIds([]);
+      alert(`${individual_ids.length} individuals deleted!`);
     },
   });
 
@@ -159,10 +191,25 @@ export default function Dataset() {
     });
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this individual? This will also delete all associated reproduction events.')) {
-      deleteMutation.mutate(id);
+  const handleDeleteSelected = () => {
+    if (selectedIds.length === 0) return;
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} individuals? This will also delete all associated reproduction events.`)) {
+      deleteSelectedMutation.mutate(selectedIds);
     }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === sortedIndividuals.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(sortedIndividuals.map(ind => ind.id));
+    }
+  };
+
+  const toggleSelectId = (id) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
   };
 
   const naturalSort = (a, b) => {
@@ -275,13 +322,30 @@ export default function Dataset() {
     <div className="p-8 max-w-full">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Dataset</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {selectedIds.length > 0 && (
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteSelected}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Selected ({selectedIds.length})
+            </Button>
+          )}
           <Button onClick={exportCSV} disabled={!selectedExp || individuals.length === 0}>
             Export CSV
           </Button>
-          <Button onClick={() => addIndividualMutation.mutate()} disabled={!selectedExp}>
+          <Input
+            type="number"
+            min="1"
+            value={bulkAddCount}
+            onChange={(e) => setBulkAddCount(parseInt(e.target.value) || 1)}
+            className="w-20"
+            placeholder="Count"
+          />
+          <Button onClick={() => addIndividualsMutation.mutate(bulkAddCount)} disabled={!selectedExp}>
             <Plus className="w-4 h-4 mr-2" />
-            Add Individual
+            Add
           </Button>
         </div>
       </div>
@@ -363,8 +427,14 @@ export default function Dataset() {
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50">
+                    <th className="p-2 text-left sticky left-0 bg-gray-50">
+                      <Checkbox
+                        checked={selectedIds.length === sortedIndividuals.length && sortedIndividuals.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </th>
                     <th 
-                      className="p-2 text-left sticky left-0 bg-gray-50 cursor-pointer hover:bg-gray-100"
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('code')}
                     >
                       Code {sortColumn === 'code' && (sortDirection === 'asc' ? '↑' : '↓')}
@@ -439,9 +509,16 @@ export default function Dataset() {
                 <tbody>
                   {sortedIndividuals.map((ind) => (
                     <tr key={ind.id} className="border-b hover:bg-gray-50">
+                      <td className="p-2 sticky left-0 bg-white">
+                        <Checkbox
+                          checked={selectedIds.includes(ind.id)}
+                          onCheckedChange={() => toggleSelectId(ind.id)}
+                          disabled={editingId === ind.id}
+                        />
+                      </td>
                       {editingId === ind.id ? (
                         <>
-                          <td className="p-2 sticky left-0 bg-white">
+                          <td className="p-2 bg-white">
                             <Input
                               value={editValues.individual_id}
                               onChange={(e) => 
@@ -472,7 +549,7 @@ export default function Dataset() {
                         </>
                       ) : (
                         <>
-                          <td className="p-2 font-mono sticky left-0 bg-white">{ind.individual_id}</td>
+                          <td className="p-2 font-mono bg-white">{ind.individual_id}</td>
                           {experiment?.factors && experiment.factors.map(factor => (
                             <td key={factor.name} className="p-2">{ind.factors?.[factor.name] || '-'}</td>
                           ))}
@@ -600,15 +677,7 @@ export default function Dataset() {
                           <td className="p-2">{ind.spores_volume || '-'}</td>
                           <td className="p-2">{ind.red_signal_count || 0}</td>
                           <td className="p-2">{ind.red_confirmed ? 'Yes' : 'No'}</td>
-                          <td className="p-2">
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                              onClick={() => handleDelete(ind.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </td>
+                          <td className="p-2"></td>
                         </>
                       )}
                     </tr>
