@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useExperiment, ExperimentProvider } from "./components/ExperimentContext";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 
@@ -29,6 +29,33 @@ function LayoutContent({ children, currentPageName }) {
   const handleExit = () => {
     exitExperiment();
     navigate(createPageUrl("Home"));
+  };
+
+  const handleExport = async () => {
+    try {
+      const individuals = await base44.entities.Individual.filter({ experiment_id: activeExperimentId });
+      const reproductionEvents = await base44.entities.ReproductionEvent.filter({ experiment_id: activeExperimentId });
+      const labNotes = await base44.entities.LabNote.filter({ experiment_id: activeExperimentId });
+
+      const exportData = {
+        version: "1.0",
+        export_date: new Date().toISOString(),
+        experiment: experiment,
+        individuals: individuals,
+        reproduction_events: reproductionEvents,
+        lab_notes: labNotes
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${experiment?.experiment_name || 'experiment'}_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      alert('Export failed: ' + error.message);
+    }
   };
 
   if (!activeExperimentId || currentPageName === "Home") {
@@ -111,7 +138,17 @@ function LayoutContent({ children, currentPageName }) {
               </Link>
 
               <div className="h-6 w-px bg-gray-300 mx-2"></div>
-              
+
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleExport}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download Data
+              </Button>
+
               <Button 
                 variant="outline" 
                 size="sm"
