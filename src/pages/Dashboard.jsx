@@ -77,17 +77,25 @@ export default function Dashboard() {
         .join(' - ');
       
       if (!groups[groupKey]) {
-        groups[groupKey] = { name: groupKey, alive: 0, dead: 0 };
+        groups[groupKey] = { name: groupKey, aliveCount: 0, deadCount: 0 };
       }
       
       if (ind.alive) {
-        groups[groupKey].alive++;
+        groups[groupKey].aliveCount++;
       } else {
-        groups[groupKey].dead++;
+        groups[groupKey].deadCount++;
       }
     });
 
-    return Object.values(groups);
+    return Object.values(groups).map(group => {
+      const total = group.aliveCount + group.deadCount;
+      return {
+        name: group.name,
+        alive: total > 0 ? (group.aliveCount / total) * 100 : 0,
+        dead: total > 0 ? (group.deadCount / total) * 100 : 0,
+        total: total
+      };
+    });
   };
 
   const getFacetLevels = () => {
@@ -317,8 +325,8 @@ export default function Dashboard() {
                     <BarChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                      <YAxis />
-                      <Tooltip />
+                      <YAxis label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
+                      <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
                       <Legend />
                       <Bar dataKey="alive" stackId="a" fill="#22c55e" name="Alive" />
                       <Bar dataKey="dead" stackId="a" fill="#6b7280" name="Dead" />
@@ -335,8 +343,8 @@ export default function Dashboard() {
                             <BarChart data={facetData}>
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} fontSize={12} />
-                              <YAxis fontSize={12} />
-                              <Tooltip />
+                              <YAxis fontSize={12} label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
+                              <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
                               <Legend />
                               <Bar dataKey="alive" stackId="a" fill="#22c55e" name="Alive" />
                               <Bar dataKey="dead" stackId="a" fill="#6b7280" name="Dead" />
