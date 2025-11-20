@@ -14,6 +14,7 @@ export default function Dashboard() {
   const selectedExp = activeExperimentId;
   const [categoryFilters, setCategoryFilters] = useState({});
   const [selectedGraphFactors, setSelectedGraphFactors] = useState([]);
+  const [facetFactor, setFacetFactor] = useState(null);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -61,12 +62,16 @@ export default function Dashboard() {
     );
   };
 
-  const getChartData = () => {
+  const getChartData = (filterByFacet = null) => {
     if (!experiment?.factors || selectedGraphFactors.length === 0) return [];
 
     const groups = {};
     
-    allIndividuals.forEach(ind => {
+    const filteredInds = filterByFacet 
+      ? allIndividuals.filter(ind => ind.factors?.[facetFactor] === filterByFacet)
+      : allIndividuals;
+    
+    filteredInds.forEach(ind => {
       const groupKey = selectedGraphFactors
         .map(factor => ind.factors?.[factor] || 'Unknown')
         .join(' - ');
@@ -85,7 +90,14 @@ export default function Dashboard() {
     return Object.values(groups);
   };
 
-  const chartData = getChartData();
+  const getFacetLevels = () => {
+    if (!facetFactor) return null;
+    const factor = experiment?.factors?.find(f => f.name === facetFactor);
+    return factor?.levels || [];
+  };
+
+  const chartData = !facetFactor ? getChartData() : null;
+  const facetLevels = getFacetLevels();
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -256,36 +268,85 @@ export default function Dashboard() {
               <CardTitle>Survival by Group</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="mb-4">
-                <p className="text-sm font-medium mb-2">Select factors to group by:</p>
-                <div className="flex flex-wrap gap-4">
-                  {experiment.factors?.map(factor => (
-                    <div key={factor.name} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`graph-${factor.name}`}
-                        checked={selectedGraphFactors.includes(factor.name)}
-                        onCheckedChange={() => toggleGraphFactor(factor.name)}
-                      />
-                      <label htmlFor={`graph-${factor.name}`} className="text-sm cursor-pointer">
+              <div className="mb-6 space-y-4">
+                <div>
+                  <p className="text-sm font-medium mb-2">Select factors to group by:</p>
+                  <div className="flex flex-wrap gap-4">
+                    {experiment.factors?.map(factor => (
+                      <div key={factor.name} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`graph-${factor.name}`}
+                          checked={selectedGraphFactors.includes(factor.name)}
+                          onCheckedChange={() => toggleGraphFactor(factor.name)}
+                          disabled={facetFactor === factor.name}
+                        />
+                        <label htmlFor={`graph-${factor.name}`} className="text-sm cursor-pointer">
+                          {factor.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium mb-2">Facet by (optional):</p>
+                  <select
+                    className="border rounded p-2 text-sm"
+                    value={facetFactor || ''}
+                    onChange={(e) => {
+                      const value = e.target.value || null;
+                      setFacetFactor(value);
+                      if (value && selectedGraphFactors.includes(value)) {
+                        setSelectedGraphFactors(selectedGraphFactors.filter(f => f !== value));
+                      }
+                    }}
+                  >
+                    <option value="">None</option>
+                    {experiment.factors?.map(factor => (
+                      <option key={factor.name} value={factor.name}>
                         {factor.name}
-                      </label>
-                    </div>
-                  ))}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
               {selectedGraphFactors.length > 0 ? (
-                <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="alive" stackId="a" fill="#22c55e" name="Alive" />
-                    <Bar dataKey="dead" stackId="a" fill="#6b7280" name="Dead" />
-                  </BarChart>
-                </ResponsiveContainer>
+                !facetFactor ? (
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="alive" stackId="a" fill="#22c55e" name="Alive" />
+                      <Bar dataKey="dead" stackId="a" fill="#6b7280" name="Dead" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {facetLevels.map(level => {
+                      const facetData = getChartData(level);
+                      return (
+                        <div key={level} className="border rounded-lg p-4">
+                          <h3 className="text-center font-semibold mb-3">{facetFactor}: {level}</h3>
+                          <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={facetData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} fontSize={12} />
+                              <YAxis fontSize={12} />
+                              <Tooltip />
+                              <Legend />
+                              <Bar dataKey="alive" stackId="a" fill="#22c55e" name="Alive" />
+                              <Bar dataKey="dead" stackId="a" fill="#6b7280" name="Dead" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
               ) : (
                 <div className="text-center py-12 text-gray-500">
                   Select at least one factor to display the chart
