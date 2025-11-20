@@ -250,12 +250,14 @@ export default function Dataset() {
         individual_id: newCodes[idx]
       }));
 
-      // Update all without checking for duplicates
-      for (const update of updates) {
-        await base44.entities.Individual.update(update.id, {
-          individual_id: update.individual_id
-        });
-      }
+      // Update all without checking for duplicates (in parallel to avoid rate limits)
+      await Promise.all(
+        updates.map(update => 
+          base44.entities.Individual.update(update.id, {
+            individual_id: update.individual_id
+          })
+        )
+      );
 
       return newCodes;
     },
