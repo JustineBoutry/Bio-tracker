@@ -127,7 +127,9 @@ export default function ExperimentSetup() {
     onSuccess: () => {
       exitExperiment();
       navigate(createPageUrl("Home"));
-      alert('Experiment deleted!');
+    },
+    onError: (error) => {
+      alert('Error deleting experiment: ' + error.message);
     },
   });
 
@@ -236,9 +238,10 @@ export default function ExperimentSetup() {
         <Button 
           variant="destructive" 
           onClick={handleDeleteExperiment}
+          disabled={deleteExperimentMutation.isPending}
         >
           <Trash2 className="w-4 h-4 mr-2" />
-          Delete Experiment
+          {deleteExperimentMutation.isPending ? 'Deleting...' : 'Delete Experiment'}
         </Button>
       </div>
 
