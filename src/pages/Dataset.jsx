@@ -250,22 +250,14 @@ export default function Dataset() {
         individual_id: newCodes[idx]
       }));
 
-      // Update in batches to avoid rate limits
-      const batchSize = 5;
-      for (let i = 0; i < updates.length; i += batchSize) {
-        const batch = updates.slice(i, i + batchSize);
-        await Promise.all(
-          batch.map(update => 
-            base44.entities.Individual.update(update.id, {
-              individual_id: update.individual_id
-            })
-          )
-        );
-        // Small delay between batches
-        if (i + batchSize < updates.length) {
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
-      }
+      // Update all without checking for duplicates (in parallel to avoid rate limits)
+      await Promise.all(
+        updates.map(update => 
+          base44.entities.Individual.update(update.id, {
+            individual_id: update.individual_id
+          })
+        )
+      );
 
       return newCodes;
     },
