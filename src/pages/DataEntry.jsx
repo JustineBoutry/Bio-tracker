@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useExperiment } from "../components/ExperimentContext";
 import { Calendar } from "lucide-react";
-import CustomTraitsEntry from "../components/data-entry/CustomTraitsEntry";
 
 export default function DataEntry() {
   const queryClient = useQueryClient();
@@ -339,12 +338,11 @@ export default function DataEntry() {
 
       {selectedExp && (
         <Tabs defaultValue="reproduction">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="reproduction">Reproduction</TabsTrigger>
             <TabsTrigger value="death">Death</TabsTrigger>
             <TabsTrigger value="redness">Redness</TabsTrigger>
             <TabsTrigger value="infection">Infection</TabsTrigger>
-            <TabsTrigger value="custom">Custom Traits</TabsTrigger>
           </TabsList>
 
           <TabsContent value="reproduction">
@@ -585,14 +583,6 @@ export default function DataEntry() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="custom">
-            <CustomTraitsEntry
-              experimentId={selectedExp}
-              experiment={experiment}
-              currentDate={currentDataEntryDate}
-            />
           </TabsContent>
         </Tabs>
       )}

@@ -158,16 +158,19 @@ export default function Dataset() {
   const startEdit = (ind) => {
     setEditingId(ind.id);
     setCodeError(null);
-    const customTraits = {};
-    (experiment?.traits || []).forEach(trait => {
-      const value = ind.custom_traits?.[trait.field_name];
-      customTraits[trait.field_name] = value !== undefined ? value : '';
-    });
     setEditValues({
       individual_id: ind.individual_id,
       factors: ind.factors || {},
       alive: ind.alive,
-      custom_traits: customTraits
+      first_reproduction_date: ind.first_reproduction_date || '',
+      last_reproduction_date: ind.last_reproduction_date || '',
+      cumulative_offspring: ind.cumulative_offspring || 0,
+      death_date: ind.death_date || '',
+      infected: ind.infected || false,
+      spores_count: ind.spores_count || '',
+      spores_volume: ind.spores_volume || '',
+      red_signal_count: ind.red_signal_count || 0,
+      red_confirmed: ind.red_confirmed || false
     });
   };
 
@@ -281,20 +284,29 @@ export default function Dataset() {
   const exportCSV = () => {
     if (sortedIndividuals.length === 0) return;
     
+    const headers = ['Code', 'Alive', 'Death Date', 'First Reproduction', 'Last Reproduction', 
+                     'Cumulative Offspring', 'Infected', 'Spores Count', 'Spores Volume', 
+                     'Red Signal Count', 'Red Confirmed'];
+    
     const factorKeys = individuals[0]?.factors ? Object.keys(individuals[0].factors) : [];
-    const traitHeaders = (experiment?.traits || []).map(t => t.name);
-    const allHeaders = ['Code', ...factorKeys, 'Alive', ...traitHeaders];
+    const allHeaders = [...factorKeys, ...headers];
     
     const rows = sortedIndividuals.map(ind => {
       const factorValues = factorKeys.map(k => ind.factors?.[k] || '');
-      const traitValues = (experiment?.traits || []).map(trait => {
-        const value = ind.custom_traits?.[trait.field_name];
-        if (trait.data_type === 'boolean') {
-          return value === true ? 'Yes' : value === false ? 'No' : '';
-        }
-        return value !== undefined && value !== null && value !== '' ? String(value) : '';
-      });
-      return [ind.individual_id, ...factorValues, ind.alive ? 'Yes' : 'No', ...traitValues];
+      const values = [
+        ind.individual_id,
+        ind.alive ? 'Yes' : 'No',
+        ind.death_date || '',
+        ind.first_reproduction_date || '',
+        ind.last_reproduction_date || '',
+        ind.cumulative_offspring || 0,
+        ind.infected ? 'Yes' : 'No',
+        ind.spores_count || '',
+        ind.spores_volume || '',
+        ind.red_signal_count || 0,
+        ind.red_confirmed ? 'Yes' : 'No'
+      ];
+      return [...factorValues, ...values];
     });
     
     const csv = [allHeaders, ...rows].map(row => row.join(',')).join('\n');
@@ -436,191 +448,240 @@ export default function Dataset() {
                         {factor.name} {sortColumn === `factor_${factor.name}` && (sortDirection === 'asc' ? '↑' : '↓')}
                       </th>
                     ))}
-                    <th className="p-2 text-left">Alive</th>
-                    {(experiment?.traits || []).map((trait) => (
-                      <th 
-                        key={trait.field_name}
-                        className="p-2 text-left cursor-pointer hover:bg-gray-100"
-                        onClick={() => handleSort(trait.field_name)}
-                      >
-                        {trait.name} {sortColumn === trait.field_name && (sortDirection === 'asc' ? '↑' : '↓')}
-                      </th>
-                    ))}
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('alive')}
+                    >
+                      Alive {sortColumn === 'alive' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('death_date')}
+                    >
+                      Death Date {sortColumn === 'death_date' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('first_reproduction_date')}
+                    >
+                      First Repro {sortColumn === 'first_reproduction_date' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('last_reproduction_date')}
+                    >
+                      Last Repro {sortColumn === 'last_reproduction_date' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('cumulative_offspring')}
+                    >
+                      Offspring {sortColumn === 'cumulative_offspring' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('infected')}
+                    >
+                      Infected {sortColumn === 'infected' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('spores_count')}
+                    >
+                      Spores Count {sortColumn === 'spores_count' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th className="p-2 text-left">Spores Volume</th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('red_signal_count')}
+                    >
+                      Red Signals {sortColumn === 'red_signal_count' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('red_confirmed')}
+                    >
+                      Red Confirmed {sortColumn === 'red_confirmed' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
                     <th className="p-2 text-left">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedIndividuals.map((ind) => {
-                    const renderTraitCell = (trait, isEditing) => {
-                      const value = ind.custom_traits?.[trait.field_name];
+                  {sortedIndividuals.map((ind) => (
+                    <tr key={ind.id} className="border-b hover:bg-gray-50">
+                      <td className="p-2 sticky left-0 bg-white">
+                        <Checkbox
+                          checked={selectedIds.includes(ind.id)}
+                          onCheckedChange={() => toggleSelectId(ind.id)}
+                          disabled={editingId === ind.id}
+                        />
+                      </td>
+                      {editingId === ind.id ? (
+                        <>
+                          <td className="p-2 bg-white">
+                            <Input
+                              value={editValues.individual_id}
+                              onChange={(e) => 
+                                setEditValues({ ...editValues, individual_id: e.target.value })
+                              }
+                              className="w-32 font-mono"
+                            />
+                          </td>
+                          {experiment?.factors && experiment.factors.map(factor => (
+                            <td key={factor.name} className="p-2">
+                              <select
+                                className="w-full border rounded p-1"
+                                value={editValues.factors[factor.name] || ''}
+                                onChange={(e) => 
+                                  setEditValues({ 
+                                    ...editValues, 
+                                    factors: { ...editValues.factors, [factor.name]: e.target.value }
+                                  })
+                                }
+                              >
+                                <option value="">-</option>
+                                {factor.levels.map(level => (
+                                  <option key={level} value={level}>{level}</option>
+                                ))}
+                              </select>
+                            </td>
+                          ))}
+                        </>
+                      ) : (
+                        <>
+                          <td className="p-2 font-mono bg-white">{ind.individual_id}</td>
+                          {experiment?.factors && experiment.factors.map(factor => (
+                            <td key={factor.name} className="p-2">{ind.factors?.[factor.name] || '-'}</td>
+                          ))}
+                        </>
+                      )}
 
-                      if (isEditing) {
-                        if (trait.data_type === 'numeric') {
-                          return (
-                            <Input
-                              type="number"
-                              value={editValues.custom_traits[trait.field_name] || ''}
-                              onChange={(e) => setEditValues({
-                                ...editValues,
-                                custom_traits: { ...editValues.custom_traits, [trait.field_name]: e.target.value }
-                              })}
-                              className="w-24"
-                            />
-                          );
-                        } else if (trait.data_type === 'text') {
-                          return (
-                            <Input
-                              value={editValues.custom_traits[trait.field_name] || ''}
-                              onChange={(e) => setEditValues({
-                                ...editValues,
-                                custom_traits: { ...editValues.custom_traits, [trait.field_name]: e.target.value }
-                              })}
-                              className="w-32"
-                            />
-                          );
-                        } else if (trait.data_type === 'boolean') {
-                          return (
+                      {editingId === ind.id ? (
+                        <>
+                          <td className="p-2">
                             <Checkbox
-                              checked={editValues.custom_traits[trait.field_name] === true}
-                              onCheckedChange={(checked) => setEditValues({
-                                ...editValues,
-                                custom_traits: { ...editValues.custom_traits, [trait.field_name]: checked }
-                              })}
+                              checked={editValues.alive}
+                              onCheckedChange={(checked) => 
+                                setEditValues({ ...editValues, alive: checked })
+                              }
                             />
-                          );
-                        } else if (trait.data_type === 'date') {
-                          return (
+                          </td>
+                          <td className="p-2">
                             <Input
                               type="date"
-                              value={editValues.custom_traits[trait.field_name] || ''}
-                              onChange={(e) => setEditValues({
-                                ...editValues,
-                                custom_traits: { ...editValues.custom_traits, [trait.field_name]: e.target.value }
-                              })}
+                              value={editValues.death_date}
+                              onChange={(e) => 
+                                setEditValues({ ...editValues, death_date: e.target.value })
+                              }
                               className="w-32"
                             />
-                          );
-                        } else if (trait.data_type === 'category') {
-                          return (
-                            <select
-                              className="w-full border rounded p-1"
-                              value={editValues.custom_traits[trait.field_name] || ''}
-                              onChange={(e) => setEditValues({
-                                ...editValues,
-                                custom_traits: { ...editValues.custom_traits, [trait.field_name]: e.target.value }
-                              })}
-                            >
-                              <option value="">-</option>
-                              {(trait.categories || []).map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                              ))}
-                            </select>
-                          );
-                        }
-                      } else {
-                        if (trait.data_type === 'boolean') {
-                          return value === true ? 'Yes' : value === false ? 'No' : '-';
-                        }
-                        return value !== undefined && value !== null && value !== '' ? String(value) : '-';
-                      }
-                    };
-
-                    return (
-                      <tr key={ind.id} className="border-b hover:bg-gray-50">
-                        <td className="p-2 sticky left-0 bg-white">
-                          <Checkbox
-                            checked={selectedIds.includes(ind.id)}
-                            onCheckedChange={() => toggleSelectId(ind.id)}
-                            disabled={editingId === ind.id}
-                          />
-                        </td>
-                        {editingId === ind.id ? (
-                          <>
-                            <td className="p-2 bg-white">
-                              <Input
-                                value={editValues.individual_id}
-                                onChange={(e) => 
-                                  setEditValues({ ...editValues, individual_id: e.target.value })
-                                }
-                                className="w-32 font-mono"
-                              />
-                            </td>
-                            {experiment?.factors && experiment.factors.map(factor => (
-                              <td key={factor.name} className="p-2">
-                                <select
-                                  className="w-full border rounded p-1"
-                                  value={editValues.factors[factor.name] || ''}
-                                  onChange={(e) => 
-                                    setEditValues({ 
-                                      ...editValues, 
-                                      factors: { ...editValues.factors, [factor.name]: e.target.value }
-                                    })
-                                  }
-                                >
-                                  <option value="">-</option>
-                                  {factor.levels.map(level => (
-                                    <option key={level} value={level}>{level}</option>
-                                  ))}
-                                </select>
-                              </td>
-                            ))}
-                          </>
-                        ) : (
-                          <>
-                            <td className="p-2 font-mono bg-white">{ind.individual_id}</td>
-                            {experiment?.factors && experiment.factors.map(factor => (
-                              <td key={factor.name} className="p-2">{ind.factors?.[factor.name] || '-'}</td>
-                            ))}
-                          </>
-                        )}
-
-                        {editingId === ind.id ? (
-                          <>
-                            <td className="p-2">
-                              <Checkbox
-                                checked={editValues.alive}
-                                onCheckedChange={(checked) => 
-                                  setEditValues({ ...editValues, alive: checked })
-                                }
-                              />
-                            </td>
-                            {(experiment?.traits || []).map(trait => (
-                              <td key={trait.field_name} className="p-2">
-                                {renderTraitCell(trait, true)}
-                              </td>
-                            ))}
-                            <td className="p-2">
-                              <div className="flex gap-1">
-                                <Button size="sm" onClick={() => handleSave(ind)}>
-                                  Save
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => {
-                                  setEditingId(null);
-                                  setCodeError(null);
-                                }}>
-                                  Cancel
-                                </Button>
-                              </div>
-                            </td>
-                          </>
-                        ) : (
-                          <>
-                            <td className="p-2">{ind.alive ? 'Yes' : 'No'}</td>
-                            {(experiment?.traits || []).map(trait => (
-                              <td key={trait.field_name} className="p-2">
-                                {renderTraitCell(trait, false)}
-                              </td>
-                            ))}
-                            <td className="p-2">
-                              <Button size="sm" variant="ghost" onClick={() => startEdit(ind)}>
-                                Edit
+                          </td>
+                          <td className="p-2">
+                            <Input
+                              type="date"
+                              value={editValues.first_reproduction_date}
+                              onChange={(e) => 
+                                setEditValues({ ...editValues, first_reproduction_date: e.target.value })
+                              }
+                              className="w-32"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <Input
+                              type="date"
+                              value={editValues.last_reproduction_date}
+                              onChange={(e) => 
+                                setEditValues({ ...editValues, last_reproduction_date: e.target.value })
+                              }
+                              className="w-32"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <Input
+                              type="number"
+                              value={editValues.cumulative_offspring}
+                              onChange={(e) => 
+                                setEditValues({ ...editValues, cumulative_offspring: parseInt(e.target.value) || 0 })
+                              }
+                              className="w-20"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <Checkbox
+                              checked={editValues.infected}
+                              onCheckedChange={(checked) => 
+                                setEditValues({ ...editValues, infected: checked })
+                              }
+                            />
+                          </td>
+                          <td className="p-2">
+                            <Input
+                              type="number"
+                              value={editValues.spores_count}
+                              onChange={(e) => 
+                                setEditValues({ ...editValues, spores_count: e.target.value })
+                              }
+                              className="w-24"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <Input
+                              value={editValues.spores_volume}
+                              onChange={(e) => 
+                                setEditValues({ ...editValues, spores_volume: e.target.value })
+                              }
+                              className="w-24"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <Input
+                              type="number"
+                              value={editValues.red_signal_count}
+                              onChange={(e) => 
+                                setEditValues({ ...editValues, red_signal_count: parseInt(e.target.value) || 0 })
+                              }
+                              className="w-20"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <Checkbox
+                              checked={editValues.red_confirmed}
+                              onCheckedChange={(checked) => 
+                                setEditValues({ ...editValues, red_confirmed: checked })
+                              }
+                            />
+                          </td>
+                          <td className="p-2">
+                            <div className="flex gap-1">
+                              <Button size="sm" onClick={() => handleSave(ind)}>
+                                Save
                               </Button>
-                            </td>
-                          </>
-                        )}
-                      </tr>
-                    );
-                  })}
+                              <Button size="sm" variant="outline" onClick={() => {
+                                setEditingId(null);
+                                setCodeError(null);
+                              }}>
+                                Cancel
+                              </Button>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="p-2">{ind.alive ? 'Yes' : 'No'}</td>
+                          <td className="p-2">{ind.death_date || '-'}</td>
+                          <td className="p-2">{ind.first_reproduction_date || '-'}</td>
+                          <td className="p-2">{ind.last_reproduction_date || '-'}</td>
+                          <td className="p-2">{ind.cumulative_offspring || 0}</td>
+                          <td className="p-2">{ind.infected ? 'Yes' : 'No'}</td>
+                          <td className="p-2">{ind.spores_count || '-'}</td>
+                          <td className="p-2">{ind.spores_volume || '-'}</td>
+                          <td className="p-2">{ind.red_signal_count || 0}</td>
+                          <td className="p-2">{ind.red_confirmed ? 'Yes' : 'No'}</td>
+                          <td className="p-2"></td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

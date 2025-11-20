@@ -450,36 +450,19 @@ export default function ExperimentSetup() {
           )}
         </>
       ) : (
-        <div className="space-y-6">
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-lg mb-4">✓ Individuals generated</p>
-              <div className="flex gap-3 justify-center">
-                <Button onClick={() => navigate(createPageUrl("DataEntry"))}>
-                  Go to Data Entry
-                </Button>
-                <Button variant="outline" onClick={() => navigate(createPageUrl("Dataset"))}>
-                  View Dataset
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card id="traits-section">
-            <CardHeader>
-              <CardTitle>Add More Traits</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TraitSelector
-                selectedTraits={selectedTraits}
-                onChange={setSelectedTraits}
-              />
-              <Button onClick={saveTraits} className="mt-4">
-                Save Traits
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-lg mb-4">✓ Individuals generated</p>
+            <div className="flex gap-3 justify-center">
+              <Button onClick={() => navigate(createPageUrl("DataEntry"))}>
+                Go to Data Entry
               </Button>
-            </CardContent>
-          </Card>
-        </div>
+              <Button variant="outline" onClick={() => navigate(createPageUrl("Dataset"))}>
+                View Dataset
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
