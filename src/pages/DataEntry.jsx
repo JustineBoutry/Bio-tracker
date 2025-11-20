@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useExperiment } from "../components/ExperimentContext";
+import { Calendar } from "lucide-react";
 
 export default function DataEntry() {
   const queryClient = useQueryClient();
@@ -22,6 +23,19 @@ export default function DataEntry() {
   const [infectedIds, setInfectedIds] = useState('');
   const [showSporeEntry, setShowSporeEntry] = useState(false);
   const [sporeData, setSporeData] = useState({});
+
+  const [currentDataEntryDate, setCurrentDataEntryDate] = useState(() => {
+    const saved = localStorage.getItem('currentDataEntryDate');
+    return saved || new Date().toISOString().split('T')[0];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('currentDataEntryDate', currentDataEntryDate);
+  }, [currentDataEntryDate]);
+
+  const resetToToday = () => {
+    setCurrentDataEntryDate(new Date().toISOString().split('T')[0]);
+  };
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -48,7 +62,6 @@ export default function DataEntry() {
 
   const reproductionMutation = useMutation({
     mutationFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
       const ids = [];
       
       for (const id of selectedIds) {
@@ -59,13 +72,13 @@ export default function DataEntry() {
         await base44.entities.ReproductionEvent.create({
           experiment_id: selectedExp,
           individual_id: ind.individual_id,
-          event_date: today,
+          event_date: currentDataEntryDate,
           offspring_count: offspring
         });
         
         await base44.entities.Individual.update(id, {
-          first_reproduction_date: ind.first_reproduction_date || today,
-          last_reproduction_date: today,
+          first_reproduction_date: ind.first_reproduction_date || currentDataEntryDate,
+          last_reproduction_date: currentDataEntryDate,
           cumulative_offspring: (ind.cumulative_offspring || 0) + offspring
         });
       }
@@ -94,7 +107,6 @@ export default function DataEntry() {
 
   const deathMutation = useMutation({
     mutationFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
       const ids = [];
       
       for (const id of selectedIds) {
@@ -102,7 +114,7 @@ export default function DataEntry() {
         ids.push(ind.individual_id);
         await base44.entities.Individual.update(id, {
           alive: false,
-          death_date: today
+          death_date: currentDataEntryDate
         });
       }
       
@@ -264,6 +276,36 @@ export default function DataEntry() {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Data Entry</h1>
+
+      {selectedExp && (
+        <Card className="mb-6 bg-blue-50 border-blue-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              <div className="flex-1">
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  Current data entry date
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="date"
+                    value={currentDataEntryDate}
+                    onChange={(e) => setCurrentDataEntryDate(e.target.value)}
+                    className="max-w-xs"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={resetToToday}
+                  >
+                    Use today's date
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {selectedExp && experiment?.factors && (
         <Card className="mb-6">
