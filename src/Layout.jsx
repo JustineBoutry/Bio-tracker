@@ -20,6 +20,12 @@ function LayoutContent({ children, currentPageName }) {
     enabled: !!activeExperimentId,
   });
 
+  React.useEffect(() => {
+    if (!activeExperimentId && currentPageName !== "Home") {
+      navigate(createPageUrl("Home"));
+    }
+  }, [activeExperimentId, currentPageName, navigate]);
+
   const handleExit = () => {
     exitExperiment();
     navigate(createPageUrl("Home"));
