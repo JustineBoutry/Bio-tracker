@@ -297,7 +297,6 @@ export default function ExperimentSetup() {
                 </Button>
               )}
             </CardHeader>
-            </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-medium block mb-2">Mode</label>
