@@ -15,6 +15,8 @@ export default function Dashboard() {
   const [categoryFilters, setCategoryFilters] = useState({});
   const [selectedGraphFactors, setSelectedGraphFactors] = useState([]);
   const [facetFactor, setFacetFactor] = useState(null);
+  const [selectedInfectionGraphFactors, setSelectedInfectionGraphFactors] = useState([]);
+  const [facetInfectionFactor, setFacetInfectionFactor] = useState(null);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -56,6 +58,14 @@ export default function Dashboard() {
 
   const toggleGraphFactor = (factorName) => {
     setSelectedGraphFactors(prev => 
+      prev.includes(factorName) 
+        ? prev.filter(f => f !== factorName)
+        : [...prev, factorName]
+    );
+  };
+
+  const toggleInfectionGraphFactor = (factorName) => {
+    setSelectedInfectionGraphFactors(prev => 
       prev.includes(factorName) 
         ? prev.filter(f => f !== factorName)
         : [...prev, factorName]
@@ -104,8 +114,52 @@ export default function Dashboard() {
     return factor?.levels || [];
   };
 
+  const getInfectionChartData = (filterByFacet = null) => {
+    if (!experiment?.factors || selectedInfectionGraphFactors.length === 0) return [];
+
+    const groups = {};
+    
+    const filteredInds = filterByFacet 
+      ? allIndividuals.filter(ind => ind.factors?.[facetInfectionFactor] === filterByFacet)
+      : allIndividuals;
+    
+    filteredInds.forEach(ind => {
+      const groupKey = selectedInfectionGraphFactors
+        .map(factor => ind.factors?.[factor] || 'Unknown')
+        .join(' - ');
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = { name: groupKey, infectedCount: 0, notInfectedCount: 0 };
+      }
+      
+      if (ind.infected) {
+        groups[groupKey].infectedCount++;
+      } else {
+        groups[groupKey].notInfectedCount++;
+      }
+    });
+
+    return Object.values(groups).map(group => {
+      const total = group.infectedCount + group.notInfectedCount;
+      return {
+        name: group.name,
+        infected: total > 0 ? (group.infectedCount / total) * 100 : 0,
+        notInfected: total > 0 ? (group.notInfectedCount / total) * 100 : 0,
+        total: total
+      };
+    });
+  };
+
+  const getInfectionFacetLevels = () => {
+    if (!facetInfectionFactor) return null;
+    const factor = experiment?.factors?.find(f => f.name === facetInfectionFactor);
+    return factor?.levels || [];
+  };
+
   const chartData = !facetFactor ? getChartData() : null;
   const facetLevels = getFacetLevels();
+  const infectionChartData = !facetInfectionFactor ? getInfectionChartData() : null;
+  const infectionFacetLevels = getInfectionFacetLevels();
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -348,6 +402,98 @@ export default function Dashboard() {
                               <Legend />
                               <Bar dataKey="alive" stackId="a" fill="#22c55e" name="Alive" />
                               <Bar dataKey="dead" stackId="a" fill="#6b7280" name="Dead" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  Select at least one factor to display the chart
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Infection by Group</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6 space-y-4">
+                <div>
+                  <p className="text-sm font-medium mb-2">Select factors to group by:</p>
+                  <div className="flex flex-wrap gap-4">
+                    {experiment.factors?.map(factor => (
+                      <div key={factor.name} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`infection-graph-${factor.name}`}
+                          checked={selectedInfectionGraphFactors.includes(factor.name)}
+                          onCheckedChange={() => toggleInfectionGraphFactor(factor.name)}
+                          disabled={facetInfectionFactor === factor.name}
+                        />
+                        <label htmlFor={`infection-graph-${factor.name}`} className="text-sm cursor-pointer">
+                          {factor.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium mb-2">Facet by (optional):</p>
+                  <select
+                    className="border rounded p-2 text-sm"
+                    value={facetInfectionFactor || ''}
+                    onChange={(e) => {
+                      const value = e.target.value || null;
+                      setFacetInfectionFactor(value);
+                      if (value && selectedInfectionGraphFactors.includes(value)) {
+                        setSelectedInfectionGraphFactors(selectedInfectionGraphFactors.filter(f => f !== value));
+                      }
+                    }}
+                  >
+                    <option value="">None</option>
+                    {experiment.factors?.map(factor => (
+                      <option key={factor.name} value={factor.name}>
+                        {factor.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {selectedInfectionGraphFactors.length > 0 ? (
+                !facetInfectionFactor ? (
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart data={infectionChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                      <YAxis label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
+                      <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
+                      <Legend />
+                      <Bar dataKey="infected" stackId="a" fill="#92400e" name="Infected" />
+                      <Bar dataKey="notInfected" stackId="a" fill="#d6d3d1" name="Not Infected" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {infectionFacetLevels.map(level => {
+                      const facetData = getInfectionChartData(level);
+                      return (
+                        <div key={level} className="border rounded-lg p-4">
+                          <h3 className="text-center font-semibold mb-3">{facetInfectionFactor}: {level}</h3>
+                          <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={facetData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} fontSize={12} />
+                              <YAxis fontSize={12} label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
+                              <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
+                              <Legend />
+                              <Bar dataKey="infected" stackId="a" fill="#92400e" name="Infected" />
+                              <Bar dataKey="notInfected" stackId="a" fill="#d6d3d1" name="Not Infected" />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
