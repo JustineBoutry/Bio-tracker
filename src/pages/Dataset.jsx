@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import { useExperiment } from "../components/ExperimentContext";
+import CorrectDataForm from "../components/dataset/CorrectDataForm";
 
 export default function Dataset() {
   const queryClient = useQueryClient();
@@ -284,6 +285,14 @@ export default function Dataset() {
           </Button>
         </div>
       </div>
+
+      {selectedExp && (
+        <CorrectDataForm
+          experimentId={selectedExp}
+          experiment={experiment}
+          individuals={individuals}
+        />
+      )}
 
       {selectedExp && experiment && (
         <Card className="mb-6">
