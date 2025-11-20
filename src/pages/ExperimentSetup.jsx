@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Edit2 } from "lucide-react";
+import { Plus, Trash2, Edit2, Check, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import MatrixLayout from "../components/experiment/MatrixLayout";
@@ -22,6 +22,8 @@ export default function ExperimentSetup() {
   const [codeStartingNumber, setCodeStartingNumber] = useState(1);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState('');
+  const [editingLevel, setEditingLevel] = useState(null);
+  const [editingLevelValue, setEditingLevelValue] = useState('');
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', experimentId],
@@ -83,6 +85,26 @@ export default function ExperimentSetup() {
   const saveFactors = async () => {
     await base44.entities.Experiment.update(experimentId, { factors });
     alert('Factors saved!');
+  };
+
+  const startEditLevel = (factorIndex, levelIndex) => {
+    setEditingLevel({ factorIndex, levelIndex });
+    setEditingLevelValue(factors[factorIndex].levels[levelIndex]);
+  };
+
+  const saveEditLevel = () => {
+    if (editingLevel && editingLevelValue.trim()) {
+      const newFactors = [...factors];
+      newFactors[editingLevel.factorIndex].levels[editingLevel.levelIndex] = editingLevelValue.trim();
+      setFactors(newFactors);
+      setEditingLevel(null);
+      setEditingLevelValue('');
+    }
+  };
+
+  const cancelEditLevel = () => {
+    setEditingLevel(null);
+    setEditingLevelValue('');
   };
 
   const saveCodeSettings = async () => {
@@ -309,19 +331,58 @@ export default function ExperimentSetup() {
                     <label className="text-sm font-medium">Levels</label>
                     {factor.levels.map((level, lIndex) => (
                       <div key={lIndex} className="flex gap-2 mb-2">
-                        <Input
-                          value={level}
-                          onChange={(e) => updateLevel(fIndex, lIndex, e.target.value)}
-                          placeholder={`Level ${lIndex + 1}`}
-                        />
-                        {factor.levels.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeLevel(fIndex, lIndex)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                        {editingLevel?.factorIndex === fIndex && editingLevel?.levelIndex === lIndex ? (
+                          <>
+                            <Input
+                              value={editingLevelValue}
+                              onChange={(e) => setEditingLevelValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') saveEditLevel();
+                                if (e.key === 'Escape') cancelEditLevel();
+                              }}
+                              placeholder={`Level ${lIndex + 1}`}
+                              autoFocus
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={saveEditLevel}
+                            >
+                              <Check className="w-4 h-4 text-green-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={cancelEditLevel}
+                            >
+                              <X className="w-4 h-4 text-red-600" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Input
+                              value={level}
+                              onChange={(e) => updateLevel(fIndex, lIndex, e.target.value)}
+                              placeholder={`Level ${lIndex + 1}`}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => startEditLevel(fIndex, lIndex)}
+                              title="Edit level name"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            {factor.levels.length > 1 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeLevel(fIndex, lIndex)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </>
                         )}
                       </div>
                     ))}
