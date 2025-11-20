@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Edit2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import MatrixLayout from "../components/experiment/MatrixLayout";
@@ -13,13 +13,15 @@ import { useExperiment } from "../components/ExperimentContext";
 export default function ExperimentSetup() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { activeExperimentId } = useExperiment();
+  const { activeExperimentId, exitExperiment } = useExperiment();
   const experimentId = activeExperimentId;
 
   const [factors, setFactors] = useState([]);
   const [codeMode, setCodeMode] = useState('factor_based');
   const [codePrefix, setCodePrefix] = useState('ID-');
   const [codeStartingNumber, setCodeStartingNumber] = useState(1);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', experimentId],
@@ -42,6 +44,9 @@ export default function ExperimentSetup() {
     }
     if (experiment?.code_starting_number !== undefined) {
       setCodeStartingNumber(experiment.code_starting_number);
+    }
+    if (experiment?.experiment_name) {
+      setNewName(experiment.experiment_name);
     }
   }, [experiment]);
 
@@ -87,6 +92,57 @@ export default function ExperimentSetup() {
       code_starting_number: codeStartingNumber
     });
     alert('Code generation settings saved!');
+  };
+
+  const renameExperimentMutation = useMutation({
+    mutationFn: async (name) => {
+      await base44.entities.Experiment.update(experimentId, {
+        experiment_name: name
+      });
+      return name;
+    },
+    onSuccess: async (name) => {
+      queryClient.invalidateQueries(['experiment', experimentId]);
+      setIsEditingName(false);
+      alert('Experiment renamed!');
+    },
+  });
+
+  const deleteExperimentMutation = useMutation({
+    mutationFn: async () => {
+      const individuals = await base44.entities.Individual.filter({ experiment_id: experimentId });
+      for (const ind of individuals) {
+        const events = await base44.entities.ReproductionEvent.filter({ individual_id: ind.individual_id });
+        for (const event of events) {
+          await base44.entities.ReproductionEvent.delete(event.id);
+        }
+        await base44.entities.Individual.delete(ind.id);
+      }
+      const notes = await base44.entities.LabNote.filter({ experiment_id: experimentId });
+      for (const note of notes) {
+        await base44.entities.LabNote.delete(note.id);
+      }
+      await base44.entities.Experiment.delete(experimentId);
+    },
+    onSuccess: () => {
+      exitExperiment();
+      navigate(createPageUrl("Home"));
+      alert('Experiment deleted!');
+    },
+  });
+
+  const handleDeleteExperiment = () => {
+    if (window.confirm('Are you sure you want to delete this experiment? This will delete all individuals, reproduction events, and lab notes associated with it. This action cannot be undone.')) {
+      deleteExperimentMutation.mutate();
+    }
+  };
+
+  const handleRename = () => {
+    if (newName.trim() && newName !== experiment.experiment_name) {
+      renameExperimentMutation.mutate(newName.trim());
+    } else {
+      setIsEditingName(false);
+    }
   };
 
   const generateIndividualsMutation = useMutation({
@@ -149,7 +205,42 @@ export default function ExperimentSetup() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8">Experiment Setup</h1>
+      <div className="flex items-center justify-between mb-8">
+        {isEditingName ? (
+          <div className="flex items-center gap-2">
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="text-2xl font-bold h-12"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleRename();
+                if (e.key === 'Escape') setIsEditingName(false);
+              }}
+              autoFocus
+            />
+            <Button onClick={handleRename}>Save</Button>
+            <Button variant="outline" onClick={() => setIsEditingName(false)}>Cancel</Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold">{experiment.experiment_name}</h1>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => setIsEditingName(true)}
+            >
+              <Edit2 className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+        <Button 
+          variant="destructive" 
+          onClick={handleDeleteExperiment}
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Delete Experiment
+        </Button>
+      </div>
 
       {!experiment.individuals_generated ? (
         <>
