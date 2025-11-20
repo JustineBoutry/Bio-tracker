@@ -338,11 +338,12 @@ export default function DataEntry() {
 
       {selectedExp && (
         <Tabs defaultValue="reproduction">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="reproduction">Reproduction</TabsTrigger>
             <TabsTrigger value="death">Death</TabsTrigger>
             <TabsTrigger value="redness">Redness</TabsTrigger>
             <TabsTrigger value="infection">Infection</TabsTrigger>
+            <TabsTrigger value="custom">Custom Traits</TabsTrigger>
           </TabsList>
 
           <TabsContent value="reproduction">
@@ -584,8 +585,16 @@ export default function DataEntry() {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
-      )}
-    </div>
-  );
-}
+
+          <TabsContent value="custom">
+            <CustomTraitsEntry
+              experimentId={selectedExp}
+              experiment={experiment}
+              currentDate={currentDataEntryDate}
+            />
+          </TabsContent>
+          </Tabs>
+          )}
+          </div>
+          );
+          }

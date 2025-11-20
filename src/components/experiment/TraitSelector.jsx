@@ -6,10 +6,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, X } from "lucide-react";
 
 const PREDEFINED_TRAITS = [
-  { name: "Death", field_name: "death_date", data_type: "boolean", entry_mode: "individual" },
-  { name: "Reproduction", field_name: "reproduction", data_type: "numeric", entry_mode: "individual" },
+  { name: "Death", field_name: "death_date", data_type: "date", entry_mode: "individual", date_behavior: "fixed" },
+  { name: "First Reproduction", field_name: "first_reproduction_date", data_type: "date", entry_mode: "individual", date_behavior: "fixed" },
+  { name: "Last Reproduction", field_name: "last_reproduction_date", data_type: "date", entry_mode: "individual", date_behavior: "auto_updating" },
+  { name: "Cumulative Offspring", field_name: "cumulative_offspring", data_type: "numeric", entry_mode: "individual" },
   { name: "Redness", field_name: "red_signal_count", data_type: "numeric", entry_mode: "individual" },
-  { name: "Infection", field_name: "infected", data_type: "boolean", entry_mode: "batch" },
+  { name: "Infection Status", field_name: "infected", data_type: "boolean", entry_mode: "batch" },
+  { name: "Spores Count", field_name: "spores_count", data_type: "numeric", entry_mode: "individual" },
+  { name: "Spores Volume", field_name: "spores_volume", data_type: "text", entry_mode: "individual" },
 ];
 
 const ADDITIONAL_TRAITS = [
@@ -29,7 +33,8 @@ export default function TraitSelector({ selectedTraits, onChange }) {
     name: "",
     data_type: "numeric",
     entry_mode: "individual",
-    categories: []
+    categories: [],
+    date_behavior: "fixed"
   });
   const [categoryInput, setCategoryInput] = useState("");
 
@@ -54,7 +59,8 @@ export default function TraitSelector({ selectedTraits, onChange }) {
       field_name: fieldName,
       data_type: customTrait.data_type,
       entry_mode: customTrait.entry_mode,
-      categories: customTrait.data_type === 'category' ? customTrait.categories : undefined
+      categories: customTrait.data_type === 'category' ? customTrait.categories : undefined,
+      date_behavior: customTrait.data_type === 'date' ? customTrait.date_behavior : undefined
     };
     
     onChange([...selectedTraits, newTrait]);
@@ -63,7 +69,8 @@ export default function TraitSelector({ selectedTraits, onChange }) {
       name: "",
       data_type: "numeric",
       entry_mode: "individual",
-      categories: []
+      categories: [],
+      date_behavior: "fixed"
     });
   };
 
@@ -148,6 +155,7 @@ export default function TraitSelector({ selectedTraits, onChange }) {
                 <div className="text-sm text-gray-500">
                   {trait.data_type} • {trait.entry_mode} entry
                   {trait.categories && ` • ${trait.categories.length} categories`}
+                  {trait.date_behavior && ` • ${trait.date_behavior === 'fixed' ? 'fixed' : 'auto-updating'}`}
                 </div>
               </div>
               <Button
@@ -186,10 +194,31 @@ export default function TraitSelector({ selectedTraits, onChange }) {
                   onChange={(e) => setCustomTrait({ ...customTrait, data_type: e.target.value })}
                 >
                   <option value="numeric">Numeric value</option>
+                  <option value="text">Text</option>
                   <option value="boolean">Yes / No</option>
                   <option value="category">Category</option>
+                  <option value="date">Date</option>
                 </select>
               </div>
+
+              {customTrait.data_type === 'date' && (
+                <div>
+                  <label className="text-sm font-medium">Date behavior</label>
+                  <select
+                    className="w-full border rounded p-2"
+                    value={customTrait.date_behavior}
+                    onChange={(e) => setCustomTrait({ ...customTrait, date_behavior: e.target.value })}
+                  >
+                    <option value="fixed">Fixed date (set once, manually editable)</option>
+                    <option value="auto_updating">Auto-updating date (changes with events)</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {customTrait.date_behavior === 'fixed' 
+                      ? 'Examples: Date of death, First reproduction date' 
+                      : 'Examples: Last reproduction date (updates each time)'}
+                  </p>
+                </div>
+              )}
 
               {customTrait.data_type === 'category' && (
                 <div>
