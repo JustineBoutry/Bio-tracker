@@ -601,18 +601,13 @@ export default function Dataset() {
                           <td className="p-2">{ind.red_signal_count || 0}</td>
                           <td className="p-2">{ind.red_confirmed ? 'Yes' : 'No'}</td>
                           <td className="p-2">
-                            <div className="flex gap-1">
-                              <Button size="sm" variant="outline" onClick={() => startEdit(ind)}>
-                                Edit
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="ghost"
-                                onClick={() => handleDelete(ind.id)}
-                              >
-                                <Trash2 className="w-4 h-4 text-red-500" />
-                              </Button>
-                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => handleDelete(ind.id)}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
                           </td>
                         </>
                       )}
