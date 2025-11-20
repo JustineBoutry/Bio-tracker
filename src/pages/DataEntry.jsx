@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useExperiment } from "../components/ExperimentContext";
 import { Calendar } from "lucide-react";
+import CustomTraitsEntry from "../components/data-entry/CustomTraitsEntry";
 
 export default function DataEntry() {
   const queryClient = useQueryClient();
@@ -593,8 +594,8 @@ export default function DataEntry() {
               currentDate={currentDataEntryDate}
             />
           </TabsContent>
-          </Tabs>
-          )}
-          </div>
-          );
-          }
+        </Tabs>
+      )}
+    </div>
+  );
+}
