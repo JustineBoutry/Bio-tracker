@@ -13,6 +13,7 @@ export default function Dashboard() {
   const { activeExperimentId } = useExperiment();
   const selectedExp = activeExperimentId;
   const [categoryFilters, setCategoryFilters] = useState({});
+  const [selectedGraphFactors, setSelectedGraphFactors] = useState([]);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
