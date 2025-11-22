@@ -146,13 +146,14 @@ export default function IndividualHistory() {
 
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Infected</p>
-                  <Badge variant={selectedIndividual.infected ? "destructive" : "outline"}>
-                    {selectedIndividual.infected ? "Yes" : "No"}
+                  <Badge variant={selectedIndividual.infected === "confirmed Yes" ? "destructive" : "outline"}>
+                    {selectedIndividual.infected === "confirmed Yes" ? "Confirmed Yes" : 
+                     selectedIndividual.infected === "confirmed No" ? "Confirmed No" : "Not Tested"}
                   </Badge>
-                  {selectedIndividual.infected && (
+                  {selectedIndividual.infected === "confirmed Yes" && (
                     <div className="text-sm mt-1">
-                      <div>Spores: {selectedIndividual.spores_count}</div>
-                      <div>Volume: {selectedIndividual.spores_volume}</div>
+                      <div>Spores: {selectedIndividual.spores_count || 'N/A'}</div>
+                      <div>Volume: {selectedIndividual.spores_volume || 'N/A'}</div>
                     </div>
                   )}
                 </div>
@@ -242,8 +243,8 @@ export default function IndividualHistory() {
                 <div className="space-y-3">
                   {reproductionEvents.sort((a, b) => 
                     new Date(b.event_date) - new Date(a.event_date)
-                  ).map((event, idx) => (
-                    <div key={idx} className="flex items-center gap-4 p-3 border rounded">
+                  ).map((event) => (
+                    <div key={event.id} className="flex items-center gap-4 p-3 border rounded">
                       <Baby className="w-5 h-5 text-green-600" />
                       <div className="flex-1">
                         <p className="font-semibold">{format(new Date(event.event_date), 'MMM d, yyyy')}</p>
