@@ -340,7 +340,7 @@ export default function DataEntry() {
       <Tabs defaultValue="reproduction">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="reproduction">Reproduction</TabsTrigger>
-            <TabsTrigger value="death">Death</TabsTrigger>
+            <TabsTrigger value="death" className="bg-slate-500 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Death</TabsTrigger>
             <TabsTrigger value="redness">Redness</TabsTrigger>
             <TabsTrigger value="infection">Infection</TabsTrigger>
           </TabsList>
