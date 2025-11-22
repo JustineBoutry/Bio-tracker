@@ -122,7 +122,7 @@ export default function Dashboard() {
         aliveCount: group.aliveCount,
         deadCount: group.deadCount
       };
-    });
+    }).sort((a, b) => a.name.localeCompare(b.name));
   };
 
   const getFacetLevels = () => {
@@ -175,7 +175,7 @@ export default function Dashboard() {
           notTested: group.notTested
         }
       };
-    });
+    }).sort((a, b) => a.name.localeCompare(b.name));
   };
 
   const getInfectionFacetLevels = () => {
@@ -225,7 +225,7 @@ export default function Dashboard() {
         reproducedCount: group.reproduced,
         notReproducedCount: group.notReproduced
       };
-    });
+    }).sort((a, b) => a.name.localeCompare(b.name));
   };
 
   const getReproductionFacetLevels = () => {
