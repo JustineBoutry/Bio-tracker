@@ -8,7 +8,6 @@ import { Plus, Trash2, Edit2, Check, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import MatrixLayout from "../components/experiment/MatrixLayout";
-import TraitSelector from "../components/experiment/TraitSelector";
 import { useExperiment } from "../components/ExperimentContext";
 
 export default function ExperimentSetup() {
@@ -25,7 +24,6 @@ export default function ExperimentSetup() {
   const [newName, setNewName] = useState('');
   const [editingLevel, setEditingLevel] = useState(null);
   const [editingLevelValue, setEditingLevelValue] = useState('');
-  const [selectedTraits, setSelectedTraits] = useState([]);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', experimentId],
@@ -51,9 +49,6 @@ export default function ExperimentSetup() {
     }
     if (experiment?.experiment_name) {
       setNewName(experiment.experiment_name);
-    }
-    if (experiment?.traits) {
-      setSelectedTraits(experiment.traits);
     }
   }, [experiment]);
 
@@ -119,13 +114,6 @@ export default function ExperimentSetup() {
       code_starting_number: codeStartingNumber
     });
     alert('Code generation settings saved!');
-  };
-
-  const saveTraits = async () => {
-    await base44.entities.Experiment.update(experimentId, {
-      traits: selectedTraits
-    });
-    alert('Traits saved!');
   };
 
   const renameExperimentMutation = useMutation({
@@ -284,18 +272,6 @@ export default function ExperimentSetup() {
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>1. Code Generation Mode</CardTitle>
-              {experiment.traits && experiment.traits.length > 0 && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    document.getElementById('traits-section').scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="mt-2"
-                >
-                  Add more traits
-                </Button>
-              )}
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -336,24 +312,9 @@ export default function ExperimentSetup() {
             </CardContent>
           </Card>
 
-          <Card className="mb-6" id="traits-section">
-            <CardHeader>
-              <CardTitle>2. Select Traits to Measure</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TraitSelector
-                selectedTraits={selectedTraits}
-                onChange={setSelectedTraits}
-              />
-              <Button onClick={saveTraits} className="mt-4">
-                Save Traits
-              </Button>
-            </CardContent>
-          </Card>
-
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>3. Define Factors</CardTitle>
+              <CardTitle>2. Define Factors</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {factors.map((factor, fIndex) => (
