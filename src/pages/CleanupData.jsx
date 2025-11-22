@@ -115,8 +115,8 @@ export default function CleanupData() {
       notes.forEach(note => {
         const text = note.note.toLowerCase();
         if (text.includes('infection:')) {
-          // Extract IDs from parentheses
-          const match = text.match(/\(ids?:\s*([^)]+)\)/i);
+          // Extract IDs from original note (not lowercased) to preserve case
+          const match = note.note.match(/\(ids?:\s*([^)]+)\)/i);
           if (match) {
             const ids = match[1].split(/[\s,]+/).map(id => id.trim()).filter(Boolean);
             
