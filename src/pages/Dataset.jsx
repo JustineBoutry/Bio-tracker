@@ -79,7 +79,7 @@ export default function Dataset() {
             experiment_id: selectedExp,
             factors: {},
             alive: true,
-            infected: false,
+            infected: "not_tested",
             red_signal_count: 0,
             red_confirmed: false,
             cumulative_offspring: 0
@@ -93,7 +93,7 @@ export default function Dataset() {
             experiment_id: selectedExp,
             factors: {},
             alive: true,
-            infected: false,
+            infected: "not_tested",
             red_signal_count: 0,
             red_confirmed: false,
             cumulative_offspring: 0
