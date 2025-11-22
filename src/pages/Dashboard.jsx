@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [facetFactor, setFacetFactor] = useState(null);
   const [selectedInfectionGraphFactors, setSelectedInfectionGraphFactors] = useState([]);
   const [facetInfectionFactor, setFacetInfectionFactor] = useState(null);
+  const [excludeNotTested, setExcludeNotTested] = useState(false);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -43,7 +44,7 @@ export default function Dashboard() {
     total: filteredIndividuals.length,
     alive: filteredIndividuals.filter(i => i.alive).length,
     dead: filteredIndividuals.filter(i => !i.alive).length,
-    infected: filteredIndividuals.filter(i => i.infected).length,
+    infected: filteredIndividuals.filter(i => i.infected === "confirmed Yes").length,
     redConfirmed: filteredIndividuals.filter(i => i.red_confirmed).length,
     totalOffspring: filteredIndividuals.reduce((sum, i) => sum + (i.cumulative_offspring || 0), 0),
   };
@@ -143,7 +144,9 @@ export default function Dashboard() {
     });
 
     return Object.values(groups).map(group => {
-      const total = group.confirmedYes + group.confirmedNo + group.notTested;
+      const total = excludeNotTested 
+        ? group.confirmedYes + group.confirmedNo
+        : group.confirmedYes + group.confirmedNo + group.notTested;
       return {
         name: group.name,
         confirmedYes: total > 0 ? (group.confirmedYes / total) * 100 : 0,
@@ -467,6 +470,17 @@ export default function Dashboard() {
                     ))}
                   </select>
                 </div>
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="exclude-not-tested"
+                    checked={excludeNotTested}
+                    onCheckedChange={setExcludeNotTested}
+                  />
+                  <label htmlFor="exclude-not-tested" className="text-sm cursor-pointer">
+                    Exclude "Not Tested" from proportion calculation
+                  </label>
+                </div>
               </div>
 
               {selectedInfectionGraphFactors.length > 0 ? (
@@ -480,7 +494,7 @@ export default function Dashboard() {
                       <Legend />
                       <Bar dataKey="confirmedYes" stackId="a" fill="#ef4444" name="Confirmed Yes" />
                       <Bar dataKey="confirmedNo" stackId="a" fill="#22c55e" name="Confirmed No" />
-                      <Bar dataKey="notTested" stackId="a" fill="#9ca3af" name="Not Tested" />
+                      {!excludeNotTested && <Bar dataKey="notTested" stackId="a" fill="#9ca3af" name="Not Tested" />}
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -499,7 +513,7 @@ export default function Dashboard() {
                               <Legend />
                               <Bar dataKey="confirmedYes" stackId="a" fill="#ef4444" name="Confirmed Yes" />
                               <Bar dataKey="confirmedNo" stackId="a" fill="#22c55e" name="Confirmed No" />
-                              <Bar dataKey="notTested" stackId="a" fill="#9ca3af" name="Not Tested" />
+                              {!excludeNotTested && <Bar dataKey="notTested" stackId="a" fill="#9ca3af" name="Not Tested" />}
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
