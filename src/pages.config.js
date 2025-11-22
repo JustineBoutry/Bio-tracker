@@ -5,6 +5,7 @@ import IndividualHistory from './pages/IndividualHistory';
 import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
 import LabNotebook from './pages/LabNotebook';
+import CleanupData from './pages/CleanupData';
 import __Layout from './Layout.jsx';
 
 
@@ -16,6 +17,7 @@ export const PAGES = {
     "Dashboard": Dashboard,
     "Home": Home,
     "LabNotebook": LabNotebook,
+    "CleanupData": CleanupData,
 }
 
 export const pagesConfig = {

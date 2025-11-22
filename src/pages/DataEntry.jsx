@@ -62,6 +62,8 @@ export default function DataEntry() {
 
   const reproductionMutation = useMutation({
     mutationFn: async () => {
+      const eventsToCreate = [];
+      const individualsToUpdate = [];
       const ids = [];
       
       for (const id of selectedIds) {
@@ -69,19 +71,42 @@ export default function DataEntry() {
         const offspring = offspringCounts[id] || 0;
         ids.push(ind.individual_id);
         
-        await base44.entities.ReproductionEvent.create({
+        // Check if event already exists for this individual on this date
+        const existingEvents = await base44.entities.ReproductionEvent.filter({
+          individual_id: ind.individual_id,
+          event_date: currentDataEntryDate
+        });
+        
+        if (existingEvents.length > 0) {
+          throw new Error(`Reproduction event already exists for ${ind.individual_id} on ${currentDataEntryDate}`);
+        }
+        
+        eventsToCreate.push({
           experiment_id: selectedExp,
           individual_id: ind.individual_id,
           event_date: currentDataEntryDate,
           offspring_count: offspring
         });
         
-        await base44.entities.Individual.update(id, {
-          first_reproduction_date: ind.first_reproduction_date || currentDataEntryDate,
-          last_reproduction_date: currentDataEntryDate,
-          cumulative_offspring: (ind.cumulative_offspring || 0) + offspring
+        individualsToUpdate.push({
+          id: id,
+          data: {
+            first_reproduction_date: ind.first_reproduction_date || currentDataEntryDate,
+            last_reproduction_date: currentDataEntryDate,
+            cumulative_offspring: (ind.cumulative_offspring || 0) + offspring
+          }
         });
       }
+      
+      // Bulk create all events at once
+      await base44.entities.ReproductionEvent.bulkCreate(eventsToCreate);
+      
+      // Update all individuals in parallel
+      await Promise.all(
+        individualsToUpdate.map(({ id, data }) => 
+          base44.entities.Individual.update(id, data)
+        )
+      );
       
       return ids;
     },
@@ -102,6 +127,9 @@ export default function DataEntry() {
       setOffspringCounts({});
       setShowOffspringEntry(false);
       alert('Reproduction recorded!');
+    },
+    onError: (error) => {
+      alert('Error: ' + error.message);
     },
   });
 
@@ -406,8 +434,11 @@ export default function DataEntry() {
                     })}
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={() => reproductionMutation.mutate()}>
-                      Submit
+                    <Button 
+                      onClick={() => reproductionMutation.mutate()}
+                      disabled={reproductionMutation.isPending}
+                    >
+                      {reproductionMutation.isPending ? 'Submitting...' : 'Submit'}
                     </Button>
                     <Button 
                       variant="outline"
@@ -415,6 +446,7 @@ export default function DataEntry() {
                         setShowOffspringEntry(false);
                         setSelectedIds([]);
                       }}
+                      disabled={reproductionMutation.isPending}
                     >
                       Cancel
                     </Button>

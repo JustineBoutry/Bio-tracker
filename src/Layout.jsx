@@ -136,6 +136,16 @@ function LayoutContent({ children, currentPageName }) {
               >
                 Lab Notebook
               </Link>
+              <Link 
+                to={createPageUrl("CleanupData")} 
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  currentPageName === "CleanupData" 
+                    ? "bg-blue-100 text-blue-700 font-medium" 
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                Cleanup
+              </Link>
 
               <div className="h-6 w-px bg-gray-300 mx-2"></div>
 
