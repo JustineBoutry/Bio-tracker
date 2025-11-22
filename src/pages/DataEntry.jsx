@@ -62,15 +62,6 @@ export default function DataEntry() {
 
   const reproductionMutation = useMutation({
     mutationFn: async () => {
-      // Fetch all events for this date once (performance optimization)
-      const existingEvents = await base44.entities.ReproductionEvent.filter({
-        experiment_id: selectedExp,
-        event_date: currentDataEntryDate
-      });
-      const existingIndividualIds = new Set(existingEvents.map(e => e.individual_id));
-      
-      const eventsToCreate = [];
-      const individualsToUpdate = [];
       const ids = [];
       
       for (const id of selectedIds) {
@@ -78,37 +69,19 @@ export default function DataEntry() {
         const offspring = offspringCounts[id] || 0;
         ids.push(ind.individual_id);
         
-        // Check if event already exists
-        if (existingIndividualIds.has(ind.individual_id)) {
-          throw new Error(`Reproduction event already exists for ${ind.individual_id} on ${currentDataEntryDate}`);
-        }
-        
-        eventsToCreate.push({
+        await base44.entities.ReproductionEvent.create({
           experiment_id: selectedExp,
           individual_id: ind.individual_id,
           event_date: currentDataEntryDate,
           offspring_count: offspring
         });
         
-        individualsToUpdate.push({
-          id: id,
-          data: {
-            first_reproduction_date: ind.first_reproduction_date || currentDataEntryDate,
-            last_reproduction_date: currentDataEntryDate,
-            cumulative_offspring: (ind.cumulative_offspring || 0) + offspring
-          }
+        await base44.entities.Individual.update(id, {
+          first_reproduction_date: ind.first_reproduction_date || currentDataEntryDate,
+          last_reproduction_date: currentDataEntryDate,
+          cumulative_offspring: (ind.cumulative_offspring || 0) + offspring
         });
       }
-      
-      // Bulk create all events at once
-      await base44.entities.ReproductionEvent.bulkCreate(eventsToCreate);
-      
-      // Update all individuals in parallel
-      await Promise.all(
-        individualsToUpdate.map(({ id, data }) => 
-          base44.entities.Individual.update(id, data)
-        )
-      );
       
       return ids;
     },
@@ -129,9 +102,6 @@ export default function DataEntry() {
       setOffspringCounts({});
       setShowOffspringEntry(false);
       alert('Reproduction recorded!');
-    },
-    onError: (error) => {
-      alert('Error: ' + error.message);
     },
   });
 
@@ -215,7 +185,7 @@ export default function DataEntry() {
         if (inds.length > 0) {
           processedIds.push(individualId.trim());
           await base44.entities.Individual.update(inds[0].id, {
-            infected: "confirmed No",
+            infected: false,
             spores_count: null,
             spores_volume: null
           });
@@ -264,7 +234,7 @@ export default function DataEntry() {
         if (inds.length > 0) {
           processedIds.push(individualId);
           await base44.entities.Individual.update(inds[0].id, {
-            infected: "confirmed Yes",
+            infected: true,
             spores_volume: data.volume,
             spores_count: parseFloat(data.count) || 0
           });
@@ -436,11 +406,8 @@ export default function DataEntry() {
                     })}
                   </div>
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={() => reproductionMutation.mutate()}
-                      disabled={reproductionMutation.isPending}
-                    >
-                      {reproductionMutation.isPending ? 'Submitting...' : 'Submit'}
+                    <Button onClick={() => reproductionMutation.mutate()}>
+                      Submit
                     </Button>
                     <Button 
                       variant="outline"
@@ -448,7 +415,6 @@ export default function DataEntry() {
                         setShowOffspringEntry(false);
                         setSelectedIds([]);
                       }}
-                      disabled={reproductionMutation.isPending}
                     >
                       Cancel
                     </Button>
