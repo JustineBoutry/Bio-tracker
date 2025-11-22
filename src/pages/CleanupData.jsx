@@ -131,7 +131,7 @@ export default function CleanupData() {
 
       const corrections = [];
       for (const ind of individuals) {
-        const currentStatus = ind.infected;
+        const currentStatus = ind.infected || "not_tested";
         let suggestedStatus = null;
         let reason = '';
 
@@ -141,24 +141,26 @@ export default function CleanupData() {
 
         // Determine correct status based on notebook
         if (inInfectedNotebook) {
+          // Should be "confirmed Yes"
           if (currentStatus !== "confirmed Yes") {
             suggestedStatus = "confirmed Yes";
             reason = "Found in notebook as infected";
           }
         } else if (inNotInfectedNotebook) {
+          // Should be "confirmed No"
           if (currentStatus !== "confirmed No") {
             suggestedStatus = "confirmed No";
             reason = "Found in notebook as non-infected";
           }
         } else {
-          // Not in notebook - should be not_tested
-          if (currentStatus !== "not_tested" && currentStatus !== null && currentStatus !== undefined) {
+          // Not in notebook - should be "not_tested"
+          if (currentStatus !== "not_tested") {
             suggestedStatus = "not_tested";
-            reason = ind.alive ? "Alive, no infection record in notebook" : "Dead, no infection record in notebook";
+            reason = "No infection record in notebook";
           }
         }
 
-        if (suggestedStatus && suggestedStatus !== currentStatus) {
+        if (suggestedStatus) {
           corrections.push({
             id: ind.id,
             individual_id: ind.individual_id,
