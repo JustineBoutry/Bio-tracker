@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Skull, Droplet, Syringe, X } from "lucide-react";
+import { Users, Skull, Droplet, Syringe, X, Loader2 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -26,6 +26,8 @@ export default function Dashboard() {
   const [selectedReproductionBars, setSelectedReproductionBars] = useState([]);
   const [selectedSurvivalCurveFactors, setSelectedSurvivalCurveFactors] = useState([]);
   const [selectedSurvivalCurves, setSelectedSurvivalCurves] = useState([]);
+  const [logRankTestResult, setLogRankTestResult] = useState(null);
+  const [runningLogRank, setRunningLogRank] = useState(false);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -248,6 +250,7 @@ export default function Dashboard() {
     if (!experiment?.factors || selectedSurvivalCurveFactors.length === 0 || !experiment?.start_date) return [];
 
     const groups = {};
+    let maxDay = 0;
     
     allIndividuals.forEach(ind => {
       const groupKey = selectedSurvivalCurveFactors
@@ -261,25 +264,27 @@ export default function Dashboard() {
       if (ind.death_date) {
         const daysSinceStart = differenceInDays(new Date(ind.death_date), new Date(experiment.start_date));
         groups[groupKey].push({ day: daysSinceStart, event: 'death' });
+        maxDay = Math.max(maxDay, daysSinceStart);
       } else {
-        const daysSinceStart = differenceInDays(new Date(), new Date(experiment.start_date));
-        groups[groupKey].push({ day: daysSinceStart, event: 'censored' });
+        // For censored (alive), use the latest death date in the dataset
+        groups[groupKey].push({ day: null, event: 'censored' });
       }
     });
 
     // Calculate Kaplan-Meier survival curves
     const curves = {};
     Object.entries(groups).forEach(([groupName, events]) => {
-      events.sort((a, b) => a.day - b.day);
+      events.sort((a, b) => (a.day || maxDay) - (b.day || maxDay));
       
       let atRisk = events.length;
       let survival = 1.0;
       const curve = [{ day: 0, survival: 1.0, atRisk: atRisk }];
       
-      const uniqueDays = [...new Set(events.filter(e => e.event === 'death').map(e => e.day))].sort((a, b) => a - b);
+      const deathEvents = events.filter(e => e.event === 'death');
+      const uniqueDays = [...new Set(deathEvents.map(e => e.day))].sort((a, b) => a - b);
       
       uniqueDays.forEach(day => {
-        const deaths = events.filter(e => e.day === day && e.event === 'death').length;
+        const deaths = deathEvents.filter(e => e.day === day).length;
         if (deaths > 0) {
           survival = survival * (1 - deaths / atRisk);
           atRisk -= deaths;
@@ -287,16 +292,16 @@ export default function Dashboard() {
         }
       });
       
-      curves[groupName] = { curve, totalN: events.length };
+      curves[groupName] = { curve, totalN: events.length, events: events };
     });
 
-    // Merge all curves into time points
-    const allDays = new Set();
+    // Merge all curves into time points up to maxDay
+    const allDays = new Set([0]);
     Object.values(curves).forEach(({ curve }) => {
       curve.forEach(point => allDays.add(point.day));
     });
     
-    const sortedDays = Array.from(allDays).sort((a, b) => a - b);
+    const sortedDays = Array.from(allDays).sort((a, b) => a - b).filter(d => d <= maxDay);
     
     return sortedDays.map(day => {
       const point = { day };
@@ -314,6 +319,83 @@ export default function Dashboard() {
       setSelectedSurvivalCurves(selectedSurvivalCurves.filter(g => g !== groupName));
     } else {
       setSelectedSurvivalCurves([...selectedSurvivalCurves, groupName]);
+    }
+    setLogRankTestResult(null);
+  };
+
+  const runLogRankTest = async () => {
+    setRunningLogRank(true);
+    setLogRankTestResult(null);
+    
+    try {
+      // Prepare survival data for selected groups
+      const survivalData = {};
+      
+      allIndividuals.forEach(ind => {
+        const groupKey = selectedSurvivalCurveFactors
+          .map(factor => ind.factors?.[factor] || 'Unknown')
+          .join(' - ');
+        
+        if (!selectedSurvivalCurves.includes(groupKey)) return;
+        
+        if (!survivalData[groupKey]) {
+          survivalData[groupKey] = [];
+        }
+        
+        if (ind.death_date) {
+          const daysSinceStart = differenceInDays(new Date(ind.death_date), new Date(experiment.start_date));
+          survivalData[groupKey].push({ time: daysSinceStart, status: 1 });
+        } else {
+          // Find max death time for censoring
+          const maxDeathTime = allIndividuals
+            .filter(i => i.death_date)
+            .map(i => differenceInDays(new Date(i.death_date), new Date(experiment.start_date)))
+            .reduce((max, time) => Math.max(max, time), 0);
+          survivalData[groupKey].push({ time: maxDeathTime, status: 0 });
+        }
+      });
+
+      const prompt = `Perform a log-rank test on the following survival data:
+
+${Object.entries(survivalData).map(([group, data]) => 
+  `Group: ${group}
+  Data: ${JSON.stringify(data)}`
+).join('\n\n')}
+
+Instructions:
+1. Calculate the log-rank test statistic (chi-square)
+2. Calculate degrees of freedom (number of groups - 1)
+3. Calculate the p-value
+4. Provide interpretation
+
+Return in JSON format:
+{
+  "test_statistic": number,
+  "degrees_of_freedom": number,
+  "p_value": number,
+  "significant": boolean (p < 0.05),
+  "interpretation": "string describing the result"
+}`;
+
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            test_statistic: { type: "number" },
+            degrees_of_freedom: { type: "number" },
+            p_value: { type: "number" },
+            significant: { type: "boolean" },
+            interpretation: { type: "string" }
+          }
+        }
+      });
+
+      setLogRankTestResult(response);
+    } catch (error) {
+      alert('Log-rank test failed: ' + error.message);
+    } finally {
+      setRunningLogRank(false);
     }
   };
 
@@ -801,14 +883,62 @@ export default function Dashboard() {
                               ))}
                             </div>
                           </div>
-                          <Button
-                            onClick={async () => {
-                              alert('Log-rank test functionality - would compare survival curves between selected groups');
-                            }}
-                            className="w-full"
-                          >
-                            Run Log-Rank Test
-                          </Button>
+                          {!logRankTestResult ? (
+                            <Button
+                              onClick={runLogRankTest}
+                              disabled={runningLogRank}
+                              className="w-full"
+                            >
+                              {runningLogRank ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Running log-rank test...
+                                </>
+                              ) : (
+                                "Run Log-Rank Test"
+                              )}
+                            </Button>
+                          ) : (
+                            <div className="space-y-4">
+                              <div className="bg-white rounded p-4">
+                                <h3 className="font-semibold text-lg mb-3">Log-Rank Test Results</h3>
+
+                                <div className="grid grid-cols-2 gap-4 mb-3">
+                                  <div>
+                                    <p className="text-sm text-gray-600">Test Statistic (χ²)</p>
+                                    <p className="text-xl font-bold">
+                                      {logRankTestResult.test_statistic?.toFixed(4) || "N/A"}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-gray-600">P-value</p>
+                                    <p className={`text-xl font-bold ${logRankTestResult.p_value < 0.05 ? "text-red-600" : "text-gray-900"}`}>
+                                      {logRankTestResult.p_value?.toFixed(6) || "N/A"}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <p className="text-sm text-gray-600 mb-1">Degrees of Freedom</p>
+                                  <p className="font-semibold">{logRankTestResult.degrees_of_freedom}</p>
+                                </div>
+
+                                <div className={`mt-3 p-3 rounded ${logRankTestResult.significant ? "bg-red-50 text-red-800" : "bg-gray-50 text-gray-800"}`}>
+                                  {logRankTestResult.significant ? "✓ Statistically significant (p < 0.05)" : "Not significant (p ≥ 0.05)"}
+                                </div>
+
+                                {logRankTestResult.interpretation && (
+                                  <div className="mt-3 p-3 bg-blue-50 rounded text-sm text-blue-900">
+                                    {logRankTestResult.interpretation}
+                                  </div>
+                                )}
+                              </div>
+
+                              <Button variant="outline" onClick={() => setLogRankTestResult(null)} className="w-full">
+                                Run Another Test
+                              </Button>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     </div>
