@@ -1,20 +1,23 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Baby, Skull, Droplet, Syringe } from "lucide-react";
+import { Search, Baby, Skull, Droplet, Syringe, Edit2, Check, X } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useExperiment } from "../components/ExperimentContext";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function IndividualHistory() {
+  const queryClient = useQueryClient();
   const { activeExperimentId } = useExperiment();
   const selectedExp = activeExperimentId;
   const [individualId, setIndividualId] = useState('');
   const [selectedIndividual, setSelectedIndividual] = useState(null);
+  const [editingEventId, setEditingEventId] = useState(null);
+  const [editingValue, setEditingValue] = useState(0);
 
   const { data: individuals = [] } = useQuery({
     queryKey: ['individuals', selectedExp],
@@ -33,6 +36,55 @@ export default function IndividualHistory() {
   const handleSearch = () => {
     const found = individuals.find(i => i.individual_id === individualId);
     setSelectedIndividual(found || null);
+  };
+
+  const updateEventMutation = useMutation({
+    mutationFn: async ({ eventId, newCount }) => {
+      await base44.entities.ReproductionEvent.update(eventId, {
+        offspring_count: newCount
+      });
+
+      // Recalculate cumulative offspring for this individual
+      const allEvents = await base44.entities.ReproductionEvent.filter({ 
+        individual_id: selectedIndividual.individual_id 
+      });
+      const total = allEvents.map(e => 
+        e.id === eventId ? newCount : e.offspring_count
+      ).reduce((sum, count) => sum + (count || 0), 0);
+
+      await base44.entities.Individual.update(selectedIndividual.id, {
+        cumulative_offspring: total
+      });
+
+      return { eventId, newCount, total };
+    },
+    onSuccess: async ({ newCount, total }) => {
+      queryClient.invalidateQueries(['reproduction-events']);
+      queryClient.invalidateQueries(['individuals']);
+      
+      await base44.entities.LabNote.create({
+        experiment_id: selectedExp,
+        note: `Edited reproduction event for ${selectedIndividual.individual_id}, new total: ${total} offspring`,
+        timestamp: new Date().toISOString(),
+      });
+
+      setEditingEventId(null);
+      alert('Event updated!');
+    },
+  });
+
+  const startEdit = (event) => {
+    setEditingEventId(event.id);
+    setEditingValue(event.offspring_count);
+  };
+
+  const saveEdit = (eventId) => {
+    updateEventMutation.mutate({ eventId, newCount: editingValue });
+  };
+
+  const cancelEdit = () => {
+    setEditingEventId(null);
+    setEditingValue(0);
   };
 
   return (
@@ -195,8 +247,50 @@ export default function IndividualHistory() {
                       <Baby className="w-5 h-5 text-green-600" />
                       <div className="flex-1">
                         <p className="font-semibold">{format(new Date(event.event_date), 'MMM d, yyyy')}</p>
-                        <p className="text-sm text-gray-600">{event.offspring_count} offspring</p>
+                        {editingEventId === event.id ? (
+                          <div className="flex items-center gap-2 mt-1">
+                            <Input
+                              type="number"
+                              min="0"
+                              value={editingValue}
+                              onChange={(e) => setEditingValue(parseInt(e.target.value) || 0)}
+                              className="w-24"
+                              autoFocus
+                            />
+                            <span className="text-sm text-gray-600">offspring</span>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-600">{event.offspring_count} offspring</p>
+                        )}
                       </div>
+                      {editingEventId === event.id ? (
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => saveEdit(event.id)}
+                            disabled={updateEventMutation.isPending}
+                          >
+                            <Check className="w-4 h-4 text-green-600" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={cancelEdit}
+                            disabled={updateEventMutation.isPending}
+                          >
+                            <X className="w-4 h-4 text-red-600" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => startEdit(event)}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
