@@ -62,12 +62,9 @@ export default function DataEntry() {
 
   const reproductionMutation = useMutation({
     mutationFn: async () => {
-      const ids = [];
-
-      for (const id of selectedIds) {
+      const updates = selectedIds.map(async (id) => {
         const ind = individuals.find((i) => i.id === id);
         const offspring = offspringCounts[id] || 0;
-        ids.push(ind.individual_id);
 
         await base44.entities.ReproductionEvent.create({
           experiment_id: selectedExp,
@@ -81,9 +78,11 @@ export default function DataEntry() {
           last_reproduction_date: currentDataEntryDate,
           cumulative_offspring: (ind.cumulative_offspring || 0) + offspring
         });
-      }
 
-      return ids;
+        return ind.individual_id;
+      });
+
+      return await Promise.all(updates);
     },
     onSuccess: async (ids) => {
       queryClient.invalidateQueries(['individuals']);
@@ -107,18 +106,16 @@ export default function DataEntry() {
 
   const deathMutation = useMutation({
     mutationFn: async () => {
-      const ids = [];
-
-      for (const id of selectedIds) {
+      const updates = selectedIds.map(async (id) => {
         const ind = individuals.find((i) => i.id === id);
-        ids.push(ind.individual_id);
         await base44.entities.Individual.update(id, {
           alive: false,
           death_date: currentDataEntryDate
         });
-      }
+        return ind.individual_id;
+      });
 
-      return ids;
+      return await Promise.all(updates);
     },
     onSuccess: async (ids) => {
       queryClient.invalidateQueries(['individuals']);
@@ -140,19 +137,17 @@ export default function DataEntry() {
 
   const rednessMutation = useMutation({
     mutationFn: async () => {
-      const ids = [];
-
-      for (const id of selectedIds) {
+      const updates = selectedIds.map(async (id) => {
         const ind = individuals.find((i) => i.id === id);
-        ids.push(ind.individual_id);
         const newCount = (ind.red_signal_count || 0) + 1;
         await base44.entities.Individual.update(id, {
           red_signal_count: newCount,
           red_confirmed: newCount >= 3
         });
-      }
+        return ind.individual_id;
+      });
 
-      return ids;
+      return await Promise.all(updates);
     },
     onSuccess: async (ids) => {
       queryClient.invalidateQueries(['individuals']);
@@ -175,24 +170,25 @@ export default function DataEntry() {
   const markNonInfectedMutation = useMutation({
     mutationFn: async () => {
       const ids = nonInfectedIds.split(/[\s,]+/).filter((id) => id.trim());
-      const processedIds = [];
-
-      for (const individualId of ids) {
+      
+      const updates = ids.map(async (individualId) => {
         const inds = await base44.entities.Individual.filter({
           experiment_id: selectedExp,
           individual_id: individualId.trim()
         });
         if (inds.length > 0) {
-          processedIds.push(individualId.trim());
           await base44.entities.Individual.update(inds[0].id, {
             infected: "confirmed No",
             spores_count: null,
             spores_volume: null
           });
+          return individualId.trim();
         }
-      }
+        return null;
+      });
 
-      return processedIds;
+      const results = await Promise.all(updates);
+      return results.filter(id => id !== null);
     },
     onSuccess: async (ids) => {
       queryClient.invalidateQueries(['individuals']);
@@ -224,24 +220,24 @@ export default function DataEntry() {
 
   const saveInfectedMutation = useMutation({
     mutationFn: async () => {
-      const processedIds = [];
-
-      for (const [individualId, data] of Object.entries(sporeData)) {
+      const updates = Object.entries(sporeData).map(async ([individualId, data]) => {
         const inds = await base44.entities.Individual.filter({
           experiment_id: selectedExp,
           individual_id: individualId
         });
         if (inds.length > 0) {
-          processedIds.push(individualId);
           await base44.entities.Individual.update(inds[0].id, {
             infected: "confirmed Yes",
             spores_volume: data.volume,
             spores_count: parseFloat(data.count) || 0
           });
+          return individualId;
         }
-      }
+        return null;
+      });
 
-      return processedIds;
+      const results = await Promise.all(updates);
+      return results.filter(id => id !== null);
     },
     onSuccess: async (ids) => {
       queryClient.invalidateQueries(['individuals']);

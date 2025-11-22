@@ -125,17 +125,20 @@ export default function Dataset() {
 
   const deleteSelectedMutation = useMutation({
     mutationFn: async (ids) => {
-      const deletedIds = [];
-      for (const id of ids) {
+      const deleteTasks = ids.map(async (id) => {
         const ind = individuals.find(i => i.id === id);
-        deletedIds.push(ind.individual_id);
         const events = await base44.entities.ReproductionEvent.filter({ individual_id: ind.individual_id });
-        for (const event of events) {
-          await base44.entities.ReproductionEvent.delete(event.id);
-        }
+        
+        // Delete all events in parallel
+        await Promise.all(events.map(event => 
+          base44.entities.ReproductionEvent.delete(event.id)
+        ));
+        
         await base44.entities.Individual.delete(id);
-      }
-      return deletedIds;
+        return ind.individual_id;
+      });
+      
+      return await Promise.all(deleteTasks);
     },
     onSuccess: async (individual_ids) => {
       queryClient.invalidateQueries(['individuals']);
