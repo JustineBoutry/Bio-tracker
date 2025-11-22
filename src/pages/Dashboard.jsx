@@ -129,22 +129,26 @@ export default function Dashboard() {
         .join(' - ');
       
       if (!groups[groupKey]) {
-        groups[groupKey] = { name: groupKey, infectedCount: 0, notInfectedCount: 0 };
+        groups[groupKey] = { name: groupKey, confirmedYes: 0, confirmedNo: 0, notTested: 0 };
       }
       
-      if (ind.infected) {
-        groups[groupKey].infectedCount++;
+      const status = ind.infected || 'not_tested';
+      if (status === 'confirmed Yes') {
+        groups[groupKey].confirmedYes++;
+      } else if (status === 'confirmed No') {
+        groups[groupKey].confirmedNo++;
       } else {
-        groups[groupKey].notInfectedCount++;
+        groups[groupKey].notTested++;
       }
     });
 
     return Object.values(groups).map(group => {
-      const total = group.infectedCount + group.notInfectedCount;
+      const total = group.confirmedYes + group.confirmedNo + group.notTested;
       return {
         name: group.name,
-        infected: total > 0 ? (group.infectedCount / total) * 100 : 0,
-        notInfected: total > 0 ? (group.notInfectedCount / total) * 100 : 0,
+        confirmedYes: total > 0 ? (group.confirmedYes / total) * 100 : 0,
+        confirmedNo: total > 0 ? (group.confirmedNo / total) * 100 : 0,
+        notTested: total > 0 ? (group.notTested / total) * 100 : 0,
         total: total
       };
     });
@@ -474,8 +478,9 @@ export default function Dashboard() {
                       <YAxis label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
                       <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
                       <Legend />
-                      <Bar dataKey="infected" stackId="a" fill="#92400e" name="Infected" />
-                      <Bar dataKey="notInfected" stackId="a" fill="#d6d3d1" name="Not Infected" />
+                      <Bar dataKey="confirmedYes" stackId="a" fill="#ef4444" name="Confirmed Yes" />
+                      <Bar dataKey="confirmedNo" stackId="a" fill="#22c55e" name="Confirmed No" />
+                      <Bar dataKey="notTested" stackId="a" fill="#9ca3af" name="Not Tested" />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -492,8 +497,9 @@ export default function Dashboard() {
                               <YAxis fontSize={12} label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
                               <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
                               <Legend />
-                              <Bar dataKey="infected" stackId="a" fill="#92400e" name="Infected" />
-                              <Bar dataKey="notInfected" stackId="a" fill="#d6d3d1" name="Not Infected" />
+                              <Bar dataKey="confirmedYes" stackId="a" fill="#ef4444" name="Confirmed Yes" />
+                              <Bar dataKey="confirmedNo" stackId="a" fill="#22c55e" name="Confirmed No" />
+                              <Bar dataKey="notTested" stackId="a" fill="#9ca3af" name="Not Tested" />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
