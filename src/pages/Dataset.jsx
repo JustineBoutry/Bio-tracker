@@ -166,7 +166,7 @@ export default function Dataset() {
       last_reproduction_date: ind.last_reproduction_date || '',
       cumulative_offspring: ind.cumulative_offspring || 0,
       death_date: ind.death_date || '',
-      infected: ind.infected || false,
+      infected: ind.infected || "not_tested",
       spores_count: ind.spores_count || '',
       spores_volume: ind.spores_volume || '',
       red_signal_count: ind.red_signal_count || 0,
@@ -300,7 +300,7 @@ export default function Dataset() {
         ind.first_reproduction_date || '',
         ind.last_reproduction_date || '',
         ind.cumulative_offspring || 0,
-        ind.infected ? 'Yes' : 'No',
+        ind.infected || 'not tested',
         ind.spores_count || '',
         ind.spores_volume || '',
         ind.red_signal_count || 0,
@@ -607,12 +607,17 @@ export default function Dataset() {
                             />
                           </td>
                           <td className="p-2">
-                            <Checkbox
-                              checked={editValues.infected}
-                              onCheckedChange={(checked) => 
-                                setEditValues({ ...editValues, infected: checked })
+                            <select
+                              className="border rounded p-1"
+                              value={editValues.infected}
+                              onChange={(e) => 
+                                setEditValues({ ...editValues, infected: e.target.value })
                               }
-                            />
+                            >
+                              <option value="not_tested">not tested</option>
+                              <option value="confirmed No">confirmed No</option>
+                              <option value="confirmed Yes">confirmed Yes</option>
+                            </select>
                           </td>
                           <td className="p-2">
                             <Input
@@ -672,7 +677,7 @@ export default function Dataset() {
                           <td className="p-2">{ind.first_reproduction_date || '-'}</td>
                           <td className="p-2">{ind.last_reproduction_date || '-'}</td>
                           <td className="p-2">{ind.cumulative_offspring || 0}</td>
-                          <td className="p-2">{ind.infected ? 'Yes' : 'No'}</td>
+                          <td className="p-2">{ind.infected || 'not tested'}</td>
                           <td className="p-2">{ind.spores_count || '-'}</td>
                           <td className="p-2">{ind.spores_volume || '-'}</td>
                           <td className="p-2">{ind.red_signal_count || 0}</td>
