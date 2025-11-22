@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Skull, Droplet, Syringe } from "lucide-react";
+import { Users, Skull, Droplet, Syringe, X } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useExperiment } from "../components/ExperimentContext";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, LineChart, Line } from 'recharts';
 import StatisticalTestPanel from "../components/dashboard/StatisticalTestPanel";
 
 export default function Dashboard() {
@@ -24,6 +24,8 @@ export default function Dashboard() {
   const [selectedReproductionGraphFactors, setSelectedReproductionGraphFactors] = useState([]);
   const [facetReproductionFactor, setFacetReproductionFactor] = useState(null);
   const [selectedReproductionBars, setSelectedReproductionBars] = useState([]);
+  const [selectedSurvivalCurveFactors, setSelectedSurvivalCurveFactors] = useState([]);
+  const [selectedSurvivalCurves, setSelectedSurvivalCurves] = useState([]);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -81,6 +83,14 @@ export default function Dashboard() {
 
   const toggleReproductionGraphFactor = (factorName) => {
     setSelectedReproductionGraphFactors(prev => 
+      prev.includes(factorName) 
+        ? prev.filter(f => f !== factorName)
+        : [...prev, factorName]
+    );
+  };
+
+  const toggleSurvivalCurveFactor = (factorName) => {
+    setSelectedSurvivalCurveFactors(prev => 
       prev.includes(factorName) 
         ? prev.filter(f => f !== factorName)
         : [...prev, factorName]
@@ -234,12 +244,86 @@ export default function Dashboard() {
     return factor?.levels || [];
   };
 
+  const getSurvivalCurveData = () => {
+    if (!experiment?.factors || selectedSurvivalCurveFactors.length === 0 || !experiment?.start_date) return [];
+
+    const groups = {};
+    
+    allIndividuals.forEach(ind => {
+      const groupKey = selectedSurvivalCurveFactors
+        .map(factor => ind.factors?.[factor] || 'Unknown')
+        .join(' - ');
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      
+      if (ind.death_date) {
+        const daysSinceStart = differenceInDays(new Date(ind.death_date), new Date(experiment.start_date));
+        groups[groupKey].push({ day: daysSinceStart, event: 'death' });
+      } else {
+        const daysSinceStart = differenceInDays(new Date(), new Date(experiment.start_date));
+        groups[groupKey].push({ day: daysSinceStart, event: 'censored' });
+      }
+    });
+
+    // Calculate Kaplan-Meier survival curves
+    const curves = {};
+    Object.entries(groups).forEach(([groupName, events]) => {
+      events.sort((a, b) => a.day - b.day);
+      
+      let atRisk = events.length;
+      let survival = 1.0;
+      const curve = [{ day: 0, survival: 1.0, atRisk: atRisk }];
+      
+      const uniqueDays = [...new Set(events.filter(e => e.event === 'death').map(e => e.day))].sort((a, b) => a - b);
+      
+      uniqueDays.forEach(day => {
+        const deaths = events.filter(e => e.day === day && e.event === 'death').length;
+        if (deaths > 0) {
+          survival = survival * (1 - deaths / atRisk);
+          atRisk -= deaths;
+          curve.push({ day, survival, atRisk, deaths });
+        }
+      });
+      
+      curves[groupName] = { curve, totalN: events.length };
+    });
+
+    // Merge all curves into time points
+    const allDays = new Set();
+    Object.values(curves).forEach(({ curve }) => {
+      curve.forEach(point => allDays.add(point.day));
+    });
+    
+    const sortedDays = Array.from(allDays).sort((a, b) => a - b);
+    
+    return sortedDays.map(day => {
+      const point = { day };
+      Object.entries(curves).forEach(([groupName, { curve }]) => {
+        const lastPoint = curve.filter(p => p.day <= day).slice(-1)[0];
+        point[groupName] = lastPoint ? lastPoint.survival * 100 : 100;
+      });
+      return point;
+    });
+  };
+
+  const handleSurvivalCurveClick = (groupName) => {
+    const existing = selectedSurvivalCurves.find(g => g === groupName);
+    if (existing) {
+      setSelectedSurvivalCurves(selectedSurvivalCurves.filter(g => g !== groupName));
+    } else {
+      setSelectedSurvivalCurves([...selectedSurvivalCurves, groupName]);
+    }
+  };
+
   const chartData = !facetFactor ? getChartData() : null;
   const facetLevels = getFacetLevels();
   const infectionChartData = !facetInfectionFactor ? getInfectionChartData() : null;
   const infectionFacetLevels = getInfectionFacetLevels();
   const reproductionChartData = !facetReproductionFactor ? getReproductionChartData() : null;
   const reproductionFacetLevels = getReproductionFacetLevels();
+  const survivalCurveData = getSurvivalCurveData();
 
   const handleInfectionBarClick = (data) => {
     if (!data) return;
@@ -622,6 +706,117 @@ export default function Dashboard() {
               ) : (
                 <div className="text-center py-12 text-gray-500">
                   Select at least one factor to display the chart
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Survival Curves</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6 space-y-4">
+                <div>
+                  <p className="text-sm font-medium mb-2">Select factors to group by:</p>
+                  <div className="flex flex-wrap gap-4">
+                    {experiment.factors?.map(factor => (
+                      <div key={factor.name} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`survival-curve-${factor.name}`}
+                          checked={selectedSurvivalCurveFactors.includes(factor.name)}
+                          onCheckedChange={() => toggleSurvivalCurveFactor(factor.name)}
+                        />
+                        <label htmlFor={`survival-curve-${factor.name}`} className="text-sm cursor-pointer">
+                          {factor.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {selectedSurvivalCurveFactors.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <LineChart data={survivalCurveData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="day" 
+                        label={{ value: 'Days Since Start', position: 'insideBottom', offset: -5 }}
+                      />
+                      <YAxis 
+                        label={{ value: 'Survival (%)', angle: -90, position: 'insideLeft' }}
+                        domain={[0, 100]}
+                      />
+                      <Tooltip formatter={(value) => `${value.toFixed(1)}%`} />
+                      <Legend 
+                        onClick={(e) => handleSurvivalCurveClick(e.value)}
+                        wrapperStyle={{ cursor: 'pointer' }}
+                      />
+                      {Object.keys(survivalCurveData[0] || {})
+                        .filter(key => key !== 'day')
+                        .map((groupName, idx) => {
+                          const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+                          const isSelected = selectedSurvivalCurves.includes(groupName);
+                          return (
+                            <Line
+                              key={groupName}
+                              type="stepAfter"
+                              dataKey={groupName}
+                              stroke={colors[idx % colors.length]}
+                              strokeWidth={isSelected ? 3 : 2}
+                              opacity={selectedSurvivalCurves.length > 0 && !isSelected ? 0.3 : 1}
+                              dot={false}
+                              name={groupName}
+                            />
+                          );
+                        })}
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <div className="mt-4 text-sm text-gray-600 text-center">
+                    Click on legend items to select groups for log-rank testing
+                  </div>
+                  {selectedSurvivalCurves.length >= 2 && (
+                    <div className="mt-4">
+                      <Card className="border-blue-200 bg-blue-50">
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-blue-800">
+                              Log-Rank Test ({selectedSurvivalCurves.length} groups selected)
+                            </CardTitle>
+                            <Button variant="ghost" size="sm" onClick={() => setSelectedSurvivalCurves([])}>
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="bg-white rounded p-3 mb-4">
+                            <p className="text-sm font-medium mb-2">Selected Groups:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedSurvivalCurves.map((group, idx) => (
+                                <div key={idx} className="px-3 py-1 bg-blue-100 rounded text-sm">
+                                  {group}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <Button
+                            onClick={async () => {
+                              alert('Log-rank test functionality - would compare survival curves between selected groups');
+                            }}
+                            className="w-full"
+                          >
+                            Run Log-Rank Test
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  Select at least one factor to display survival curves
                 </div>
               )}
             </CardContent>
