@@ -3,8 +3,9 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, Trash2, CheckCircle } from "lucide-react";
+import { AlertTriangle, Trash2, CheckCircle, Edit2, X } from "lucide-react";
 import { useExperiment } from "../components/ExperimentContext";
+import { Input } from "@/components/ui/input";
 
 export default function CleanupData() {
   const queryClient = useQueryClient();
@@ -12,6 +13,9 @@ export default function CleanupData() {
   const [duplicatesFound, setDuplicatesFound] = useState([]);
   const [scanning, setScanning] = useState(false);
   const [cleaned, setCleaned] = useState(false);
+  const [highOffspringEvents, setHighOffspringEvents] = useState([]);
+  const [scanningHighOffspring, setScanningHighOffspring] = useState(false);
+  const [eventActions, setEventActions] = useState({});
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', activeExperimentId],
@@ -60,6 +64,94 @@ export default function CleanupData() {
       setScanning(false);
     }
   };
+
+  const scanForHighOffspring = async () => {
+    setScanningHighOffspring(true);
+    try {
+      const events = await base44.entities.ReproductionEvent.filter({ 
+        experiment_id: activeExperimentId 
+      });
+
+      const highEvents = events.filter(e => e.offspring_count > 15);
+      setHighOffspringEvents(highEvents);
+      
+      // Initialize actions as "ignore" for all
+      const actions = {};
+      highEvents.forEach(e => {
+        actions[e.id] = { action: 'ignore', newValue: e.offspring_count };
+      });
+      setEventActions(actions);
+    } catch (error) {
+      alert('Error scanning: ' + error.message);
+    } finally {
+      setScanningHighOffspring(false);
+    }
+  };
+
+  const setEventAction = (eventId, action, newValue = null) => {
+    setEventActions(prev => ({
+      ...prev,
+      [eventId]: { action, newValue: newValue ?? prev[eventId]?.newValue }
+    }));
+  };
+
+  const processHighOffspringMutation = useMutation({
+    mutationFn: async () => {
+      const affectedIndividuals = new Set();
+      let edited = 0;
+      let deleted = 0;
+
+      for (const event of highOffspringEvents) {
+        const action = eventActions[event.id];
+        
+        if (action.action === 'edit') {
+          await base44.entities.ReproductionEvent.update(event.id, {
+            offspring_count: action.newValue
+          });
+          affectedIndividuals.add(event.individual_id);
+          edited++;
+        } else if (action.action === 'delete') {
+          await base44.entities.ReproductionEvent.delete(event.id);
+          affectedIndividuals.add(event.individual_id);
+          deleted++;
+        }
+      }
+
+      // Recalculate cumulative_offspring for affected individuals
+      for (const individual_id of affectedIndividuals) {
+        const allEvents = await base44.entities.ReproductionEvent.filter({ individual_id });
+        const total = allEvents.reduce((sum, e) => sum + (e.offspring_count || 0), 0);
+        
+        const sortedEvents = allEvents.sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+        const firstDate = sortedEvents.length > 0 ? sortedEvents[0].event_date : null;
+        const lastDate = sortedEvents.length > 0 ? sortedEvents[sortedEvents.length - 1].event_date : null;
+
+        const individuals = await base44.entities.Individual.filter({ individual_id });
+        if (individuals.length > 0) {
+          await base44.entities.Individual.update(individuals[0].id, {
+            cumulative_offspring: total,
+            first_reproduction_date: firstDate,
+            last_reproduction_date: lastDate
+          });
+        }
+      }
+
+      return { edited, deleted, individualsFixed: affectedIndividuals.size };
+    },
+    onSuccess: async (result) => {
+      queryClient.invalidateQueries(['individuals']);
+      
+      await base44.entities.LabNote.create({
+        experiment_id: activeExperimentId,
+        note: `High offspring cleanup: edited ${result.edited} events, deleted ${result.deleted} events, recalculated ${result.individualsFixed} individuals`,
+        timestamp: new Date().toISOString(),
+      });
+
+      setHighOffspringEvents([]);
+      setEventActions({});
+      alert(`Cleanup complete! Edited ${result.edited}, deleted ${result.deleted}, fixed ${result.individualsFixed} individuals.`);
+    },
+  });
 
   const cleanupMutation = useMutation({
     mutationFn: async () => {
@@ -197,6 +289,81 @@ export default function CleanupData() {
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-gray-600">Scan for duplicates to see results</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="mb-6 mt-8">
+        <CardHeader>
+          <CardTitle>Scan for High Offspring Events (&gt;15)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600">
+            This tool will scan for reproduction events with more than 15 offspring. 
+            You can choose to edit, delete, or ignore each event.
+          </p>
+          <Button 
+            onClick={scanForHighOffspring}
+            disabled={scanningHighOffspring}
+          >
+            {scanningHighOffspring ? 'Scanning...' : 'Scan for High Offspring'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {highOffspringEvents.length > 0 && (
+        <Card className="mb-6 border-orange-200 bg-orange-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-800">
+              <AlertTriangle className="w-5 h-5" />
+              Found {highOffspringEvents.length} Events with &gt;15 Offspring
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="max-h-96 overflow-auto space-y-2">
+              {highOffspringEvents.map((event) => (
+                <div key={event.id} className="bg-white border border-orange-200 rounded p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="font-mono font-semibold">{event.individual_id}</div>
+                      <div className="text-sm text-gray-600">
+                        Date: {event.event_date} • Offspring: {event.offspring_count}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="border rounded p-1 text-sm"
+                        value={eventActions[event.id]?.action || 'ignore'}
+                        onChange={(e) => setEventAction(event.id, e.target.value)}
+                      >
+                        <option value="ignore">Ignore</option>
+                        <option value="edit">Edit</option>
+                        <option value="delete">Delete</option>
+                      </select>
+                      
+                      {eventActions[event.id]?.action === 'edit' && (
+                        <Input
+                          type="number"
+                          min="0"
+                          value={eventActions[event.id]?.newValue || 0}
+                          onChange={(e) => setEventAction(event.id, 'edit', parseInt(e.target.value) || 0)}
+                          className="w-20"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Button 
+              onClick={() => processHighOffspringMutation.mutate()}
+              disabled={processHighOffspringMutation.isPending || 
+                Object.values(eventActions).every(a => a.action === 'ignore')}
+            >
+              {processHighOffspringMutation.isPending ? 'Processing...' : 'Apply Changes'}
+            </Button>
           </CardContent>
         </Card>
       )}
