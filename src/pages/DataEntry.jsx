@@ -185,7 +185,7 @@ export default function DataEntry() {
         if (inds.length > 0) {
           processedIds.push(individualId.trim());
           await base44.entities.Individual.update(inds[0].id, {
-            infected: false,
+            infected: "confirmed No",
             spores_count: null,
             spores_volume: null
           });
@@ -234,7 +234,7 @@ export default function DataEntry() {
         if (inds.length > 0) {
           processedIds.push(individualId);
           await base44.entities.Individual.update(inds[0].id, {
-            infected: true,
+            infected: "confirmed Yes",
             spores_volume: data.volume,
             spores_count: parseFloat(data.count) || 0
           });
