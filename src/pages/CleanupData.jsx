@@ -207,11 +207,12 @@ export default function CleanupData() {
 
   const fixInfectionMutation = useMutation({
     mutationFn: async () => {
-      for (const correction of infectionPreview.corrections) {
-        await base44.entities.Individual.update(correction.id, {
+      const updates = infectionPreview.corrections.map(correction =>
+        base44.entities.Individual.update(correction.id, {
           infected: correction.suggested
-        });
-      }
+        })
+      );
+      await Promise.all(updates);
       return infectionPreview.corrections.length;
     },
     onSuccess: async (count) => {
@@ -234,7 +235,7 @@ export default function CleanupData() {
       let edited = 0;
       let deleted = 0;
 
-      for (const event of highOffspringEvents) {
+      const eventUpdates = highOffspringEvents.map(async (event) => {
         const action = eventActions[event.id];
         
         if (action.action === 'edit') {
@@ -248,10 +249,12 @@ export default function CleanupData() {
           affectedIndividuals.add(event.individual_id);
           deleted++;
         }
-      }
+      });
 
-      // Recalculate cumulative_offspring for affected individuals
-      for (const individual_id of affectedIndividuals) {
+      await Promise.all(eventUpdates);
+
+      // Recalculate cumulative_offspring for affected individuals in parallel
+      const individualUpdates = Array.from(affectedIndividuals).map(async (individual_id) => {
         const allEvents = await base44.entities.ReproductionEvent.filter({ individual_id });
         const total = allEvents.reduce((sum, e) => sum + (e.offspring_count || 0), 0);
         
@@ -267,7 +270,9 @@ export default function CleanupData() {
             last_reproduction_date: lastDate
           });
         }
-      }
+      });
+
+      await Promise.all(individualUpdates);
 
       return { edited, deleted, individualsFixed: affectedIndividuals.size };
     },
@@ -290,20 +295,21 @@ export default function CleanupData() {
     mutationFn: async () => {
       const affectedIndividuals = new Set();
 
-      for (const duplicate of duplicatesFound) {
+      const deletions = duplicatesFound.map(async (duplicate) => {
         // Keep the first event, delete the rest
-        const toKeep = duplicate.events[0];
         const toDelete = duplicate.events.slice(1);
 
-        for (const event of toDelete) {
-          await base44.entities.ReproductionEvent.delete(event.id);
-        }
+        await Promise.all(toDelete.map(event => 
+          base44.entities.ReproductionEvent.delete(event.id)
+        ));
 
         affectedIndividuals.add(duplicate.individual_id);
-      }
+      });
 
-      // Recalculate cumulative_offspring for affected individuals
-      for (const individual_id of affectedIndividuals) {
+      await Promise.all(deletions);
+
+      // Recalculate cumulative_offspring for affected individuals in parallel
+      const individualUpdates = Array.from(affectedIndividuals).map(async (individual_id) => {
         const allEvents = await base44.entities.ReproductionEvent.filter({ individual_id });
         const total = allEvents.reduce((sum, e) => sum + (e.offspring_count || 0), 0);
         
@@ -319,7 +325,9 @@ export default function CleanupData() {
             last_reproduction_date: lastDate
           });
         }
-      }
+      });
+
+      await Promise.all(individualUpdates);
 
       return { 
         duplicatesRemoved: duplicatesFound.reduce((sum, d) => sum + (d.count - 1), 0),
