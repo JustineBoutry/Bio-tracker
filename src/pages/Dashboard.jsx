@@ -413,7 +413,19 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <div className="text-3xl font-bold text-purple-600">{stats.infected}</div>
+                  <div>
+                    <div className="text-3xl font-bold text-purple-600">{stats.infected}</div>
+                    <div className="text-sm text-gray-500">
+                      {(() => {
+                        const confirmedYes = filteredIndividuals.filter(i => i.infected === "confirmed Yes").length;
+                        const confirmedNo = filteredIndividuals.filter(i => i.infected === "confirmed No").length;
+                        const totalConfirmed = confirmedYes + confirmedNo;
+                        return totalConfirmed > 0 && stats.total > 0 
+                          ? `${((totalConfirmed / stats.total) * 100).toFixed(1)}% tested`
+                          : '0% tested';
+                      })()}
+                    </div>
+                  </div>
                   <Syringe className="w-8 h-8 text-purple-500" />
                 </div>
               </CardContent>
