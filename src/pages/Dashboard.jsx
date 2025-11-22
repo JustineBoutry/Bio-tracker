@@ -291,8 +291,8 @@ export default function Dashboard() {
       setSelectedReproductionBars([...selectedReproductionBars, {
         name: barName,
         data: {
-          reproduced: data.rawCounts.reproduced,
-          notReproduced: data.rawCounts.notReproduced,
+          reproduced: data.reproducedCount || data.rawCounts?.reproduced || 0,
+          notReproduced: data.notReproducedCount || data.rawCounts?.notReproduced || 0,
           total: data.total
         }
       }]);
