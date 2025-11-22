@@ -7,7 +7,8 @@ import { format, differenceInDays } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useExperiment } from "../components/ExperimentContext";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import StatisticalTestPanel from "../components/dashboard/StatisticalTestPanel";
 
 export default function Dashboard() {
   const { activeExperimentId } = useExperiment();
@@ -18,6 +19,8 @@ export default function Dashboard() {
   const [selectedInfectionGraphFactors, setSelectedInfectionGraphFactors] = useState([]);
   const [facetInfectionFactor, setFacetInfectionFactor] = useState(null);
   const [excludeNotTested, setExcludeNotTested] = useState(false);
+  const [selectedInfectionBars, setSelectedInfectionBars] = useState([]);
+  const [selectedSurvivalBars, setSelectedSurvivalBars] = useState([]);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -104,7 +107,9 @@ export default function Dashboard() {
         name: group.name,
         alive: total > 0 ? (group.aliveCount / total) * 100 : 0,
         dead: total > 0 ? (group.deadCount / total) * 100 : 0,
-        total: total
+        total: total,
+        aliveCount: group.aliveCount,
+        deadCount: group.deadCount
       };
     });
   };
@@ -152,7 +157,12 @@ export default function Dashboard() {
         confirmedYes: total > 0 ? (group.confirmedYes / total) * 100 : 0,
         confirmedNo: total > 0 ? (group.confirmedNo / total) * 100 : 0,
         notTested: total > 0 ? (group.notTested / total) * 100 : 0,
-        total: total
+        total: total,
+        rawCounts: {
+          confirmedYes: group.confirmedYes,
+          confirmedNo: group.confirmedNo,
+          notTested: group.notTested
+        }
       };
     });
   };
@@ -167,6 +177,45 @@ export default function Dashboard() {
   const facetLevels = getFacetLevels();
   const infectionChartData = !facetInfectionFactor ? getInfectionChartData() : null;
   const infectionFacetLevels = getInfectionFacetLevels();
+
+  const handleInfectionBarClick = (data) => {
+    if (!data) return;
+    const barName = data.name;
+    const existing = selectedInfectionBars.find(b => b.name === barName);
+    
+    if (existing) {
+      setSelectedInfectionBars(selectedInfectionBars.filter(b => b.name !== barName));
+    } else {
+      setSelectedInfectionBars([...selectedInfectionBars, {
+        name: barName,
+        data: {
+          confirmedYes: data.rawCounts.confirmedYes,
+          confirmedNo: data.rawCounts.confirmedNo,
+          notTested: data.rawCounts.notTested,
+          total: data.total
+        }
+      }]);
+    }
+  };
+
+  const handleSurvivalBarClick = (data) => {
+    if (!data) return;
+    const barName = data.name;
+    const existing = selectedSurvivalBars.find(b => b.name === barName);
+    
+    if (existing) {
+      setSelectedSurvivalBars(selectedSurvivalBars.filter(b => b.name !== barName));
+    } else {
+      setSelectedSurvivalBars([...selectedSurvivalBars, {
+        name: barName,
+        data: {
+          alive: data.aliveCount || Math.round((data.alive / 100) * data.total),
+          dead: data.deadCount || Math.round((data.dead / 100) * data.total),
+          total: data.total
+        }
+      }]);
+    }
+  };
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -382,17 +431,47 @@ export default function Dashboard() {
 
               {selectedGraphFactors.length > 0 ? (
                 !facetFactor ? (
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                      <YAxis label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
-                      <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
-                      <Legend />
-                      <Bar dataKey="alive" stackId="a" fill="#22c55e" name="Alive" />
-                      <Bar dataKey="dead" stackId="a" fill="#6b7280" name="Dead" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={chartData} onClick={(e) => e?.activePayload?.[0] && handleSurvivalBarClick(e.activePayload[0].payload)}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                        <YAxis label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
+                        <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
+                        <Legend />
+                        <Bar dataKey="alive" stackId="a" name="Alive" cursor="pointer">
+                          {chartData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={selectedSurvivalBars.find(b => b.name === entry.name) ? "#16a34a" : "#22c55e"}
+                              opacity={selectedSurvivalBars.length > 0 && !selectedSurvivalBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                            />
+                          ))}
+                        </Bar>
+                        <Bar dataKey="dead" stackId="a" name="Dead" cursor="pointer">
+                          {chartData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={selectedSurvivalBars.find(b => b.name === entry.name) ? "#4b5563" : "#6b7280"}
+                              opacity={selectedSurvivalBars.length > 0 && !selectedSurvivalBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div className="mt-4 text-sm text-gray-600 text-center">
+                      Click on bars to select groups for statistical testing
+                    </div>
+                    {selectedSurvivalBars.length > 0 && (
+                      <div className="mt-4">
+                        <StatisticalTestPanel
+                          selectedBars={selectedSurvivalBars}
+                          onClear={() => setSelectedSurvivalBars([])}
+                          chartType="survival"
+                        />
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {facetLevels.map(level => {
@@ -485,18 +564,58 @@ export default function Dashboard() {
 
               {selectedInfectionGraphFactors.length > 0 ? (
                 !facetInfectionFactor ? (
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={infectionChartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                      <YAxis label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
-                      <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
-                      <Legend />
-                      <Bar dataKey="confirmedYes" stackId="a" fill="#ef4444" name="Confirmed Yes" />
-                      <Bar dataKey="confirmedNo" stackId="a" fill="#22c55e" name="Confirmed No" />
-                      {!excludeNotTested && <Bar dataKey="notTested" stackId="a" fill="#9ca3af" name="Not Tested" />}
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={infectionChartData} onClick={(e) => e?.activePayload?.[0] && handleInfectionBarClick(e.activePayload[0].payload)}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                        <YAxis label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
+                        <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
+                        <Legend />
+                        <Bar dataKey="confirmedYes" stackId="a" name="Confirmed Yes" cursor="pointer">
+                          {infectionChartData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={selectedInfectionBars.find(b => b.name === entry.name) ? "#dc2626" : "#ef4444"}
+                              opacity={selectedInfectionBars.length > 0 && !selectedInfectionBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                            />
+                          ))}
+                        </Bar>
+                        <Bar dataKey="confirmedNo" stackId="a" name="Confirmed No" cursor="pointer">
+                          {infectionChartData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={selectedInfectionBars.find(b => b.name === entry.name) ? "#16a34a" : "#22c55e"}
+                              opacity={selectedInfectionBars.length > 0 && !selectedInfectionBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                            />
+                          ))}
+                        </Bar>
+                        {!excludeNotTested && (
+                          <Bar dataKey="notTested" stackId="a" name="Not Tested" cursor="pointer">
+                            {infectionChartData.map((entry, index) => (
+                              <Cell 
+                                key={`cell-${index}`} 
+                                fill={selectedInfectionBars.find(b => b.name === entry.name) ? "#6b7280" : "#9ca3af"}
+                                opacity={selectedInfectionBars.length > 0 && !selectedInfectionBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                              />
+                            ))}
+                          </Bar>
+                        )}
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div className="mt-4 text-sm text-gray-600 text-center">
+                      Click on bars to select groups for statistical testing
+                    </div>
+                    {selectedInfectionBars.length > 0 && (
+                      <div className="mt-4">
+                        <StatisticalTestPanel
+                          selectedBars={selectedInfectionBars}
+                          onClear={() => setSelectedInfectionBars([])}
+                          chartType="infection"
+                        />
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {infectionFacetLevels.map(level => {
