@@ -8,6 +8,7 @@ import { Search, Baby, Skull, Droplet, Syringe } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useExperiment } from "../components/ExperimentContext";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function IndividualHistory() {
   const { activeExperimentId } = useExperiment();
@@ -131,6 +132,52 @@ export default function IndividualHistory() {
                   )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Cumulative Offspring Over Time</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {reproductionEvents.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={
+                    reproductionEvents
+                      .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+                      .reduce((acc, event) => {
+                        const cumulative = acc.length > 0 
+                          ? acc[acc.length - 1].cumulative + event.offspring_count
+                          : event.offspring_count;
+                        acc.push({
+                          date: event.event_date,
+                          cumulative: cumulative
+                        });
+                        return acc;
+                      }, [])
+                  }>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(date) => format(new Date(date), 'MMM d')}
+                    />
+                    <YAxis />
+                    <Tooltip 
+                      labelFormatter={(date) => format(new Date(date), 'MMM d, yyyy')}
+                      formatter={(value) => [value, 'Offspring']}
+                    />
+                    <Line 
+                      type="stepAfter" 
+                      dataKey="cumulative" 
+                      stroke="#10b981" 
+                      strokeWidth={2}
+                      dot={{ fill: '#10b981', r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-gray-600">No reproduction events recorded</p>
+              )}
             </CardContent>
           </Card>
 
