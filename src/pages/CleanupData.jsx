@@ -33,10 +33,21 @@ export default function CleanupData() {
     setCleaned(false);
     try {
       console.log('Starting scan for experiment:', activeExperimentId);
-      const events = await base44.entities.ReproductionEvent.filter({ 
+      
+      // Get all individuals in this experiment first
+      const individuals = await base44.entities.Individual.filter({ 
         experiment_id: activeExperimentId 
       });
-      console.log('Found events:', events.length);
+      const individualIds = new Set(individuals.map(i => i.individual_id));
+      console.log('Found individuals:', individualIds.size);
+      
+      // Get ALL reproduction events (not filtered by experiment_id)
+      const allEvents = await base44.entities.ReproductionEvent.list();
+      console.log('Total events in database:', allEvents.length);
+      
+      // Filter to only events for this experiment's individuals
+      const events = allEvents.filter(e => individualIds.has(e.individual_id));
+      console.log('Events for this experiment:', events.length);
 
       // Group by individual_id + event_date
       const grouped = {};
@@ -50,18 +61,19 @@ export default function CleanupData() {
 
       // Find duplicates
       const duplicates = [];
-      Object.entries(grouped).forEach(([key, events]) => {
-        if (events.length > 1) {
+      Object.entries(grouped).forEach(([key, eventList]) => {
+        if (eventList.length > 1) {
+          console.log('Found duplicate:', key, eventList.length, 'events');
           duplicates.push({
-            individual_id: events[0].individual_id,
-            event_date: events[0].event_date,
-            count: events.length,
-            events: events
+            individual_id: eventList[0].individual_id,
+            event_date: eventList[0].event_date,
+            count: eventList.length,
+            events: eventList
           });
         }
       });
 
-      console.log('Duplicates found:', duplicates.length);
+      console.log('Total duplicates found:', duplicates.length);
       setDuplicatesFound(duplicates);
       
       if (duplicates.length === 0) {
