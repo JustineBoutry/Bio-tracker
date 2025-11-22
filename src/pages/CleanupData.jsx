@@ -16,6 +16,8 @@ export default function CleanupData() {
   const [highOffspringEvents, setHighOffspringEvents] = useState([]);
   const [scanningHighOffspring, setScanningHighOffspring] = useState(false);
   const [eventActions, setEventActions] = useState({});
+  const [infectionPreview, setInfectionPreview] = useState(null);
+  const [scanningInfection, setScanningInfection] = useState(false);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', activeExperimentId],
@@ -94,6 +96,140 @@ export default function CleanupData() {
       [eventId]: { action, newValue: newValue ?? prev[eventId]?.newValue }
     }));
   };
+
+  const scanInfectionStatus = async () => {
+    setScanningInfection(true);
+    setInfectionPreview(null);
+    try {
+      const individuals = await base44.entities.Individual.filter({ 
+        experiment_id: activeExperimentId 
+      });
+      const notes = await base44.entities.LabNote.filter({ 
+        experiment_id: activeExperimentId 
+      });
+
+      // Parse notes to find infection entries
+      const confirmedInfected = new Set();
+      const confirmedNotInfected = new Set();
+
+      notes.forEach(note => {
+        const text = note.note.toLowerCase();
+        if (text.includes('infection:')) {
+          // Extract IDs from parentheses
+          const match = text.match(/\(ids?:\s*([^)]+)\)/i);
+          if (match) {
+            const ids = match[1].split(/[\s,]+/).map(id => id.trim()).filter(Boolean);
+            
+            if (text.includes('marked infected') || text.includes('confirmed yes')) {
+              ids.forEach(id => confirmedInfected.add(id));
+            } else if (text.includes('non-infected') || text.includes('confirmed no')) {
+              ids.forEach(id => confirmedNotInfected.add(id));
+            }
+          }
+        }
+      });
+
+      const corrections = [];
+      for (const ind of individuals) {
+        const currentStatus = ind.infected;
+        let suggestedStatus = null;
+        let reason = '';
+
+        // Rule 1: Alive individuals should be "not_tested" unless confirmed in notebook
+        if (ind.alive && currentStatus !== "not_tested") {
+          if (confirmedInfected.has(ind.individual_id)) {
+            if (currentStatus !== "confirmed Yes") {
+              suggestedStatus = "confirmed Yes";
+              reason = "Found in notebook as infected";
+            }
+          } else if (confirmedNotInfected.has(ind.individual_id)) {
+            if (currentStatus !== "confirmed No") {
+              suggestedStatus = "confirmed No";
+              reason = "Found in notebook as non-infected";
+            }
+          } else {
+            suggestedStatus = "not_tested";
+            reason = "Alive, no infection record in notebook";
+          }
+        }
+
+        // Rule 2: Dead individuals with status but not in notebook
+        if (!ind.alive) {
+          if (currentStatus === "confirmed Yes" && !confirmedInfected.has(ind.individual_id)) {
+            suggestedStatus = "not_tested";
+            reason = "Dead, marked infected but no notebook entry";
+          } else if (currentStatus === "confirmed No" && !confirmedNotInfected.has(ind.individual_id)) {
+            suggestedStatus = "not_tested";
+            reason = "Dead, marked non-infected but no notebook entry";
+          }
+        }
+
+        // Rule 3: Old boolean values
+        if (currentStatus === true || currentStatus === "true") {
+          if (confirmedInfected.has(ind.individual_id)) {
+            suggestedStatus = "confirmed Yes";
+            reason = "Convert from old format, confirmed in notebook";
+          } else {
+            suggestedStatus = "not_tested";
+            reason = "Convert from old format, no notebook entry";
+          }
+        } else if (currentStatus === false || currentStatus === "false") {
+          if (confirmedNotInfected.has(ind.individual_id)) {
+            suggestedStatus = "confirmed No";
+            reason = "Convert from old format, confirmed in notebook";
+          } else {
+            suggestedStatus = "not_tested";
+            reason = "Convert from old format, no notebook entry";
+          }
+        }
+
+        if (suggestedStatus && suggestedStatus !== currentStatus) {
+          corrections.push({
+            id: ind.id,
+            individual_id: ind.individual_id,
+            alive: ind.alive,
+            current: currentStatus,
+            suggested: suggestedStatus,
+            reason
+          });
+        }
+      }
+
+      setInfectionPreview({ 
+        total: individuals.length, 
+        corrections,
+        confirmedInfected: confirmedInfected.size,
+        confirmedNotInfected: confirmedNotInfected.size
+      });
+    } catch (error) {
+      alert('Scan failed: ' + error.message);
+    } finally {
+      setScanningInfection(false);
+    }
+  };
+
+  const fixInfectionMutation = useMutation({
+    mutationFn: async () => {
+      for (const correction of infectionPreview.corrections) {
+        await base44.entities.Individual.update(correction.id, {
+          infected: correction.suggested
+        });
+      }
+      return infectionPreview.corrections.length;
+    },
+    onSuccess: async (count) => {
+      queryClient.invalidateQueries(['individuals']);
+      
+      await base44.entities.LabNote.create({
+        experiment_id: activeExperimentId,
+        note: `Infection status cleanup: corrected ${count} individuals`,
+        timestamp: new Date().toISOString(),
+      });
+
+      setInfectionPreview(null);
+      alert(`Fixed ${count} individuals!`);
+    },
+  });
 
   const processHighOffspringMutation = useMutation({
     mutationFn: async () => {
@@ -364,6 +500,74 @@ export default function CleanupData() {
             >
               {processHighOffspringMutation.isPending ? 'Processing...' : 'Apply Changes'}
             </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="mb-6 mt-8">
+        <CardHeader>
+          <CardTitle>Fix Infection Status</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600">
+            This tool scans for infection status errors by:
+            <br />• Checking lab notebook for infection entries
+            <br />• Marking alive individuals as "not_tested" unless confirmed in notebook
+            <br />• Fixing old boolean values (true/false)
+            <br />• Detecting status without corresponding notebook entries
+          </p>
+          <Button 
+            onClick={scanInfectionStatus}
+            disabled={scanningInfection}
+          >
+            {scanningInfection ? 'Scanning...' : 'Scan Infection Status'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {infectionPreview && (
+        <Card className="mb-6 border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="text-blue-800">
+              Found {infectionPreview.corrections.length} Status Corrections
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-sm text-blue-700">
+              <p>Notebook entries found: {infectionPreview.confirmedInfected} infected, {infectionPreview.confirmedNotInfected} non-infected</p>
+              <p>Total individuals: {infectionPreview.total}</p>
+            </div>
+
+            {infectionPreview.corrections.length > 0 && (
+              <>
+                <div className="max-h-96 overflow-auto space-y-2">
+                  {infectionPreview.corrections.map((correction) => (
+                    <div key={correction.id} className="bg-white border border-blue-200 rounded p-3">
+                      <div className="font-mono font-semibold">{correction.individual_id}</div>
+                      <div className="text-sm text-gray-600">
+                        Status: {correction.alive ? 'Alive' : 'Dead'} | 
+                        <span className="text-red-600"> {String(correction.current)}</span> → 
+                        <span className="text-green-600"> {correction.suggested}</span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">{correction.reason}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <Button 
+                  onClick={() => fixInfectionMutation.mutate()}
+                  disabled={fixInfectionMutation.isPending}
+                >
+                  {fixInfectionMutation.isPending ? 'Fixing...' : 'Apply Corrections'}
+                </Button>
+              </>
+            )}
+
+            {infectionPreview.corrections.length === 0 && (
+              <div className="text-center py-4 text-green-700">
+                ✓ No corrections needed!
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

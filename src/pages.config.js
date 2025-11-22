@@ -6,7 +6,6 @@ import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
 import LabNotebook from './pages/LabNotebook';
 import CleanupData from './pages/CleanupData';
-import MigrateInfectionData from './pages/MigrateInfectionData';
 import __Layout from './Layout.jsx';
 
 
@@ -19,7 +18,6 @@ export const PAGES = {
     "Home": Home,
     "LabNotebook": LabNotebook,
     "CleanupData": CleanupData,
-    "MigrateInfectionData": MigrateInfectionData,
 }
 
 export const pagesConfig = {
