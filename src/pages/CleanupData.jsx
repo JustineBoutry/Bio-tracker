@@ -32,9 +32,11 @@ export default function CleanupData() {
     setScanning(true);
     setCleaned(false);
     try {
+      console.log('Starting scan for experiment:', activeExperimentId);
       const events = await base44.entities.ReproductionEvent.filter({ 
         experiment_id: activeExperimentId 
       });
+      console.log('Found events:', events.length);
 
       // Group by individual_id + event_date
       const grouped = {};
@@ -59,8 +61,14 @@ export default function CleanupData() {
         }
       });
 
+      console.log('Duplicates found:', duplicates.length);
       setDuplicatesFound(duplicates);
+      
+      if (duplicates.length === 0) {
+        alert('No duplicates found!');
+      }
     } catch (error) {
+      console.error('Scan error:', error);
       alert('Error scanning: ' + error.message);
     } finally {
       setScanning(false);
