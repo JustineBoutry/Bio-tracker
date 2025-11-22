@@ -202,7 +202,9 @@ export default function Dashboard() {
         groups[groupKey] = { name: groupKey, reproduced: 0, notReproduced: 0 };
       }
       
-      if ((ind.cumulative_offspring || 0) > 0) {
+      // Count as reproduced if cumulative_offspring > 0
+      const offspring = Number(ind.cumulative_offspring) || 0;
+      if (offspring > 0) {
         groups[groupKey].reproduced++;
       } else {
         groups[groupKey].notReproduced++;
@@ -219,7 +221,9 @@ export default function Dashboard() {
         rawCounts: {
           reproduced: group.reproduced,
           notReproduced: group.notReproduced
-        }
+        },
+        reproducedCount: group.reproduced,
+        notReproducedCount: group.notReproduced
       };
     });
   };
