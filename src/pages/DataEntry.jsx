@@ -339,10 +339,10 @@ export default function DataEntry() {
       {selectedExp &&
       <Tabs defaultValue="reproduction">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="reproduction">Reproduction</TabsTrigger>
+            <TabsTrigger value="reproduction" className="text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Reproduction</TabsTrigger>
             <TabsTrigger value="death" className="bg-slate-500 text-slate-50 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Death</TabsTrigger>
-            <TabsTrigger value="redness">Redness</TabsTrigger>
-            <TabsTrigger value="infection">Infection</TabsTrigger>
+            <TabsTrigger value="redness" className="bg-[#f7c5c5] text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Redness</TabsTrigger>
+            <TabsTrigger value="infection" className="text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Infection</TabsTrigger>
           </TabsList>
 
           <TabsContent value="reproduction">
@@ -455,7 +455,7 @@ export default function DataEntry() {
           </TabsContent>
 
           <TabsContent value="redness">
-            <Card>
+            <Card className="bg-[#fdd9d9] text-card-foreground rounded-xl border shadow">
               <CardHeader>
                 <CardTitle>Select individuals that look red today</CardTitle>
               </CardHeader>
