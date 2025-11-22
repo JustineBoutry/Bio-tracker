@@ -138,7 +138,7 @@ Be precise with calculations. Use standard statistical formulas.`;
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-blue-800">
-            Statistical Testing ({selectedBars.length} groups selected)
+            Basic Statistical Testing ({selectedBars.length} groups selected)
           </CardTitle>
           <Button variant="ghost" size="sm" onClick={onClear}>
             <X className="w-4 h-4" />
