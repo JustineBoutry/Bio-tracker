@@ -135,51 +135,26 @@ export default function CleanupData() {
         let suggestedStatus = null;
         let reason = '';
 
-        // Rule 1: Alive individuals should be "not_tested" unless confirmed in notebook
-        if (ind.alive && currentStatus !== "not_tested") {
-          if (confirmedInfected.has(ind.individual_id)) {
-            if (currentStatus !== "confirmed Yes") {
-              suggestedStatus = "confirmed Yes";
-              reason = "Found in notebook as infected";
-            }
-          } else if (confirmedNotInfected.has(ind.individual_id)) {
-            if (currentStatus !== "confirmed No") {
-              suggestedStatus = "confirmed No";
-              reason = "Found in notebook as non-infected";
-            }
-          } else {
-            suggestedStatus = "not_tested";
-            reason = "Alive, no infection record in notebook";
-          }
-        }
+        // Check if in notebook
+        const inInfectedNotebook = confirmedInfected.has(ind.individual_id);
+        const inNotInfectedNotebook = confirmedNotInfected.has(ind.individual_id);
 
-        // Rule 2: Dead individuals with status but not in notebook
-        if (!ind.alive) {
-          if (currentStatus === "confirmed Yes" && !confirmedInfected.has(ind.individual_id)) {
-            suggestedStatus = "not_tested";
-            reason = "Dead, marked infected but no notebook entry";
-          } else if (currentStatus === "confirmed No" && !confirmedNotInfected.has(ind.individual_id)) {
-            suggestedStatus = "not_tested";
-            reason = "Dead, marked non-infected but no notebook entry";
-          }
-        }
-
-        // Rule 3: Old boolean values
-        if (currentStatus === true || currentStatus === "true") {
-          if (confirmedInfected.has(ind.individual_id)) {
+        // Determine correct status based on notebook
+        if (inInfectedNotebook) {
+          if (currentStatus !== "confirmed Yes") {
             suggestedStatus = "confirmed Yes";
-            reason = "Convert from old format, confirmed in notebook";
-          } else {
-            suggestedStatus = "not_tested";
-            reason = "Convert from old format, no notebook entry";
+            reason = "Found in notebook as infected";
           }
-        } else if (currentStatus === false || currentStatus === "false") {
-          if (confirmedNotInfected.has(ind.individual_id)) {
+        } else if (inNotInfectedNotebook) {
+          if (currentStatus !== "confirmed No") {
             suggestedStatus = "confirmed No";
-            reason = "Convert from old format, confirmed in notebook";
-          } else {
+            reason = "Found in notebook as non-infected";
+          }
+        } else {
+          // Not in notebook - should be not_tested
+          if (currentStatus !== "not_tested" && currentStatus !== null && currentStatus !== undefined) {
             suggestedStatus = "not_tested";
-            reason = "Convert from old format, no notebook entry";
+            reason = ind.alive ? "Alive, no infection record in notebook" : "Dead, no infection record in notebook";
           }
         }
 
