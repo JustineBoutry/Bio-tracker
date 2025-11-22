@@ -554,12 +554,21 @@ export default function CleanupData() {
                   ))}
                 </div>
 
-                <Button 
-                  onClick={() => fixInfectionMutation.mutate()}
-                  disabled={fixInfectionMutation.isPending}
-                >
-                  {fixInfectionMutation.isPending ? 'Fixing...' : 'Apply Corrections'}
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => fixInfectionMutation.mutate()}
+                    disabled={fixInfectionMutation.isPending}
+                  >
+                    {fixInfectionMutation.isPending ? 'Fixing...' : 'Apply Corrections'}
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={scanInfectionStatus}
+                    disabled={fixInfectionMutation.isPending || scanningInfection}
+                  >
+                    Re-scan
+                  </Button>
+                </div>
               </>
             )}
 
