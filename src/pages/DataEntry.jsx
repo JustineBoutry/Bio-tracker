@@ -62,6 +62,13 @@ export default function DataEntry() {
 
   const reproductionMutation = useMutation({
     mutationFn: async () => {
+      // Fetch all events for this date once (performance optimization)
+      const existingEvents = await base44.entities.ReproductionEvent.filter({
+        experiment_id: selectedExp,
+        event_date: currentDataEntryDate
+      });
+      const existingIndividualIds = new Set(existingEvents.map(e => e.individual_id));
+      
       const eventsToCreate = [];
       const individualsToUpdate = [];
       const ids = [];
@@ -71,13 +78,8 @@ export default function DataEntry() {
         const offspring = offspringCounts[id] || 0;
         ids.push(ind.individual_id);
         
-        // Check if event already exists for this individual on this date
-        const existingEvents = await base44.entities.ReproductionEvent.filter({
-          individual_id: ind.individual_id,
-          event_date: currentDataEntryDate
-        });
-        
-        if (existingEvents.length > 0) {
+        // Check if event already exists
+        if (existingIndividualIds.has(ind.individual_id)) {
           throw new Error(`Reproduction event already exists for ${ind.individual_id} on ${currentDataEntryDate}`);
         }
         
