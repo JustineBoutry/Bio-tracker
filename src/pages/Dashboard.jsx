@@ -28,6 +28,9 @@ export default function Dashboard() {
   const [selectedSurvivalCurves, setSelectedSurvivalCurves] = useState([]);
   const [logRankTestResult, setLogRankTestResult] = useState(null);
   const [runningLogRank, setRunningLogRank] = useState(false);
+  const [selectedRedSignalGraphFactors, setSelectedRedSignalGraphFactors] = useState([]);
+  const [facetRedSignalFactor, setFacetRedSignalFactor] = useState(null);
+  const [selectedRedSignalBars, setSelectedRedSignalBars] = useState([]);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -93,6 +96,14 @@ export default function Dashboard() {
 
   const toggleSurvivalCurveFactor = (factorName) => {
     setSelectedSurvivalCurveFactors(prev => 
+      prev.includes(factorName) 
+        ? prev.filter(f => f !== factorName)
+        : [...prev, factorName]
+    );
+  };
+
+  const toggleRedSignalGraphFactor = (factorName) => {
+    setSelectedRedSignalGraphFactors(prev => 
       prev.includes(factorName) 
         ? prev.filter(f => f !== factorName)
         : [...prev, factorName]
@@ -243,6 +254,50 @@ export default function Dashboard() {
   const getReproductionFacetLevels = () => {
     if (!facetReproductionFactor) return null;
     const factor = experiment?.factors?.find(f => f.name === facetReproductionFactor);
+    return factor?.levels || [];
+  };
+
+  const getRedSignalChartData = (filterByFacet = null) => {
+    if (!experiment?.factors || selectedRedSignalGraphFactors.length === 0) return [];
+
+    const groups = {};
+    
+    const filteredInds = filterByFacet 
+      ? allIndividuals.filter(ind => ind.factors?.[facetRedSignalFactor] === filterByFacet)
+      : allIndividuals;
+    
+    filteredInds.forEach(ind => {
+      const groupKey = selectedRedSignalGraphFactors
+        .map(factor => ind.factors?.[factor] || 'Unknown')
+        .join(' - ');
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = { name: groupKey, redConfirmed: 0, notRedConfirmed: 0 };
+      }
+      
+      if (ind.red_confirmed) {
+        groups[groupKey].redConfirmed++;
+      } else {
+        groups[groupKey].notRedConfirmed++;
+      }
+    });
+
+    return Object.values(groups).map(group => {
+      const total = group.redConfirmed + group.notRedConfirmed;
+      return {
+        name: group.name,
+        redConfirmed: total > 0 ? (group.redConfirmed / total) * 100 : 0,
+        notRedConfirmed: total > 0 ? (group.notRedConfirmed / total) * 100 : 0,
+        total: total,
+        redConfirmedCount: group.redConfirmed,
+        notRedConfirmedCount: group.notRedConfirmed
+      };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+  };
+
+  const getRedSignalFacetLevels = () => {
+    if (!facetRedSignalFactor) return null;
+    const factor = experiment?.factors?.find(f => f.name === facetRedSignalFactor);
     return factor?.levels || [];
   };
 
@@ -406,6 +461,8 @@ Return in JSON format:
   const reproductionChartData = !facetReproductionFactor ? getReproductionChartData() : null;
   const reproductionFacetLevels = getReproductionFacetLevels();
   const survivalCurveData = getSurvivalCurveData();
+  const redSignalChartData = !facetRedSignalFactor ? getRedSignalChartData() : null;
+  const redSignalFacetLevels = getRedSignalFacetLevels();
 
   const handleInfectionBarClick = (data) => {
     if (!data) return;
@@ -459,6 +516,25 @@ Return in JSON format:
         data: {
           reproduced: data.reproducedCount || data.rawCounts?.reproduced || 0,
           notReproduced: data.notReproducedCount || data.rawCounts?.notReproduced || 0,
+          total: data.total
+        }
+      }]);
+    }
+  };
+
+  const handleRedSignalBarClick = (data) => {
+    if (!data) return;
+    const barName = data.name;
+    const existing = selectedRedSignalBars.find(b => b.name === barName);
+    
+    if (existing) {
+      setSelectedRedSignalBars(selectedRedSignalBars.filter(b => b.name !== barName));
+    } else {
+      setSelectedRedSignalBars([...selectedRedSignalBars, {
+        name: barName,
+        data: {
+          redConfirmed: data.redConfirmedCount || 0,
+          notRedConfirmed: data.notRedConfirmedCount || 0,
           total: data.total
         }
       }]);
@@ -1091,6 +1167,158 @@ Return in JSON format:
                           selectedBars={selectedReproductionBars}
                           onClear={() => setSelectedReproductionBars([])}
                           chartType="reproduction"
+                        />
+                      </div>
+                    )}
+                  </>
+                )
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  Select at least one factor to display the chart
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Red Signal by Group</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6 space-y-4">
+                <div>
+                  <p className="text-sm font-medium mb-2">Select factors to group by:</p>
+                  <div className="flex flex-wrap gap-4">
+                    {experiment.factors?.map(factor => (
+                      <div key={factor.name} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`red-signal-graph-${factor.name}`}
+                          checked={selectedRedSignalGraphFactors.includes(factor.name)}
+                          onCheckedChange={() => toggleRedSignalGraphFactor(factor.name)}
+                          disabled={facetRedSignalFactor === factor.name}
+                        />
+                        <label htmlFor={`red-signal-graph-${factor.name}`} className="text-sm cursor-pointer">
+                          {factor.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium mb-2">Facet by (optional):</p>
+                  <select
+                    className="border rounded p-2 text-sm"
+                    value={facetRedSignalFactor || ''}
+                    onChange={(e) => {
+                      const value = e.target.value || null;
+                      setFacetRedSignalFactor(value);
+                      if (value && selectedRedSignalGraphFactors.includes(value)) {
+                        setSelectedRedSignalGraphFactors(selectedRedSignalGraphFactors.filter(f => f !== value));
+                      }
+                    }}
+                  >
+                    <option value="">None</option>
+                    {experiment.factors?.map(factor => (
+                      <option key={factor.name} value={factor.name}>
+                        {factor.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {selectedRedSignalGraphFactors.length > 0 ? (
+                !facetRedSignalFactor ? (
+                  <>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={redSignalChartData} onClick={(e) => e?.activePayload?.[0] && handleRedSignalBarClick(e.activePayload[0].payload)}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                        <YAxis label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
+                        <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
+                        <Legend />
+                        <Bar dataKey="redConfirmed" stackId="a" name="Red Confirmed" cursor="pointer">
+                          {redSignalChartData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#dc2626" : "#ef4444"}
+                              opacity={selectedRedSignalBars.length > 0 && !selectedRedSignalBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                            />
+                          ))}
+                        </Bar>
+                        <Bar dataKey="notRedConfirmed" stackId="a" name="Not Red Confirmed" cursor="pointer">
+                          {redSignalChartData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#4b5563" : "#6b7280"}
+                              opacity={selectedRedSignalBars.length > 0 && !selectedRedSignalBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div className="mt-4 text-sm text-gray-600 text-center">
+                      Click on bars to select groups for statistical testing
+                    </div>
+                    {selectedRedSignalBars.length > 0 && (
+                      <div className="mt-4">
+                        <StatisticalTestPanel
+                          selectedBars={selectedRedSignalBars}
+                          onClear={() => setSelectedRedSignalBars([])}
+                          chartType="red_signal"
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {redSignalFacetLevels.map(level => {
+                        const facetData = getRedSignalChartData(level);
+                        return (
+                          <div key={level} className="border rounded-lg p-4">
+                            <h3 className="text-center font-semibold mb-3">{facetRedSignalFactor}: {level}</h3>
+                            <ResponsiveContainer width="100%" height={300}>
+                              <BarChart data={facetData} onClick={(e) => e?.activePayload?.[0] && handleRedSignalBarClick(e.activePayload[0].payload)}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} fontSize={12} />
+                                <YAxis fontSize={12} label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
+                                <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
+                                <Legend />
+                                <Bar dataKey="redConfirmed" stackId="a" name="Red Confirmed" cursor="pointer">
+                                  {facetData.map((entry, index) => (
+                                    <Cell 
+                                      key={`cell-${index}`} 
+                                      fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#dc2626" : "#ef4444"}
+                                      opacity={selectedRedSignalBars.length > 0 && !selectedRedSignalBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                                    />
+                                  ))}
+                                </Bar>
+                                <Bar dataKey="notRedConfirmed" stackId="a" name="Not Red Confirmed" cursor="pointer">
+                                  {facetData.map((entry, index) => (
+                                    <Cell 
+                                      key={`cell-${index}`} 
+                                      fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#4b5563" : "#6b7280"}
+                                      opacity={selectedRedSignalBars.length > 0 && !selectedRedSignalBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                                    />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-4 text-sm text-gray-600 text-center">
+                      Click on bars to select groups for statistical testing
+                    </div>
+                    {selectedRedSignalBars.length > 0 && (
+                      <div className="mt-4">
+                        <StatisticalTestPanel
+                          selectedBars={selectedRedSignalBars}
+                          onClear={() => setSelectedRedSignalBars([])}
+                          chartType="red_signal"
                         />
                       </div>
                     )}
