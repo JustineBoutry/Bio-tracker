@@ -31,6 +31,7 @@ export default function Dashboard() {
   const [selectedRedSignalGraphFactors, setSelectedRedSignalGraphFactors] = useState([]);
   const [facetRedSignalFactor, setFacetRedSignalFactor] = useState(null);
   const [selectedRedSignalBars, setSelectedRedSignalBars] = useState([]);
+  const [includePartialRedSignals, setIncludePartialRedSignals] = useState(false);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -272,25 +273,29 @@ export default function Dashboard() {
         .join(' - ');
       
       if (!groups[groupKey]) {
-        groups[groupKey] = { name: groupKey, redConfirmed: 0, notRedConfirmed: 0 };
+        groups[groupKey] = { name: groupKey, redConfirmed: 0, partialRed: 0, noRed: 0 };
       }
       
       if (ind.red_confirmed) {
         groups[groupKey].redConfirmed++;
+      } else if ((ind.red_signal_count || 0) > 0) {
+        groups[groupKey].partialRed++;
       } else {
-        groups[groupKey].notRedConfirmed++;
+        groups[groupKey].noRed++;
       }
     });
 
     return Object.values(groups).map(group => {
-      const total = group.redConfirmed + group.notRedConfirmed;
+      const total = group.redConfirmed + group.partialRed + group.noRed;
       return {
         name: group.name,
         redConfirmed: total > 0 ? (group.redConfirmed / total) * 100 : 0,
-        notRedConfirmed: total > 0 ? (group.notRedConfirmed / total) * 100 : 0,
+        partialRed: total > 0 ? (group.partialRed / total) * 100 : 0,
+        noRed: total > 0 ? (group.noRed / total) * 100 : 0,
         total: total,
         redConfirmedCount: group.redConfirmed,
-        notRedConfirmedCount: group.notRedConfirmed
+        partialRedCount: group.partialRed,
+        noRedCount: group.noRed
       };
     }).sort((a, b) => a.name.localeCompare(b.name));
   };
@@ -534,7 +539,8 @@ Return in JSON format:
         name: barName,
         data: {
           redConfirmed: data.redConfirmedCount || 0,
-          notRedConfirmed: data.notRedConfirmedCount || 0,
+          partialRed: data.partialRedCount || 0,
+          noRed: data.noRedCount || 0,
           total: data.total
         }
       }]);
@@ -1226,7 +1232,18 @@ Return in JSON format:
                     ))}
                   </select>
                 </div>
-              </div>
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="include-partial-red"
+                    checked={includePartialRedSignals}
+                    onCheckedChange={setIncludePartialRedSignals}
+                  />
+                  <label htmlFor="include-partial-red" className="text-sm cursor-pointer">
+                    Show partial red signals (1-2 signals, not yet confirmed)
+                  </label>
+                </div>
+                </div>
 
               {selectedRedSignalGraphFactors.length > 0 ? (
                 !facetRedSignalFactor ? (
@@ -1247,7 +1264,18 @@ Return in JSON format:
                             />
                           ))}
                         </Bar>
-                        <Bar dataKey="notRedConfirmed" stackId="a" name="Not Red Confirmed" cursor="pointer">
+                        {includePartialRedSignals && (
+                          <Bar dataKey="partialRed" stackId="a" name="Partial Red (1-2 signals)" cursor="pointer">
+                            {redSignalChartData.map((entry, index) => (
+                              <Cell 
+                                key={`cell-${index}`} 
+                                fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#f97316" : "#fb923c"}
+                                opacity={selectedRedSignalBars.length > 0 && !selectedRedSignalBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                              />
+                            ))}
+                          </Bar>
+                        )}
+                        <Bar dataKey="noRed" stackId="a" name="No Red Signal" cursor="pointer">
                           {redSignalChartData.map((entry, index) => (
                             <Cell 
                               key={`cell-${index}`} 
@@ -1295,7 +1323,18 @@ Return in JSON format:
                                     />
                                   ))}
                                 </Bar>
-                                <Bar dataKey="notRedConfirmed" stackId="a" name="Not Red Confirmed" cursor="pointer">
+                                {includePartialRedSignals && (
+                                  <Bar dataKey="partialRed" stackId="a" name="Partial Red (1-2 signals)" cursor="pointer">
+                                    {facetData.map((entry, index) => (
+                                      <Cell 
+                                        key={`cell-${index}`} 
+                                        fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#f97316" : "#fb923c"}
+                                        opacity={selectedRedSignalBars.length > 0 && !selectedRedSignalBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                                      />
+                                    ))}
+                                  </Bar>
+                                )}
+                                <Bar dataKey="noRed" stackId="a" name="No Red Signal" cursor="pointer">
                                   {facetData.map((entry, index) => (
                                     <Cell 
                                       key={`cell-${index}`} 
