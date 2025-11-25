@@ -32,6 +32,10 @@ export default function Dashboard() {
   const [facetRedSignalFactor, setFacetRedSignalFactor] = useState(null);
   const [selectedRedSignalBars, setSelectedRedSignalBars] = useState([]);
   const [includePartialRedSignals, setIncludePartialRedSignals] = useState(false);
+  const [excludeMales, setExcludeMales] = useState(false);
+  const [selectedSexGraphFactors, setSelectedSexGraphFactors] = useState([]);
+  const [facetSexFactor, setFacetSexFactor] = useState(null);
+  const [selectedSexBars, setSelectedSexBars] = useState([]);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -49,9 +53,11 @@ export default function Dashboard() {
   });
 
   const filteredIndividuals = allIndividuals.filter(ind => {
-    return Object.entries(categoryFilters).every(([key, value]) => 
+    const categoryMatch = Object.entries(categoryFilters).every(([key, value]) => 
       value === 'all' || ind.factors?.[key] === value
     );
+    const sexMatch = !excludeMales || ind.sex !== 'male';
+    return categoryMatch && sexMatch;
   });
 
   const stats = {
@@ -111,14 +117,26 @@ export default function Dashboard() {
     );
   };
 
+  const toggleSexGraphFactor = (factorName) => {
+    setSelectedSexGraphFactors(prev => 
+      prev.includes(factorName) 
+        ? prev.filter(f => f !== factorName)
+        : [...prev, factorName]
+    );
+  };
+
   const getChartData = (filterByFacet = null) => {
     if (!experiment?.factors || selectedGraphFactors.length === 0) return [];
 
     const groups = {};
     
-    const filteredInds = filterByFacet 
+    let filteredInds = filterByFacet 
       ? allIndividuals.filter(ind => ind.factors?.[facetFactor] === filterByFacet)
       : allIndividuals;
+    
+    if (excludeMales) {
+      filteredInds = filteredInds.filter(ind => ind.sex !== 'male');
+    }
     
     filteredInds.forEach(ind => {
       const groupKey = selectedGraphFactors
@@ -160,9 +178,13 @@ export default function Dashboard() {
 
     const groups = {};
     
-    const filteredInds = filterByFacet 
+    let filteredInds = filterByFacet 
       ? allIndividuals.filter(ind => ind.factors?.[facetInfectionFactor] === filterByFacet)
       : allIndividuals;
+    
+    if (excludeMales) {
+      filteredInds = filteredInds.filter(ind => ind.sex !== 'male');
+    }
     
     filteredInds.forEach(ind => {
       const groupKey = selectedInfectionGraphFactors
@@ -213,9 +235,13 @@ export default function Dashboard() {
 
     const groups = {};
     
-    const filteredInds = filterByFacet 
+    let filteredInds = filterByFacet 
       ? allIndividuals.filter(ind => ind.factors?.[facetReproductionFactor] === filterByFacet)
       : allIndividuals;
+    
+    if (excludeMales) {
+      filteredInds = filteredInds.filter(ind => ind.sex !== 'male');
+    }
     
     filteredInds.forEach(ind => {
       const groupKey = selectedReproductionGraphFactors
@@ -263,9 +289,13 @@ export default function Dashboard() {
 
     const groups = {};
     
-    const filteredInds = filterByFacet 
+    let filteredInds = filterByFacet 
       ? allIndividuals.filter(ind => ind.factors?.[facetRedSignalFactor] === filterByFacet)
       : allIndividuals;
+    
+    if (excludeMales) {
+      filteredInds = filteredInds.filter(ind => ind.sex !== 'male');
+    }
     
     filteredInds.forEach(ind => {
       const groupKey = selectedRedSignalGraphFactors
@@ -303,6 +333,49 @@ export default function Dashboard() {
   const getRedSignalFacetLevels = () => {
     if (!facetRedSignalFactor) return null;
     const factor = experiment?.factors?.find(f => f.name === facetRedSignalFactor);
+    return factor?.levels || [];
+  };
+
+  const getSexChartData = (filterByFacet = null) => {
+    if (!experiment?.factors || selectedSexGraphFactors.length === 0) return [];
+
+    const groups = {};
+    
+    const filteredInds = filterByFacet 
+      ? allIndividuals.filter(ind => ind.factors?.[facetSexFactor] === filterByFacet)
+      : allIndividuals;
+    
+    filteredInds.forEach(ind => {
+      const groupKey = selectedSexGraphFactors
+        .map(factor => ind.factors?.[factor] || 'Unknown')
+        .join(' - ');
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = { name: groupKey, male: 0, female: 0, unknown: 0 };
+      }
+      
+      const sex = ind.sex || 'unknown';
+      groups[groupKey][sex]++;
+    });
+
+    return Object.values(groups).map(group => {
+      const total = group.male + group.female + group.unknown;
+      return {
+        name: group.name,
+        male: total > 0 ? (group.male / total) * 100 : 0,
+        female: total > 0 ? (group.female / total) * 100 : 0,
+        unknown: total > 0 ? (group.unknown / total) * 100 : 0,
+        total: total,
+        maleCount: group.male,
+        femaleCount: group.female,
+        unknownCount: group.unknown
+      };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+  };
+
+  const getSexFacetLevels = () => {
+    if (!facetSexFactor) return null;
+    const factor = experiment?.factors?.find(f => f.name === facetSexFactor);
     return factor?.levels || [];
   };
 
@@ -468,6 +541,8 @@ Return in JSON format:
   const survivalCurveData = getSurvivalCurveData();
   const redSignalChartData = !facetRedSignalFactor ? getRedSignalChartData() : null;
   const redSignalFacetLevels = getRedSignalFacetLevels();
+  const sexChartData = !facetSexFactor ? getSexChartData() : null;
+  const sexFacetLevels = getSexFacetLevels();
 
   const handleInfectionBarClick = (data) => {
     if (!data) return;
@@ -541,6 +616,26 @@ Return in JSON format:
           redConfirmed: data.redConfirmedCount || 0,
           partialRed: data.partialRedCount || 0,
           noRed: data.noRedCount || 0,
+          total: data.total
+        }
+      }]);
+    }
+  };
+
+  const handleSexBarClick = (data) => {
+    if (!data) return;
+    const barName = data.name;
+    const existing = selectedSexBars.find(b => b.name === barName);
+    
+    if (existing) {
+      setSelectedSexBars(selectedSexBars.filter(b => b.name !== barName));
+    } else {
+      setSelectedSexBars([...selectedSexBars, {
+        name: barName,
+        data: {
+          male: data.maleCount || 0,
+          female: data.femaleCount || 0,
+          unknown: data.unknownCount || 0,
           total: data.total
         }
       }]);
@@ -623,11 +718,26 @@ Return in JSON format:
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+                </Card>
+                )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <Card className="mb-6">
+                <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                <Checkbox
+                  id="exclude-males"
+                  checked={excludeMales}
+                  onCheckedChange={setExcludeMales}
+                />
+                <label htmlFor="exclude-males" className="text-sm font-medium cursor-pointer">
+                  Exclude males from all graphs and statistics
+                </label>
+                </div>
+                </CardContent>
+                </Card>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-gray-600">Total Individuals</CardTitle>
@@ -1358,6 +1468,176 @@ Return in JSON format:
                           selectedBars={selectedRedSignalBars}
                           onClear={() => setSelectedRedSignalBars([])}
                           chartType="red_signal"
+                        />
+                      </div>
+                    )}
+                  </>
+                )
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  Select at least one factor to display the chart
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Sex Distribution by Group</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6 space-y-4">
+                <div>
+                  <p className="text-sm font-medium mb-2">Select factors to group by:</p>
+                  <div className="flex flex-wrap gap-4">
+                    {experiment.factors?.map(factor => (
+                      <div key={factor.name} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`sex-graph-${factor.name}`}
+                          checked={selectedSexGraphFactors.includes(factor.name)}
+                          onCheckedChange={() => toggleSexGraphFactor(factor.name)}
+                          disabled={facetSexFactor === factor.name}
+                        />
+                        <label htmlFor={`sex-graph-${factor.name}`} className="text-sm cursor-pointer">
+                          {factor.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium mb-2">Facet by (optional):</p>
+                  <select
+                    className="border rounded p-2 text-sm"
+                    value={facetSexFactor || ''}
+                    onChange={(e) => {
+                      const value = e.target.value || null;
+                      setFacetSexFactor(value);
+                      if (value && selectedSexGraphFactors.includes(value)) {
+                        setSelectedSexGraphFactors(selectedSexGraphFactors.filter(f => f !== value));
+                      }
+                    }}
+                  >
+                    <option value="">None</option>
+                    {experiment.factors?.map(factor => (
+                      <option key={factor.name} value={factor.name}>
+                        {factor.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {selectedSexGraphFactors.length > 0 ? (
+                !facetSexFactor ? (
+                  <>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={sexChartData} onClick={(e) => e?.activePayload?.[0] && handleSexBarClick(e.activePayload[0].payload)}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                        <YAxis label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
+                        <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
+                        <Legend />
+                        <Bar dataKey="male" stackId="a" name="Male" cursor="pointer">
+                          {sexChartData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={selectedSexBars.find(b => b.name === entry.name) ? "#2563eb" : "#3b82f6"}
+                              opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                            />
+                          ))}
+                        </Bar>
+                        <Bar dataKey="female" stackId="a" name="Female" cursor="pointer">
+                          {sexChartData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={selectedSexBars.find(b => b.name === entry.name) ? "#db2777" : "#ec4899"}
+                              opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                            />
+                          ))}
+                        </Bar>
+                        <Bar dataKey="unknown" stackId="a" name="Unknown" cursor="pointer">
+                          {sexChartData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={selectedSexBars.find(b => b.name === entry.name) ? "#4b5563" : "#6b7280"}
+                              opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div className="mt-4 text-sm text-gray-600 text-center">
+                      Click on bars to select groups for statistical testing
+                    </div>
+                    {selectedSexBars.length > 0 && (
+                      <div className="mt-4">
+                        <StatisticalTestPanel
+                          selectedBars={selectedSexBars}
+                          onClear={() => setSelectedSexBars([])}
+                          chartType="sex"
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {sexFacetLevels.map(level => {
+                        const facetData = getSexChartData(level);
+                        return (
+                          <div key={level} className="border rounded-lg p-4">
+                            <h3 className="text-center font-semibold mb-3">{facetSexFactor}: {level}</h3>
+                            <ResponsiveContainer width="100%" height={300}>
+                              <BarChart data={facetData} onClick={(e) => e?.activePayload?.[0] && handleSexBarClick(e.activePayload[0].payload)}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} fontSize={12} />
+                                <YAxis fontSize={12} label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
+                                <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
+                                <Legend />
+                                <Bar dataKey="male" stackId="a" name="Male" cursor="pointer">
+                                  {facetData.map((entry, index) => (
+                                    <Cell 
+                                      key={`cell-${index}`} 
+                                      fill={selectedSexBars.find(b => b.name === entry.name) ? "#2563eb" : "#3b82f6"}
+                                      opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                                    />
+                                  ))}
+                                </Bar>
+                                <Bar dataKey="female" stackId="a" name="Female" cursor="pointer">
+                                  {facetData.map((entry, index) => (
+                                    <Cell 
+                                      key={`cell-${index}`} 
+                                      fill={selectedSexBars.find(b => b.name === entry.name) ? "#db2777" : "#ec4899"}
+                                      opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                                    />
+                                  ))}
+                                </Bar>
+                                <Bar dataKey="unknown" stackId="a" name="Unknown" cursor="pointer">
+                                  {facetData.map((entry, index) => (
+                                    <Cell 
+                                      key={`cell-${index}`} 
+                                      fill={selectedSexBars.find(b => b.name === entry.name) ? "#4b5563" : "#6b7280"}
+                                      opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                                    />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-4 text-sm text-gray-600 text-center">
+                      Click on bars to select groups for statistical testing
+                    </div>
+                    {selectedSexBars.length > 0 && (
+                      <div className="mt-4">
+                        <StatisticalTestPanel
+                          selectedBars={selectedSexBars}
+                          onClear={() => setSelectedSexBars([])}
+                          chartType="sex"
                         />
                       </div>
                     )}

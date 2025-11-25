@@ -23,6 +23,7 @@ export default function DataEntry() {
   const [infectedIds, setInfectedIds] = useState('');
   const [showSporeEntry, setShowSporeEntry] = useState(false);
   const [sporeData, setSporeData] = useState({});
+  const [maleIds, setMaleIds] = useState('');
 
   const [currentDataEntryDate, setCurrentDataEntryDate] = useState(() => {
     const saved = localStorage.getItem('currentDataEntryDate');
@@ -221,6 +222,58 @@ export default function DataEntry() {
     }
   });
 
+  const markMalesMutation = useMutation({
+    mutationFn: async () => {
+      const ids = maleIds.split(/[\s,]+/).filter((id) => id.trim());
+      const notFound = [];
+      
+      const updates = await Promise.all(ids.map(async (individualId) => {
+        const trimmedId = individualId.trim();
+        const inds = await base44.entities.Individual.filter({
+          experiment_id: selectedExp,
+          individual_id: trimmedId
+        });
+        if (inds.length > 0) {
+          await base44.entities.Individual.update(inds[0].id, {
+            sex: "male"
+          });
+          return trimmedId;
+        }
+        notFound.push(trimmedId);
+        return null;
+      }));
+
+      const successIds = updates.filter(id => id !== null);
+      return { successIds, notFound };
+    },
+    onSuccess: async ({ successIds, notFound }) => {
+      queryClient.invalidateQueries(['individuals']);
+
+      if (successIds.length > 0) {
+        const idsText = successIds.length > 10 ?
+          `${successIds.slice(0, 5).join(', ')}, ... ${successIds.slice(-5).join(', ')}` :
+          successIds.join(', ');
+
+        await base44.entities.LabNote.create({
+          experiment_id: selectedExp,
+          note: `Sex: ${successIds.length} individuals marked as male (IDs: ${idsText})`,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      setMaleIds('');
+      
+      let message = `${successIds.length} individual(s) marked as male!`;
+      if (notFound.length > 0) {
+        message += `\n\nNot found: ${notFound.join(', ')}`;
+      }
+      alert(message);
+    },
+    onError: (error) => {
+      alert('Error: ' + error.message);
+    }
+  });
+
   const parseInfectedIds = () => {
     const ids = infectedIds.split(/[\s,]+/).filter((id) => id.trim());
     const data = {};
@@ -347,11 +400,12 @@ export default function DataEntry() {
 
       {selectedExp &&
       <Tabs defaultValue="reproduction">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="reproduction" className="text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Reproduction</TabsTrigger>
             <TabsTrigger value="death" className="bg-slate-500 text-slate-50 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Death</TabsTrigger>
             <TabsTrigger value="redness" className="bg-[#f7c5c5] text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Redness</TabsTrigger>
             <TabsTrigger value="infection" className="text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Infection</TabsTrigger>
+            <TabsTrigger value="sex" className="text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Sex</TabsTrigger>
           </TabsList>
 
           <TabsContent value="reproduction">
@@ -595,6 +649,42 @@ export default function DataEntry() {
                       </div>
                     </>
                 }
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="sex">
+            <Card>
+              <CardHeader>
+                <CardTitle>Mark Males</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="font-semibold mb-2">Enter Male Individual IDs</h3>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Enter the IDs of individuals that are males (comma or space separated)
+                  </p>
+                  <Textarea
+                    placeholder="Enter male individual codes (comma or space separated)"
+                    value={maleIds}
+                    onChange={(e) => setMaleIds(e.target.value)}
+                    rows={3}
+                  />
+                  <Button
+                    className="mt-2"
+                    onClick={() => markMalesMutation.mutate()}
+                    disabled={!maleIds.trim() || markMalesMutation.isPending}
+                  >
+                    {markMalesMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Mark as Male"
+                    )}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
