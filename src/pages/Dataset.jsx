@@ -173,7 +173,8 @@ export default function Dataset() {
       spores_count: ind.spores_count || '',
       spores_volume: ind.spores_volume || '',
       red_signal_count: ind.red_signal_count || 0,
-      red_confirmed: ind.red_confirmed || false
+      red_confirmed: ind.red_confirmed || false,
+      sex: ind.sex || 'female'
     });
   };
 
@@ -287,7 +288,7 @@ export default function Dataset() {
   const exportCSV = () => {
     if (sortedIndividuals.length === 0) return;
     
-    const headers = ['Code', 'Alive', 'Death Date', 'First Reproduction', 'Last Reproduction', 
+    const headers = ['Code', 'Sex', 'Alive', 'Death Date', 'First Reproduction', 'Last Reproduction', 
                      'Cumulative Offspring', 'Infected', 'Spores Count', 'Spores Volume', 
                      'Red Signal Count', 'Red Confirmed'];
     
@@ -298,6 +299,7 @@ export default function Dataset() {
       const factorValues = factorKeys.map(k => ind.factors?.[k] || '');
       const values = [
         ind.individual_id,
+        ind.sex || 'female',
         ind.alive ? 'Yes' : 'No',
         ind.death_date || '',
         ind.first_reproduction_date || '',
@@ -453,6 +455,12 @@ export default function Dataset() {
                     ))}
                     <th 
                       className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('sex')}
+                    >
+                      Sex {sortColumn === 'sex' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('alive')}
                     >
                       Alive {sortColumn === 'alive' && (sortDirection === 'asc' ? '↑' : '↓')}
@@ -561,6 +569,18 @@ export default function Dataset() {
 
                       {editingId === ind.id ? (
                         <>
+                          <td className="p-2">
+                            <select
+                              className="border rounded p-1"
+                              value={editValues.sex}
+                              onChange={(e) => 
+                                setEditValues({ ...editValues, sex: e.target.value })
+                              }
+                            >
+                              <option value="female">female</option>
+                              <option value="male">male</option>
+                            </select>
+                          </td>
                           <td className="p-2">
                             <Checkbox
                               checked={editValues.alive}
@@ -675,6 +695,7 @@ export default function Dataset() {
                         </>
                       ) : (
                         <>
+                          <td className="p-2">{ind.sex || 'female'}</td>
                           <td className="p-2">{ind.alive ? 'Yes' : 'No'}</td>
                           <td className="p-2">{ind.death_date || '-'}</td>
                           <td className="p-2">{ind.first_reproduction_date || '-'}</td>

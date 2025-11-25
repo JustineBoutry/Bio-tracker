@@ -351,24 +351,22 @@ export default function Dashboard() {
         .join(' - ');
       
       if (!groups[groupKey]) {
-        groups[groupKey] = { name: groupKey, male: 0, female: 0, unknown: 0 };
+        groups[groupKey] = { name: groupKey, male: 0, female: 0 };
       }
       
-      const sex = ind.sex || 'unknown';
+      const sex = ind.sex || 'female';
       groups[groupKey][sex]++;
     });
 
     return Object.values(groups).map(group => {
-      const total = group.male + group.female + group.unknown;
+      const total = group.male + group.female;
       return {
         name: group.name,
         male: total > 0 ? (group.male / total) * 100 : 0,
         female: total > 0 ? (group.female / total) * 100 : 0,
-        unknown: total > 0 ? (group.unknown / total) * 100 : 0,
         total: total,
         maleCount: group.male,
-        femaleCount: group.female,
-        unknownCount: group.unknown
+        femaleCount: group.female
       };
     }).sort((a, b) => a.name.localeCompare(b.name));
   };
@@ -635,7 +633,6 @@ Return in JSON format:
         data: {
           male: data.maleCount || 0,
           female: data.femaleCount || 0,
-          unknown: data.unknownCount || 0,
           total: data.total
         }
       }]);
@@ -1543,7 +1540,7 @@ Return in JSON format:
                           {sexChartData.map((entry, index) => (
                             <Cell 
                               key={`cell-${index}`} 
-                              fill={selectedSexBars.find(b => b.name === entry.name) ? "#2563eb" : "#3b82f6"}
+                              fill={selectedSexBars.find(b => b.name === entry.name) ? "#ea580c" : "#f97316"}
                               opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
                             />
                           ))}
@@ -1552,16 +1549,7 @@ Return in JSON format:
                           {sexChartData.map((entry, index) => (
                             <Cell 
                               key={`cell-${index}`} 
-                              fill={selectedSexBars.find(b => b.name === entry.name) ? "#db2777" : "#ec4899"}
-                              opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
-                            />
-                          ))}
-                        </Bar>
-                        <Bar dataKey="unknown" stackId="a" name="Unknown" cursor="pointer">
-                          {sexChartData.map((entry, index) => (
-                            <Cell 
-                              key={`cell-${index}`} 
-                              fill={selectedSexBars.find(b => b.name === entry.name) ? "#4b5563" : "#6b7280"}
+                              fill={selectedSexBars.find(b => b.name === entry.name) ? "#78350f" : "#92400e"}
                               opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
                             />
                           ))}
@@ -1600,7 +1588,7 @@ Return in JSON format:
                                   {facetData.map((entry, index) => (
                                     <Cell 
                                       key={`cell-${index}`} 
-                                      fill={selectedSexBars.find(b => b.name === entry.name) ? "#2563eb" : "#3b82f6"}
+                                      fill={selectedSexBars.find(b => b.name === entry.name) ? "#ea580c" : "#f97316"}
                                       opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
                                     />
                                   ))}
@@ -1609,16 +1597,7 @@ Return in JSON format:
                                   {facetData.map((entry, index) => (
                                     <Cell 
                                       key={`cell-${index}`} 
-                                      fill={selectedSexBars.find(b => b.name === entry.name) ? "#db2777" : "#ec4899"}
-                                      opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
-                                    />
-                                  ))}
-                                </Bar>
-                                <Bar dataKey="unknown" stackId="a" name="Unknown" cursor="pointer">
-                                  {facetData.map((entry, index) => (
-                                    <Cell 
-                                      key={`cell-${index}`} 
-                                      fill={selectedSexBars.find(b => b.name === entry.name) ? "#4b5563" : "#6b7280"}
+                                      fill={selectedSexBars.find(b => b.name === entry.name) ? "#78350f" : "#92400e"}
                                       opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
                                     />
                                   ))}
