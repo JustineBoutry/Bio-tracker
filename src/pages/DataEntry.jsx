@@ -88,9 +88,7 @@ export default function DataEntry() {
     onSuccess: async (ids) => {
       queryClient.invalidateQueries(['individuals']);
 
-      const idsText = ids.length > 10 ?
-      `${ids.slice(0, 5).join(', ')}, ... ${ids.slice(-5).join(', ')}` :
-      ids.join(', ');
+      const idsText = ids.join(', ');
 
       await base44.entities.LabNote.create({
         experiment_id: selectedExp,
@@ -121,9 +119,7 @@ export default function DataEntry() {
     onSuccess: async (ids) => {
       queryClient.invalidateQueries(['individuals']);
 
-      const idsText = ids.length > 10 ?
-      `${ids.slice(0, 5).join(', ')}, ... ${ids.slice(-5).join(', ')}` :
-      ids.join(', ');
+      const idsText = ids.join(', ');
 
       await base44.entities.LabNote.create({
         experiment_id: selectedExp,
@@ -153,9 +149,7 @@ export default function DataEntry() {
     onSuccess: async (ids) => {
       queryClient.invalidateQueries(['individuals']);
 
-      const idsText = ids.length > 10 ?
-      `${ids.slice(0, 5).join(', ')}, ... ${ids.slice(-5).join(', ')}` :
-      ids.join(', ');
+      const idsText = ids.join(', ');
 
       await base44.entities.LabNote.create({
         experiment_id: selectedExp,
@@ -198,9 +192,7 @@ export default function DataEntry() {
       queryClient.invalidateQueries(['individuals']);
 
       if (successIds.length > 0) {
-        const idsText = successIds.length > 10 ?
-          `${successIds.slice(0, 5).join(', ')}, ... ${successIds.slice(-5).join(', ')}` :
-          successIds.join(', ');
+        const idsText = successIds.join(', ');
 
         await base44.entities.LabNote.create({
           experiment_id: selectedExp,
@@ -250,9 +242,7 @@ export default function DataEntry() {
       queryClient.invalidateQueries(['individuals']);
 
       if (successIds.length > 0) {
-        const idsText = successIds.length > 10 ?
-          `${successIds.slice(0, 5).join(', ')}, ... ${successIds.slice(-5).join(', ')}` :
-          successIds.join(', ');
+        const idsText = successIds.join(', ');
 
         await base44.entities.LabNote.create({
           experiment_id: selectedExp,
@@ -308,9 +298,7 @@ export default function DataEntry() {
     onSuccess: async (ids) => {
       queryClient.invalidateQueries(['individuals']);
 
-      const idsText = ids.length > 10 ?
-      `${ids.slice(0, 5).join(', ')}, ... ${ids.slice(-5).join(', ')}` :
-      ids.join(', ');
+      const idsText = ids.join(', ');
 
       await base44.entities.LabNote.create({
         experiment_id: selectedExp,
