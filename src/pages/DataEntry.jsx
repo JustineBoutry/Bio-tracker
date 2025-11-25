@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useExperiment } from "../components/ExperimentContext";
-import { Calendar } from "lucide-react";
+import { Calendar, Loader2 } from "lucide-react";
 
 export default function DataEntry() {
   const queryClient = useQueryClient();
@@ -170,11 +170,13 @@ export default function DataEntry() {
   const markNonInfectedMutation = useMutation({
     mutationFn: async () => {
       const ids = nonInfectedIds.split(/[\s,]+/).filter((id) => id.trim());
+      const notFound = [];
       
-      const updates = ids.map(async (individualId) => {
+      const updates = await Promise.all(ids.map(async (individualId) => {
+        const trimmedId = individualId.trim();
         const inds = await base44.entities.Individual.filter({
           experiment_id: selectedExp,
-          individual_id: individualId.trim()
+          individual_id: trimmedId
         });
         if (inds.length > 0) {
           await base44.entities.Individual.update(inds[0].id, {
@@ -182,29 +184,40 @@ export default function DataEntry() {
             spores_count: null,
             spores_volume: null
           });
-          return individualId.trim();
+          return trimmedId;
         }
+        notFound.push(trimmedId);
         return null;
-      });
+      }));
 
-      const results = await Promise.all(updates);
-      return results.filter(id => id !== null);
+      const successIds = updates.filter(id => id !== null);
+      return { successIds, notFound };
     },
-    onSuccess: async (ids) => {
+    onSuccess: async ({ successIds, notFound }) => {
       queryClient.invalidateQueries(['individuals']);
 
-      const idsText = ids.length > 10 ?
-      `${ids.slice(0, 5).join(', ')}, ... ${ids.slice(-5).join(', ')}` :
-      ids.join(', ');
+      if (successIds.length > 0) {
+        const idsText = successIds.length > 10 ?
+          `${successIds.slice(0, 5).join(', ')}, ... ${successIds.slice(-5).join(', ')}` :
+          successIds.join(', ');
 
-      await base44.entities.LabNote.create({
-        experiment_id: selectedExp,
-        note: `Infection: ${ids.length} individuals marked non-infected (IDs: ${idsText})`,
-        timestamp: new Date().toISOString()
-      });
+        await base44.entities.LabNote.create({
+          experiment_id: selectedExp,
+          note: `Infection: ${successIds.length} individuals marked non-infected (IDs: ${idsText})`,
+          timestamp: new Date().toISOString()
+        });
+      }
 
       setNonInfectedIds('');
-      alert('Marked as non-infected!');
+      
+      let message = `${successIds.length} individual(s) marked as non-infected!`;
+      if (notFound.length > 0) {
+        message += `\n\nNot found: ${notFound.join(', ')}`;
+      }
+      alert(message);
+    },
+    onError: (error) => {
+      alert('Error: ' + error.message);
     }
   });
 
@@ -501,9 +514,15 @@ export default function DataEntry() {
                   <Button
                   className="mt-2"
                   onClick={() => markNonInfectedMutation.mutate()}
-                  disabled={!nonInfectedIds.trim()}>
-
-                    Mark as Non-Infected
+                  disabled={!nonInfectedIds.trim() || markNonInfectedMutation.isPending}>
+                    {markNonInfectedMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Mark as Non-Infected"
+                    )}
                   </Button>
                 </div>
 
