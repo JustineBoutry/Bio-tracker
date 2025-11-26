@@ -108,9 +108,7 @@ export default function Dataset() {
       queryClient.invalidateQueries(['individuals']);
       
       const ids = created.map(ind => ind.individual_id);
-      const idsText = ids.length > 10 
-        ? `${ids.slice(0, 5).join(', ')}, ... ${ids.slice(-5).join(', ')}`
-        : ids.join(', ');
+      const idsText = ids.join(', ');
       
       await base44.entities.LabNote.create({
         experiment_id: selectedExp,
@@ -143,9 +141,7 @@ export default function Dataset() {
     onSuccess: async (individual_ids) => {
       queryClient.invalidateQueries(['individuals']);
       
-      const idsText = individual_ids.length > 10 
-        ? `${individual_ids.slice(0, 5).join(', ')}, ... ${individual_ids.slice(-5).join(', ')}`
-        : individual_ids.join(', ');
+      const idsText = individual_ids.join(', ');
       
       await base44.entities.LabNote.create({
         experiment_id: selectedExp,
