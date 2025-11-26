@@ -73,6 +73,32 @@ export default function IndividualHistory() {
     },
   });
 
+  const recalculateMutation = useMutation({
+    mutationFn: async () => {
+      const allEvents = await base44.entities.ReproductionEvent.filter({ 
+        individual_id: selectedIndividual.individual_id 
+      });
+      const total = allEvents.reduce((sum, e) => sum + (e.offspring_count || 0), 0);
+      
+      // Also recalculate first and last reproduction dates
+      const sortedEvents = allEvents.sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+      const firstDate = sortedEvents.length > 0 ? sortedEvents[0].event_date : null;
+      const lastDate = sortedEvents.length > 0 ? sortedEvents[sortedEvents.length - 1].event_date : null;
+
+      await base44.entities.Individual.update(selectedIndividual.id, {
+        cumulative_offspring: total,
+        first_reproduction_date: firstDate,
+        last_reproduction_date: lastDate
+      });
+
+      return total;
+    },
+    onSuccess: (total) => {
+      queryClient.invalidateQueries(['individuals']);
+      alert(`Recalculated: ${total} total offspring`);
+    },
+  });
+
   const startEdit = (event) => {
     setEditingEventId(event.id);
     setEditingValue(event.offspring_count);
@@ -169,8 +195,26 @@ export default function IndividualHistory() {
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Offspring</p>
+                  <p className="text-sm text-gray-600 mb-1">Total Offspring (stored)</p>
                   <p className="text-2xl font-bold">{selectedIndividual.cumulative_offspring || 0}</p>
+                  {reproductionEvents.length > 0 && (
+                    <>
+                      <p className="text-sm text-gray-500 mt-1">
+                        From events: {reproductionEvents.reduce((sum, e) => sum + (e.offspring_count || 0), 0)}
+                      </p>
+                      {reproductionEvents.reduce((sum, e) => sum + (e.offspring_count || 0), 0) !== (selectedIndividual.cumulative_offspring || 0) && (
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="mt-2 text-orange-600 border-orange-300"
+                          onClick={() => recalculateMutation.mutate()}
+                          disabled={recalculateMutation.isPending}
+                        >
+                          {recalculateMutation.isPending ? "Recalculating..." : "Fix mismatch"}
+                        </Button>
+                      )}
+                    </>
+                  )}
                 </div>
 
                 <div>
