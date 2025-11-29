@@ -39,6 +39,9 @@ export default function Dashboard() {
   const [selectedSexBars, setSelectedSexBars] = useState([]);
   const [selectedOffspringGraphFactors, setSelectedOffspringGraphFactors] = useState([]);
   const [facetOffspringFactor, setFacetOffspringFactor] = useState(null);
+  const [offspringByRedStatus, setOffspringByRedStatus] = useState(false);
+  const [survivalByRedStatus, setSurvivalByRedStatus] = useState(false);
+  const [survivalCurveByRedStatus, setSurvivalCurveByRedStatus] = useState(false);
   const [anovaFactors, setAnovaFactors] = useState([]);
   const [anovaResult, setAnovaResult] = useState(null);
   const [runningAnova, setRunningAnova] = useState(false);
@@ -153,9 +156,15 @@ export default function Dashboard() {
     }
     
     filteredInds.forEach(ind => {
-      const groupKey = selectedGraphFactors
+      let groupKey = selectedGraphFactors
         .map(factor => ind.factors?.[factor] || 'Unknown')
         .join(' - ');
+      
+      // Add red status to group key if enabled
+      if (survivalByRedStatus) {
+        const redStatus = ind.red_confirmed ? 'Red+' : 'Red-';
+        groupKey = groupKey ? `${groupKey} | ${redStatus}` : redStatus;
+      }
       
       if (!groups[groupKey]) {
         groups[groupKey] = { name: groupKey, aliveCount: 0, deadCount: 0 };
@@ -410,9 +419,15 @@ export default function Dashboard() {
     }
     
     filteredInds.forEach(ind => {
-      const groupKey = selectedOffspringGraphFactors
+      let groupKey = selectedOffspringGraphFactors
         .map(factor => ind.factors?.[factor] || 'Unknown')
         .join(' - ');
+      
+      // Add red status to group key if enabled
+      if (offspringByRedStatus) {
+        const redStatus = ind.red_confirmed ? 'Red+' : 'Red-';
+        groupKey = groupKey ? `${groupKey} | ${redStatus}` : redStatus;
+      }
       
       if (!groups[groupKey]) {
         groups[groupKey] = { name: groupKey, values: [] };
@@ -713,10 +728,20 @@ Return in JSON format:
     const groups = {};
     let maxDay = 0;
     
-    allIndividuals.forEach(ind => {
-      const groupKey = selectedSurvivalCurveFactors
+    let filteredInds = excludeMales 
+      ? allIndividuals.filter(ind => ind.sex !== 'male')
+      : allIndividuals;
+    
+    filteredInds.forEach(ind => {
+      let groupKey = selectedSurvivalCurveFactors
         .map(factor => ind.factors?.[factor] || 'Unknown')
         .join(' - ');
+      
+      // Add red status to group key if enabled
+      if (survivalCurveByRedStatus) {
+        const redStatus = ind.red_confirmed ? 'Red+' : 'Red-';
+        groupKey = groupKey ? `${groupKey} | ${redStatus}` : redStatus;
+      }
       
       if (!groups[groupKey]) {
         groups[groupKey] = [];
@@ -1209,6 +1234,17 @@ Return in JSON format:
                     ))}
                   </select>
                 </div>
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="offspring-by-red"
+                    checked={offspringByRedStatus}
+                    onCheckedChange={setOffspringByRedStatus}
+                  />
+                  <label htmlFor="offspring-by-red" className="text-sm cursor-pointer">
+                    Differentiate by red status (Red+ vs Red-)
+                  </label>
+                </div>
               </div>
 
               {selectedOffspringGraphFactors.length > 0 ? (
@@ -1654,6 +1690,17 @@ Return in JSON format:
                     ))}
                   </select>
                 </div>
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="survival-by-red"
+                    checked={survivalByRedStatus}
+                    onCheckedChange={setSurvivalByRedStatus}
+                  />
+                  <label htmlFor="survival-by-red" className="text-sm cursor-pointer">
+                    Differentiate by red status (Red+ vs Red-)
+                  </label>
+                </div>
               </div>
 
               {selectedGraphFactors.length > 0 ? (
@@ -1782,6 +1829,17 @@ Return in JSON format:
                       </div>
                     ))}
                   </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="survival-curve-by-red"
+                    checked={survivalCurveByRedStatus}
+                    onCheckedChange={setSurvivalCurveByRedStatus}
+                  />
+                  <label htmlFor="survival-curve-by-red" className="text-sm cursor-pointer">
+                    Differentiate by red status (Red+ vs Red-)
+                  </label>
                 </div>
               </div>
 
