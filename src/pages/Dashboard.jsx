@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Users, Skull, Droplet, Syringe, X, Loader2 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,11 @@ export default function Dashboard() {
   const [selectedSexGraphFactors, setSelectedSexGraphFactors] = useState([]);
   const [facetSexFactor, setFacetSexFactor] = useState(null);
   const [selectedSexBars, setSelectedSexBars] = useState([]);
+  const [selectedOffspringGraphFactors, setSelectedOffspringGraphFactors] = useState([]);
+  const [facetOffspringFactor, setFacetOffspringFactor] = useState(null);
+  const [anovaFactor, setAnovaFactor] = useState(null);
+  const [anovaResult, setAnovaResult] = useState(null);
+  const [runningAnova, setRunningAnova] = useState(false);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -119,6 +125,14 @@ export default function Dashboard() {
 
   const toggleSexGraphFactor = (factorName) => {
     setSelectedSexGraphFactors(prev => 
+      prev.includes(factorName) 
+        ? prev.filter(f => f !== factorName)
+        : [...prev, factorName]
+    );
+  };
+
+  const toggleOffspringGraphFactor = (factorName) => {
+    setSelectedOffspringGraphFactors(prev => 
       prev.includes(factorName) 
         ? prev.filter(f => f !== factorName)
         : [...prev, factorName]
@@ -377,6 +391,160 @@ export default function Dashboard() {
     return factor?.levels || [];
   };
 
+  const getOffspringChartData = (filterByFacet = null) => {
+    if (!experiment?.factors || selectedOffspringGraphFactors.length === 0) return [];
+
+    const groups = {};
+    
+    let filteredInds = filterByFacet 
+      ? allIndividuals.filter(ind => ind.factors?.[facetOffspringFactor] === filterByFacet)
+      : allIndividuals;
+    
+    if (excludeMales) {
+      filteredInds = filteredInds.filter(ind => ind.sex !== 'male');
+    }
+    
+    filteredInds.forEach(ind => {
+      const groupKey = selectedOffspringGraphFactors
+        .map(factor => ind.factors?.[factor] || 'Unknown')
+        .join(' - ');
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = { name: groupKey, totalOffspring: 0, count: 0, values: [] };
+      }
+      
+      const offspring = Number(ind.cumulative_offspring) || 0;
+      groups[groupKey].totalOffspring += offspring;
+      groups[groupKey].count++;
+      groups[groupKey].values.push(offspring);
+    });
+
+    return Object.values(groups).map(group => ({
+      name: group.name,
+      totalOffspring: group.totalOffspring,
+      meanOffspring: group.count > 0 ? group.totalOffspring / group.count : 0,
+      count: group.count,
+      values: group.values
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  };
+
+  const getOffspringFacetLevels = () => {
+    if (!facetOffspringFactor) return null;
+    const factor = experiment?.factors?.find(f => f.name === facetOffspringFactor);
+    return factor?.levels || [];
+  };
+
+  const runAnovaTest = async () => {
+    if (!anovaFactor) return;
+    
+    setRunningAnova(true);
+    setAnovaResult(null);
+    
+    try {
+      const groups = {};
+      let filteredInds = excludeMales 
+        ? allIndividuals.filter(ind => ind.sex !== 'male')
+        : allIndividuals;
+      
+      filteredInds.forEach(ind => {
+        const groupKey = ind.factors?.[anovaFactor] || 'Unknown';
+        if (!groups[groupKey]) {
+          groups[groupKey] = [];
+        }
+        groups[groupKey].push(Number(ind.cumulative_offspring) || 0);
+      });
+
+      const prompt = `Perform a one-way ANOVA test on the following offspring count data grouped by "${anovaFactor}":
+
+${Object.entries(groups).map(([group, values]) => 
+  `Group "${group}": [${values.join(', ')}]`
+).join('\n')}
+
+Instructions:
+1. Calculate the F-statistic
+2. Calculate the p-value
+3. Calculate degrees of freedom (between groups and within groups)
+4. Calculate effect size (eta-squared)
+5. Provide group means and standard deviations
+6. If significant (p < 0.05), perform post-hoc Tukey HSD test for pairwise comparisons
+
+Return in JSON format:
+{
+  "f_statistic": number,
+  "p_value": number,
+  "df_between": number,
+  "df_within": number,
+  "eta_squared": number,
+  "significant": boolean,
+  "group_stats": [
+    {
+      "name": "string",
+      "n": number,
+      "mean": number,
+      "std": number
+    }
+  ],
+  "post_hoc": [
+    {
+      "group1": "string",
+      "group2": "string",
+      "mean_diff": number,
+      "p_value": number,
+      "significant": boolean
+    }
+  ] (only if main effect is significant),
+  "interpretation": "string"
+}`;
+
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            f_statistic: { type: "number" },
+            p_value: { type: "number" },
+            df_between: { type: "number" },
+            df_within: { type: "number" },
+            eta_squared: { type: "number" },
+            significant: { type: "boolean" },
+            group_stats: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  n: { type: "number" },
+                  mean: { type: "number" },
+                  std: { type: "number" }
+                }
+              }
+            },
+            post_hoc: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  group1: { type: "string" },
+                  group2: { type: "string" },
+                  mean_diff: { type: "number" },
+                  p_value: { type: "number" },
+                  significant: { type: "boolean" }
+                }
+              }
+            },
+            interpretation: { type: "string" }
+          }
+        }
+      });
+
+      setAnovaResult(response);
+    } catch (error) {
+      alert('ANOVA test failed: ' + error.message);
+    } finally {
+      setRunningAnova(false);
+    }
+  };
+
   const getSurvivalCurveData = () => {
     if (!experiment?.factors || selectedSurvivalCurveFactors.length === 0 || !experiment?.start_date) return [];
 
@@ -541,6 +709,8 @@ Return in JSON format:
   const redSignalFacetLevels = getRedSignalFacetLevels();
   const sexChartData = !facetSexFactor ? getSexChartData() : null;
   const sexFacetLevels = getSexFacetLevels();
+  const offspringChartData = !facetOffspringFactor ? getOffspringChartData() : null;
+  const offspringFacetLevels = getOffspringFacetLevels();
 
   const handleInfectionBarClick = (data) => {
     if (!data) return;
@@ -826,6 +996,251 @@ Return in JSON format:
                     {filteredIndividuals.filter(i => (i.cumulative_offspring || 0) > 0).length}
                   </p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Total Offspring by Group</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6 space-y-4">
+                <div>
+                  <p className="text-sm font-medium mb-2">Select factors to group by:</p>
+                  <div className="flex flex-wrap gap-4">
+                    {experiment.factors?.map(factor => (
+                      <div key={factor.name} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`offspring-graph-${factor.name}`}
+                          checked={selectedOffspringGraphFactors.includes(factor.name)}
+                          onCheckedChange={() => toggleOffspringGraphFactor(factor.name)}
+                          disabled={facetOffspringFactor === factor.name}
+                        />
+                        <label htmlFor={`offspring-graph-${factor.name}`} className="text-sm cursor-pointer">
+                          {factor.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium mb-2">Facet by (optional):</p>
+                  <select
+                    className="border rounded p-2 text-sm"
+                    value={facetOffspringFactor || ''}
+                    onChange={(e) => {
+                      const value = e.target.value || null;
+                      setFacetOffspringFactor(value);
+                      if (value && selectedOffspringGraphFactors.includes(value)) {
+                        setSelectedOffspringGraphFactors(selectedOffspringGraphFactors.filter(f => f !== value));
+                      }
+                    }}
+                  >
+                    <option value="">None</option>
+                    {experiment.factors?.map(factor => (
+                      <option key={factor.name} value={factor.name}>
+                        {factor.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {selectedOffspringGraphFactors.length > 0 ? (
+                !facetOffspringFactor ? (
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart data={offspringChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                      <YAxis label={{ value: 'Total Offspring', angle: -90, position: 'insideLeft' }} />
+                      <Tooltip 
+                        formatter={(value, name) => [
+                          name === 'totalOffspring' ? value : value.toFixed(2),
+                          name === 'totalOffspring' ? 'Total' : 'Mean'
+                        ]}
+                        labelFormatter={(label) => {
+                          const data = offspringChartData.find(d => d.name === label);
+                          return `${label} (n=${data?.count || 0})`;
+                        }}
+                      />
+                      <Legend />
+                      <Bar dataKey="totalOffspring" name="Total Offspring" fill="#10b981" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {offspringFacetLevels.map(level => {
+                      const facetData = getOffspringChartData(level);
+                      return (
+                        <div key={level} className="border rounded-lg p-4">
+                          <h3 className="text-center font-semibold mb-3">{facetOffspringFactor}: {level}</h3>
+                          <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={facetData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} fontSize={12} />
+                              <YAxis fontSize={12} label={{ value: 'Total Offspring', angle: -90, position: 'insideLeft' }} />
+                              <Tooltip 
+                                formatter={(value, name) => [value, name === 'totalOffspring' ? 'Total' : 'Mean']}
+                                labelFormatter={(label) => {
+                                  const data = facetData.find(d => d.name === label);
+                                  return `${label} (n=${data?.count || 0})`;
+                                }}
+                              />
+                              <Legend />
+                              <Bar dataKey="totalOffspring" name="Total Offspring" fill="#10b981" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  Select at least one factor to display the chart
+                </div>
+              )}
+
+              <div className="mt-6 border-t pt-6">
+                <h3 className="font-semibold mb-4">ANOVA Test for Offspring</h3>
+                <div className="flex items-center gap-4 mb-4">
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Select factor to test:</label>
+                    <select
+                      className="border rounded p-2 text-sm min-w-[200px]"
+                      value={anovaFactor || ''}
+                      onChange={(e) => {
+                        setAnovaFactor(e.target.value || null);
+                        setAnovaResult(null);
+                      }}
+                    >
+                      <option value="">Select a factor...</option>
+                      {experiment.factors?.map(factor => (
+                        <option key={factor.name} value={factor.name}>
+                          {factor.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button 
+                    onClick={runAnovaTest} 
+                    disabled={!anovaFactor || runningAnova}
+                    className="mt-5"
+                  >
+                    {runningAnova ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Running ANOVA...
+                      </>
+                    ) : (
+                      "Run ANOVA"
+                    )}
+                  </Button>
+                </div>
+
+                {anovaResult && (
+                  <Card className="border-green-200 bg-green-50">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-green-800">
+                          One-Way ANOVA Results ({anovaFactor})
+                        </CardTitle>
+                        <Button variant="ghost" size="sm" onClick={() => setAnovaResult(null)}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="bg-white rounded p-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                          <div>
+                            <p className="text-sm text-gray-600">F-statistic</p>
+                            <p className="text-xl font-bold">
+                              {anovaResult.f_statistic?.toFixed(4) || "N/A"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">P-value</p>
+                            <p className={`text-xl font-bold ${anovaResult.p_value < 0.05 ? "text-red-600" : "text-gray-900"}`}>
+                              {anovaResult.p_value?.toFixed(6) || "N/A"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">df (between, within)</p>
+                            <p className="text-xl font-bold">
+                              {anovaResult.df_between}, {anovaResult.df_within}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Effect Size (η²)</p>
+                            <p className="text-xl font-bold">
+                              {anovaResult.eta_squared?.toFixed(4) || "N/A"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className={`p-3 rounded ${anovaResult.significant ? "bg-red-50 text-red-800" : "bg-gray-50 text-gray-800"}`}>
+                          {anovaResult.significant ? "✓ Statistically significant (p < 0.05)" : "Not significant (p ≥ 0.05)"}
+                        </div>
+                      </div>
+
+                      {anovaResult.group_stats && (
+                        <div className="bg-white rounded p-4">
+                          <h4 className="font-semibold mb-3">Group Statistics</h4>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b">
+                                  <th className="text-left p-2">Group</th>
+                                  <th className="text-left p-2">N</th>
+                                  <th className="text-left p-2">Mean</th>
+                                  <th className="text-left p-2">Std Dev</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {anovaResult.group_stats.map((stat, idx) => (
+                                  <tr key={idx} className="border-b">
+                                    <td className="p-2 font-medium">{stat.name}</td>
+                                    <td className="p-2">{stat.n}</td>
+                                    <td className="p-2">{stat.mean?.toFixed(2)}</td>
+                                    <td className="p-2">{stat.std?.toFixed(2)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+
+                      {anovaResult.post_hoc && anovaResult.post_hoc.length > 0 && (
+                        <div className="bg-white rounded p-4">
+                          <h4 className="font-semibold mb-3">Post-hoc Comparisons (Tukey HSD)</h4>
+                          <div className="space-y-2">
+                            {anovaResult.post_hoc.map((pair, idx) => (
+                              <div key={idx} className={`border-l-4 pl-3 py-2 ${pair.significant ? "border-red-400 bg-red-50" : "border-gray-300 bg-gray-50"}`}>
+                                <p className="font-medium text-sm">
+                                  {pair.group1} vs {pair.group2}
+                                </p>
+                                <p className="text-xs text-gray-600">
+                                  Mean diff: {pair.mean_diff?.toFixed(2)} | p = {pair.p_value?.toFixed(4)}
+                                  {pair.significant && <span className="text-red-600 ml-2">*</span>}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {anovaResult.interpretation && (
+                        <div className="bg-blue-50 rounded p-3 text-sm text-blue-900">
+                          {anovaResult.interpretation}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </CardContent>
           </Card>
