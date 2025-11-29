@@ -18,6 +18,9 @@ export default function CleanupData() {
   const [eventActions, setEventActions] = useState({});
   const [infectionPreview, setInfectionPreview] = useState(null);
   const [scanningInfection, setScanningInfection] = useState(false);
+  const [deathDateMismatches, setDeathDateMismatches] = useState([]);
+  const [scanningDeathDates, setScanningDeathDates] = useState(false);
+  const [deathDateActions, setDeathDateActions] = useState({});
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', activeExperimentId],
@@ -204,6 +207,107 @@ export default function CleanupData() {
       setScanningInfection(false);
     }
   };
+
+  const scanDeathDateMismatches = async () => {
+    setScanningDeathDates(true);
+    setDeathDateMismatches([]);
+    try {
+      const individuals = await base44.entities.Individual.filter({ 
+        experiment_id: activeExperimentId,
+        alive: false
+      });
+      const notes = await base44.entities.LabNote.filter({ 
+        experiment_id: activeExperimentId 
+      });
+
+      const mismatches = [];
+      
+      for (const ind of individuals) {
+        if (!ind.death_date) continue;
+        
+        // Find lab notes mentioning this individual's death
+        const deathNotes = notes.filter(note => {
+          const text = note.note.toLowerCase();
+          if (!text.includes('death:')) return false;
+          
+          // Check if this individual is mentioned
+          const match = note.note.match(/\(ids?:\s*([^)]+)\)/i);
+          if (match) {
+            const ids = match[1].split(/[\s,]+/).map(id => id.trim());
+            return ids.includes(ind.individual_id);
+          }
+          return false;
+        });
+
+        if (deathNotes.length > 0) {
+          // Get the date from the lab note timestamp
+          const noteDate = deathNotes[0].timestamp.split('T')[0];
+          
+          if (noteDate !== ind.death_date) {
+            mismatches.push({
+              id: ind.id,
+              individual_id: ind.individual_id,
+              recorded_death_date: ind.death_date,
+              note_date: noteDate,
+              note_timestamp: deathNotes[0].timestamp
+            });
+          }
+        }
+      }
+
+      setDeathDateMismatches(mismatches);
+      
+      // Initialize actions
+      const actions = {};
+      mismatches.forEach(m => {
+        actions[m.id] = { action: 'ignore', newDate: m.note_date };
+      });
+      setDeathDateActions(actions);
+
+      if (mismatches.length === 0) {
+        alert('No death date mismatches found!');
+      }
+    } catch (error) {
+      alert('Scan failed: ' + error.message);
+    } finally {
+      setScanningDeathDates(false);
+    }
+  };
+
+  const setDeathDateAction = (id, action, newDate = null) => {
+    setDeathDateActions(prev => ({
+      ...prev,
+      [id]: { action, newDate: newDate ?? prev[id]?.newDate }
+    }));
+  };
+
+  const fixDeathDatesMutation = useMutation({
+    mutationFn: async () => {
+      const toFix = deathDateMismatches.filter(m => deathDateActions[m.id]?.action === 'fix');
+      
+      const updates = toFix.map(m => 
+        base44.entities.Individual.update(m.id, {
+          death_date: deathDateActions[m.id].newDate
+        })
+      );
+      
+      await Promise.all(updates);
+      return toFix.length;
+    },
+    onSuccess: async (count) => {
+      queryClient.invalidateQueries(['individuals']);
+      
+      await base44.entities.LabNote.create({
+        experiment_id: activeExperimentId,
+        note: `Death date cleanup: corrected ${count} individuals`,
+        timestamp: new Date().toISOString(),
+      });
+
+      setDeathDateMismatches([]);
+      setDeathDateActions({});
+      alert(`Fixed ${count} death dates!`);
+    },
+  });
 
   const fixInfectionMutation = useMutation({
     mutationFn: async () => {
@@ -529,6 +633,82 @@ export default function CleanupData() {
           </Button>
         </CardContent>
       </Card>
+
+      <Card className="mb-6 mt-8">
+        <CardHeader>
+          <CardTitle>Fix Death Date Mismatches</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600">
+            This tool scans for cases where the recorded death date doesn't match the date 
+            when the death was reported in the lab notebook. This can happen when the data entry 
+            date wasn't updated before recording deaths.
+          </p>
+          <Button 
+            onClick={scanDeathDateMismatches}
+            disabled={scanningDeathDates}
+          >
+            {scanningDeathDates ? 'Scanning...' : 'Scan Death Dates'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {deathDateMismatches.length > 0 && (
+        <Card className="mb-6 border-purple-200 bg-purple-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-purple-800">
+              <AlertTriangle className="w-5 h-5" />
+              Found {deathDateMismatches.length} Death Date Mismatches
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="max-h-96 overflow-auto space-y-2">
+              {deathDateMismatches.map((mismatch) => (
+                <div key={mismatch.id} className="bg-white border border-purple-200 rounded p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="font-mono font-semibold">{mismatch.individual_id}</div>
+                      <div className="text-sm text-gray-600">
+                        Recorded: <span className="text-red-600">{mismatch.recorded_death_date}</span>
+                        {' | '}
+                        Lab note date: <span className="text-green-600">{mismatch.note_date}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="border rounded p-1 text-sm"
+                        value={deathDateActions[mismatch.id]?.action || 'ignore'}
+                        onChange={(e) => setDeathDateAction(mismatch.id, e.target.value)}
+                      >
+                        <option value="ignore">Ignore</option>
+                        <option value="fix">Fix to note date</option>
+                      </select>
+                      
+                      {deathDateActions[mismatch.id]?.action === 'fix' && (
+                        <Input
+                          type="date"
+                          value={deathDateActions[mismatch.id]?.newDate || mismatch.note_date}
+                          onChange={(e) => setDeathDateAction(mismatch.id, 'fix', e.target.value)}
+                          className="w-36"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Button 
+              onClick={() => fixDeathDatesMutation.mutate()}
+              disabled={fixDeathDatesMutation.isPending || 
+                Object.values(deathDateActions).every(a => a.action === 'ignore')}
+            >
+              {fixDeathDatesMutation.isPending ? 'Fixing...' : 'Apply Fixes'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {infectionPreview && (
         <Card className="mb-6 border-blue-200 bg-blue-50">

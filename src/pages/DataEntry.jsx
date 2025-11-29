@@ -26,13 +26,8 @@ export default function DataEntry() {
   const [maleIds, setMaleIds] = useState('');
 
   const [currentDataEntryDate, setCurrentDataEntryDate] = useState(() => {
-    const saved = localStorage.getItem('currentDataEntryDate');
-    return saved || new Date().toISOString().split('T')[0];
+    return new Date().toISOString().split('T')[0];
   });
-
-  useEffect(() => {
-    localStorage.setItem('currentDataEntryDate', currentDataEntryDate);
-  }, [currentDataEntryDate]);
 
   const resetToToday = () => {
     setCurrentDataEntryDate(new Date().toISOString().split('T')[0]);
