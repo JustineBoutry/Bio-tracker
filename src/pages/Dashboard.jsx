@@ -8,7 +8,7 @@ import { format, differenceInDays } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useExperiment } from "../components/ExperimentContext";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, LineChart, Line, ComposedChart, Scatter, ZAxis } from 'recharts';
 import StatisticalTestPanel from "../components/dashboard/StatisticalTestPanel";
 
 export default function Dashboard() {
@@ -317,28 +317,33 @@ export default function Dashboard() {
         .join(' - ');
       
       if (!groups[groupKey]) {
-        groups[groupKey] = { name: groupKey, redConfirmed: 0, partialRed: 0, noRed: 0 };
+        groups[groupKey] = { name: groupKey, red3plus: 0, red2: 0, red1: 0, noRed: 0 };
       }
       
-      if (ind.red_confirmed) {
-        groups[groupKey].redConfirmed++;
-      } else if ((ind.red_signal_count || 0) > 0) {
-        groups[groupKey].partialRed++;
+      const signalCount = ind.red_signal_count || 0;
+      if (signalCount >= 3) {
+        groups[groupKey].red3plus++;
+      } else if (signalCount === 2) {
+        groups[groupKey].red2++;
+      } else if (signalCount === 1) {
+        groups[groupKey].red1++;
       } else {
         groups[groupKey].noRed++;
       }
     });
 
     return Object.values(groups).map(group => {
-      const total = group.redConfirmed + group.partialRed + group.noRed;
+      const total = group.red3plus + group.red2 + group.red1 + group.noRed;
       return {
         name: group.name,
-        redConfirmed: total > 0 ? (group.redConfirmed / total) * 100 : 0,
-        partialRed: total > 0 ? (group.partialRed / total) * 100 : 0,
+        red3plus: total > 0 ? (group.red3plus / total) * 100 : 0,
+        red2: total > 0 ? (group.red2 / total) * 100 : 0,
+        red1: total > 0 ? (group.red1 / total) * 100 : 0,
         noRed: total > 0 ? (group.noRed / total) * 100 : 0,
         total: total,
-        redConfirmedCount: group.redConfirmed,
-        partialRedCount: group.partialRed,
+        red3plusCount: group.red3plus,
+        red2Count: group.red2,
+        red1Count: group.red1,
         noRedCount: group.noRed
       };
     }).sort((a, b) => a.name.localeCompare(b.name));
@@ -392,7 +397,7 @@ export default function Dashboard() {
   };
 
   const getOffspringChartData = (filterByFacet = null) => {
-    if (!experiment?.factors || selectedOffspringGraphFactors.length === 0) return [];
+    if (!experiment?.factors || selectedOffspringGraphFactors.length === 0) return { boxData: [], scatterData: [] };
 
     const groups = {};
     
@@ -410,22 +415,47 @@ export default function Dashboard() {
         .join(' - ');
       
       if (!groups[groupKey]) {
-        groups[groupKey] = { name: groupKey, totalOffspring: 0, count: 0, values: [] };
+        groups[groupKey] = { name: groupKey, values: [] };
       }
       
       const offspring = Number(ind.cumulative_offspring) || 0;
-      groups[groupKey].totalOffspring += offspring;
-      groups[groupKey].count++;
       groups[groupKey].values.push(offspring);
     });
 
-    return Object.values(groups).map(group => ({
-      name: group.name,
-      totalOffspring: group.totalOffspring,
-      meanOffspring: group.count > 0 ? group.totalOffspring / group.count : 0,
-      count: group.count,
-      values: group.values
-    })).sort((a, b) => a.name.localeCompare(b.name));
+    const sortedGroups = Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
+    
+    // Calculate boxplot statistics for each group
+    const boxData = sortedGroups.map((group, idx) => {
+      const values = [...group.values].sort((a, b) => a - b);
+      const n = values.length;
+      if (n === 0) return { name: group.name, min: 0, q1: 0, median: 0, q3: 0, max: 0, mean: 0, n: 0 };
+      
+      const min = values[0];
+      const max = values[n - 1];
+      const median = n % 2 === 0 ? (values[n/2 - 1] + values[n/2]) / 2 : values[Math.floor(n/2)];
+      const q1Idx = Math.floor(n * 0.25);
+      const q3Idx = Math.floor(n * 0.75);
+      const q1 = values[q1Idx];
+      const q3 = values[q3Idx];
+      const mean = values.reduce((a, b) => a + b, 0) / n;
+      
+      return { name: group.name, min, q1, median, q3, max, mean, n, idx };
+    });
+
+    // Create scatter data for individual points with jitter
+    const scatterData = [];
+    sortedGroups.forEach((group, groupIdx) => {
+      group.values.forEach((value, i) => {
+        scatterData.push({
+          name: group.name,
+          x: groupIdx + (Math.random() - 0.5) * 0.3, // Add jitter
+          y: value,
+          groupIdx
+        });
+      });
+    });
+
+    return { boxData, scatterData, groupNames: sortedGroups.map(g => g.name) };
   };
 
   const getOffspringFacetLevels = () => {
@@ -709,7 +739,7 @@ Return in JSON format:
   const redSignalFacetLevels = getRedSignalFacetLevels();
   const sexChartData = !facetSexFactor ? getSexChartData() : null;
   const sexFacetLevels = getSexFacetLevels();
-  const offspringChartData = !facetOffspringFactor ? getOffspringChartData() : null;
+  const offspringChartResult = !facetOffspringFactor ? getOffspringChartData() : null;
   const offspringFacetLevels = getOffspringFacetLevels();
 
   const handleInfectionBarClick = (data) => {
@@ -781,8 +811,9 @@ Return in JSON format:
       setSelectedRedSignalBars([...selectedRedSignalBars, {
         name: barName,
         data: {
-          redConfirmed: data.redConfirmedCount || 0,
-          partialRed: data.partialRedCount || 0,
+          red3plus: data.red3plusCount || 0,
+          red2: data.red2Count || 0,
+          red1: data.red1Count || 0,
           noRed: data.noRedCount || 0,
           total: data.total
         }
@@ -1050,48 +1081,115 @@ Return in JSON format:
 
               {selectedOffspringGraphFactors.length > 0 ? (
                 !facetOffspringFactor ? (
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={offspringChartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                      <YAxis label={{ value: 'Total Offspring', angle: -90, position: 'insideLeft' }} />
-                      <Tooltip 
-                        formatter={(value, name) => [
-                          name === 'totalOffspring' ? value : value.toFixed(2),
-                          name === 'totalOffspring' ? 'Total' : 'Mean'
-                        ]}
-                        labelFormatter={(label) => {
-                          const data = offspringChartData.find(d => d.name === label);
-                          return `${label} (n=${data?.count || 0})`;
-                        }}
-                      />
-                      <Legend />
-                      <Bar dataKey="totalOffspring" name="Total Offspring" fill="#10b981" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <ComposedChart margin={{ top: 20, right: 30, left: 20, bottom: 100 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          type="category" 
+                          dataKey="name" 
+                          allowDuplicatedCategory={false}
+                          data={offspringChartResult.boxData}
+                          angle={-45} 
+                          textAnchor="end" 
+                          height={100}
+                        />
+                        <YAxis label={{ value: 'Offspring per Individual', angle: -90, position: 'insideLeft' }} />
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              if (data.median !== undefined) {
+                                return (
+                                  <div className="bg-white border rounded p-2 shadow text-sm">
+                                    <p className="font-semibold">{data.name} (n={data.n})</p>
+                                    <p>Max: {data.max}</p>
+                                    <p>Q3: {data.q3?.toFixed(1)}</p>
+                                    <p>Median: {data.median?.toFixed(1)}</p>
+                                    <p>Q1: {data.q1?.toFixed(1)}</p>
+                                    <p>Min: {data.min}</p>
+                                    <p>Mean: {data.mean?.toFixed(2)}</p>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div className="bg-white border rounded p-2 shadow text-sm">
+                                  <p>{data.name}: {data.y} offspring</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        {/* Box plot elements */}
+                        {offspringChartResult.boxData.map((box, idx) => (
+                          <React.Fragment key={box.name}>
+                            {/* Whisker line */}
+                            <rect
+                              x={`${(idx / offspringChartResult.boxData.length) * 100 + 50 / offspringChartResult.boxData.length - 0.5}%`}
+                              style={{ display: 'none' }}
+                            />
+                          </React.Fragment>
+                        ))}
+                        <Bar dataKey="max" data={offspringChartResult.boxData} fill="transparent" />
+                        <Scatter 
+                          data={offspringChartResult.scatterData} 
+                          fill="#10b981" 
+                          fillOpacity={0.6}
+                        >
+                          {offspringChartResult.scatterData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} cx={entry.x} />
+                          ))}
+                        </Scatter>
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                    {/* Custom boxplot visualization */}
+                    <div className="flex justify-around mt-4 px-16">
+                      {offspringChartResult.boxData.map((box, idx) => (
+                        <div key={box.name} className="text-center text-xs">
+                          <div className="font-medium">{box.name}</div>
+                          <div className="text-gray-500">n={box.n}</div>
+                          <div className="text-gray-500">μ={box.mean?.toFixed(1)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {offspringFacetLevels.map(level => {
-                      const facetData = getOffspringChartData(level);
+                      const facetResult = getOffspringChartData(level);
                       return (
                         <div key={level} className="border rounded-lg p-4">
                           <h3 className="text-center font-semibold mb-3">{facetOffspringFactor}: {level}</h3>
                           <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={facetData}>
+                            <ComposedChart margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
                               <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} fontSize={12} />
-                              <YAxis fontSize={12} label={{ value: 'Total Offspring', angle: -90, position: 'insideLeft' }} />
-                              <Tooltip 
-                                formatter={(value, name) => [value, name === 'totalOffspring' ? 'Total' : 'Mean']}
-                                labelFormatter={(label) => {
-                                  const data = facetData.find(d => d.name === label);
-                                  return `${label} (n=${data?.count || 0})`;
-                                }}
+                              <XAxis 
+                                type="category" 
+                                dataKey="name" 
+                                allowDuplicatedCategory={false}
+                                data={facetResult.boxData}
+                                angle={-45} 
+                                textAnchor="end" 
+                                height={80}
+                                fontSize={12}
                               />
-                              <Legend />
-                              <Bar dataKey="totalOffspring" name="Total Offspring" fill="#10b981" />
-                            </BarChart>
+                              <YAxis fontSize={12} label={{ value: 'Offspring', angle: -90, position: 'insideLeft' }} />
+                              <Tooltip />
+                              <Scatter 
+                                data={facetResult.scatterData} 
+                                fill="#10b981" 
+                                fillOpacity={0.6}
+                              />
+                            </ComposedChart>
                           </ResponsiveContainer>
+                          <div className="flex justify-around text-xs mt-2">
+                            {facetResult.boxData.map((box) => (
+                              <div key={box.name} className="text-center">
+                                <div className="text-gray-500">n={box.n}, μ={box.mean?.toFixed(1)}</div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       );
                     })}
@@ -1755,16 +1853,6 @@ Return in JSON format:
                   </select>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="include-partial-red"
-                    checked={includePartialRedSignals}
-                    onCheckedChange={setIncludePartialRedSignals}
-                  />
-                  <label htmlFor="include-partial-red" className="text-sm cursor-pointer">
-                    Show partial red signals (1-2 signals, not yet confirmed)
-                  </label>
-                </div>
                 </div>
 
               {selectedRedSignalGraphFactors.length > 0 ? (
@@ -1777,27 +1865,34 @@ Return in JSON format:
                         <YAxis label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
                         <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
                         <Legend />
-                        <Bar dataKey="redConfirmed" stackId="a" name="Red Confirmed" cursor="pointer">
+                        <Bar dataKey="red3plus" stackId="a" name="3+ signals (confirmed)" cursor="pointer">
                           {redSignalChartData.map((entry, index) => (
                             <Cell 
                               key={`cell-${index}`} 
-                              fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#dc2626" : "#ef4444"}
+                              fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#991b1b" : "#dc2626"}
                               opacity={selectedRedSignalBars.length > 0 && !selectedRedSignalBars.find(b => b.name === entry.name) ? 0.3 : 1}
                             />
                           ))}
                         </Bar>
-                        {includePartialRedSignals && (
-                          <Bar dataKey="partialRed" stackId="a" name="Partial Red (1-2 signals)" cursor="pointer">
-                            {redSignalChartData.map((entry, index) => (
-                              <Cell 
-                                key={`cell-${index}`} 
-                                fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#f97316" : "#fb923c"}
-                                opacity={selectedRedSignalBars.length > 0 && !selectedRedSignalBars.find(b => b.name === entry.name) ? 0.3 : 1}
-                              />
-                            ))}
-                          </Bar>
-                        )}
-                        <Bar dataKey="noRed" stackId="a" name="No Red Signal" cursor="pointer">
+                        <Bar dataKey="red2" stackId="a" name="2 signals" cursor="pointer">
+                          {redSignalChartData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#c2410c" : "#f97316"}
+                              opacity={selectedRedSignalBars.length > 0 && !selectedRedSignalBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                            />
+                          ))}
+                        </Bar>
+                        <Bar dataKey="red1" stackId="a" name="1 signal" cursor="pointer">
+                          {redSignalChartData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#ca8a04" : "#facc15"}
+                              opacity={selectedRedSignalBars.length > 0 && !selectedRedSignalBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                            />
+                          ))}
+                        </Bar>
+                        <Bar dataKey="noRed" stackId="a" name="No signal" cursor="pointer">
                           {redSignalChartData.map((entry, index) => (
                             <Cell 
                               key={`cell-${index}`} 
@@ -1836,27 +1931,34 @@ Return in JSON format:
                                 <YAxis fontSize={12} label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
                                 <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
                                 <Legend />
-                                <Bar dataKey="redConfirmed" stackId="a" name="Red Confirmed" cursor="pointer">
+                                <Bar dataKey="red3plus" stackId="a" name="3+ signals" cursor="pointer">
                                   {facetData.map((entry, index) => (
                                     <Cell 
                                       key={`cell-${index}`} 
-                                      fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#dc2626" : "#ef4444"}
+                                      fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#991b1b" : "#dc2626"}
                                       opacity={selectedRedSignalBars.length > 0 && !selectedRedSignalBars.find(b => b.name === entry.name) ? 0.3 : 1}
                                     />
                                   ))}
                                 </Bar>
-                                {includePartialRedSignals && (
-                                  <Bar dataKey="partialRed" stackId="a" name="Partial Red (1-2 signals)" cursor="pointer">
-                                    {facetData.map((entry, index) => (
-                                      <Cell 
-                                        key={`cell-${index}`} 
-                                        fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#f97316" : "#fb923c"}
-                                        opacity={selectedRedSignalBars.length > 0 && !selectedRedSignalBars.find(b => b.name === entry.name) ? 0.3 : 1}
-                                      />
-                                    ))}
-                                  </Bar>
-                                )}
-                                <Bar dataKey="noRed" stackId="a" name="No Red Signal" cursor="pointer">
+                                <Bar dataKey="red2" stackId="a" name="2 signals" cursor="pointer">
+                                  {facetData.map((entry, index) => (
+                                    <Cell 
+                                      key={`cell-${index}`} 
+                                      fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#c2410c" : "#f97316"}
+                                      opacity={selectedRedSignalBars.length > 0 && !selectedRedSignalBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                                    />
+                                  ))}
+                                </Bar>
+                                <Bar dataKey="red1" stackId="a" name="1 signal" cursor="pointer">
+                                  {facetData.map((entry, index) => (
+                                    <Cell 
+                                      key={`cell-${index}`} 
+                                      fill={selectedRedSignalBars.find(b => b.name === entry.name) ? "#ca8a04" : "#facc15"}
+                                      opacity={selectedRedSignalBars.length > 0 && !selectedRedSignalBars.find(b => b.name === entry.name) ? 0.3 : 1}
+                                    />
+                                  ))}
+                                </Bar>
+                                <Bar dataKey="noRed" stackId="a" name="No signal" cursor="pointer">
                                   {facetData.map((entry, index) => (
                                     <Cell 
                                       key={`cell-${index}`} 
