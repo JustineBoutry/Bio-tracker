@@ -8,7 +8,7 @@ import { format, differenceInDays } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useExperiment } from "../components/ExperimentContext";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, LineChart, Line, ComposedChart, Scatter, ZAxis } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, LineChart, Line, ComposedChart, Scatter, ZAxis, ErrorBar } from 'recharts';
 import StatisticalTestPanel from "../components/dashboard/StatisticalTestPanel";
 
 export default function Dashboard() {
@@ -428,7 +428,7 @@ export default function Dashboard() {
     const boxData = sortedGroups.map((group, idx) => {
       const values = [...group.values].sort((a, b) => a - b);
       const n = values.length;
-      if (n === 0) return { name: group.name, min: 0, q1: 0, median: 0, q3: 0, max: 0, mean: 0, n: 0 };
+      if (n === 0) return { name: group.name, min: 0, q1: 0, median: 0, q3: 0, max: 0, mean: 0, std: 0, se: 0, ci95: 0, n: 0 };
       
       const min = values[0];
       const max = values[n - 1];
@@ -439,7 +439,15 @@ export default function Dashboard() {
       const q3 = values[q3Idx];
       const mean = values.reduce((a, b) => a + b, 0) / n;
       
-      return { name: group.name, min, q1, median, q3, max, mean, n, idx };
+      // Calculate standard deviation
+      const variance = values.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / (n - 1 || 1);
+      const std = Math.sqrt(variance);
+      
+      // Standard error and 95% CI
+      const se = std / Math.sqrt(n);
+      const ci95 = 1.96 * se;
+      
+      return { name: group.name, min, q1, median, q3, max, mean, std, se, ci95, n, idx };
     });
 
     // Create scatter data for individual points with jitter
@@ -1208,50 +1216,67 @@ Return in JSON format:
                   <div>
                     <ResponsiveContainer width="100%" height={400}>
                       <ComposedChart 
-                        data={offspringChartResult.scatterData}
+                        data={offspringChartResult.boxData}
                         margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis 
                           dataKey="name"
-                          type="category"
-                          allowDuplicatedCategory={false}
                           angle={-45} 
                           textAnchor="end" 
                           height={100}
                           interval={0}
                         />
-                        <YAxis label={{ value: 'Offspring per Individual', angle: -90, position: 'insideLeft' }} />
+                        <YAxis label={{ value: 'Mean Offspring ± 95% CI', angle: -90, position: 'insideLeft' }} />
                         <Tooltip 
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                               const data = payload[0].payload;
                               return (
                                 <div className="bg-white border rounded p-2 shadow text-sm">
-                                  <p>{data.name}: {data.y} offspring</p>
+                                  <p className="font-semibold">{data.name}</p>
+                                  <p>n = {data.n}</p>
+                                  <p>Mean: {data.mean?.toFixed(2)}</p>
+                                  <p>SD: {data.std?.toFixed(2)}</p>
+                                  <p>SE: {data.se?.toFixed(2)}</p>
+                                  <p>95% CI: [{(data.mean - data.ci95)?.toFixed(2)}, {(data.mean + data.ci95)?.toFixed(2)}]</p>
                                 </div>
                               );
                             }
                             return null;
                           }}
                         />
-                        <Scatter 
-                          dataKey="y"
-                          fill="#10b981" 
-                          fillOpacity={0.7}
-                          shape="circle"
-                        />
+                        <Bar dataKey="mean" fill="#10b981" name="Mean Offspring">
+                          <ErrorBar dataKey="ci95" width={4} strokeWidth={2} stroke="#065f46" />
+                        </Bar>
                       </ComposedChart>
                     </ResponsiveContainer>
-                    {/* Group statistics */}
-                    <div className="flex justify-around mt-4 px-16">
-                      {offspringChartResult.boxData.map((box, idx) => (
-                        <div key={box.name} className="text-center text-xs">
-                          <div className="font-medium">{box.name}</div>
-                          <div className="text-gray-500">n={box.n}</div>
-                          <div className="text-gray-500">μ={box.mean?.toFixed(1)}</div>
-                        </div>
-                      ))}
+                    {/* Group statistics table */}
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full text-sm border">
+                        <thead>
+                          <tr className="bg-gray-50 border-b">
+                            <th className="p-2 text-left">Group</th>
+                            <th className="p-2 text-right">n</th>
+                            <th className="p-2 text-right">Mean</th>
+                            <th className="p-2 text-right">SD</th>
+                            <th className="p-2 text-right">SE</th>
+                            <th className="p-2 text-right">95% CI</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {offspringChartResult.boxData.map((box) => (
+                            <tr key={box.name} className="border-b">
+                              <td className="p-2 font-medium">{box.name}</td>
+                              <td className="p-2 text-right">{box.n}</td>
+                              <td className="p-2 text-right">{box.mean?.toFixed(2)}</td>
+                              <td className="p-2 text-right">{box.std?.toFixed(2)}</td>
+                              <td className="p-2 text-right">{box.se?.toFixed(2)}</td>
+                              <td className="p-2 text-right">[{(box.mean - box.ci95)?.toFixed(2)}, {(box.mean + box.ci95)?.toFixed(2)}]</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 ) : (
@@ -1263,34 +1288,42 @@ Return in JSON format:
                           <h3 className="text-center font-semibold mb-3">{facetOffspringFactor}: {level}</h3>
                           <ResponsiveContainer width="100%" height={300}>
                             <ComposedChart 
-                              data={facetResult.scatterData}
+                              data={facetResult.boxData}
                               margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
                             >
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis 
                                 dataKey="name"
-                                type="category" 
-                                allowDuplicatedCategory={false}
                                 angle={-45} 
                                 textAnchor="end" 
                                 height={80}
                                 fontSize={12}
                                 interval={0}
                               />
-                              <YAxis fontSize={12} label={{ value: 'Offspring', angle: -90, position: 'insideLeft' }} />
-                              <Tooltip />
-                              <Scatter 
-                                dataKey="y"
-                                fill="#10b981" 
-                                fillOpacity={0.7}
-                                shape="circle"
+                              <YAxis fontSize={12} label={{ value: 'Mean ± 95% CI', angle: -90, position: 'insideLeft' }} />
+                              <Tooltip 
+                                content={({ active, payload }) => {
+                                  if (active && payload && payload.length) {
+                                    const data = payload[0].payload;
+                                    return (
+                                      <div className="bg-white border rounded p-2 shadow text-xs">
+                                        <p className="font-semibold">{data.name}</p>
+                                        <p>n={data.n}, Mean={data.mean?.toFixed(2)} ± {data.ci95?.toFixed(2)}</p>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                }}
                               />
+                              <Bar dataKey="mean" fill="#10b981" name="Mean">
+                                <ErrorBar dataKey="ci95" width={4} strokeWidth={2} stroke="#065f46" />
+                              </Bar>
                             </ComposedChart>
                           </ResponsiveContainer>
                           <div className="flex justify-around text-xs mt-2">
                             {facetResult.boxData.map((box) => (
                               <div key={box.name} className="text-center">
-                                <div className="text-gray-500">n={box.n}, μ={box.mean?.toFixed(1)}</div>
+                                <div className="text-gray-500">n={box.n}, μ={box.mean?.toFixed(1)} ± {box.ci95?.toFixed(1)}</div>
                               </div>
                             ))}
                           </div>
@@ -1534,18 +1567,29 @@ Return in JSON format:
                           {anovaResult.post_hoc && anovaResult.post_hoc.length > 0 && (
                             <div className="bg-white rounded p-4">
                               <h4 className="font-semibold mb-3">Post-hoc Comparisons (Tukey HSD)</h4>
-                              <div className="space-y-2">
-                                {anovaResult.post_hoc.map((pair, idx) => (
-                                  <div key={idx} className={`border-l-4 pl-3 py-2 ${pair.significant ? "border-red-400 bg-red-50" : "border-gray-300 bg-gray-50"}`}>
-                                    <p className="font-medium text-sm">
-                                      {pair.group1} vs {pair.group2}
-                                    </p>
-                                    <p className="text-xs text-gray-600">
-                                      Mean diff: {pair.mean_diff?.toFixed(2)} | p = {pair.p_value?.toFixed(4)}
-                                      {pair.significant && <span className="text-red-600 ml-2">*</span>}
-                                    </p>
-                                  </div>
-                                ))}
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="border-b">
+                                      <th className="text-left p-2">Comparison</th>
+                                      <th className="text-left p-2">Mean Diff</th>
+                                      <th className="text-left p-2">p-value</th>
+                                      <th className="text-left p-2">Sig.</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {anovaResult.post_hoc.map((pair, idx) => (
+                                      <tr key={idx} className={`border-b ${pair.significant ? "bg-red-50" : ""}`}>
+                                        <td className="p-2 font-medium">{pair.group1} vs {pair.group2}</td>
+                                        <td className="p-2">{pair.mean_diff?.toFixed(2)}</td>
+                                        <td className={`p-2 ${pair.significant ? "text-red-600 font-semibold" : ""}`}>
+                                          {pair.p_value?.toFixed(4)}
+                                        </td>
+                                        <td className="p-2">{pair.significant ? "✓ *" : ""}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
                               </div>
                             </div>
                           )}
