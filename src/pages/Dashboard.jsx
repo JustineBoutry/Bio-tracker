@@ -1567,62 +1567,30 @@ Return in JSON format:
                           {anovaResult.post_hoc && anovaResult.post_hoc.length > 0 && (
                             <div className="bg-white rounded p-4">
                               <h4 className="font-semibold mb-3">Post-hoc Comparisons (Tukey HSD)</h4>
-                              
-                              {/* Summary of significant differences */}
-                              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                                <p className="text-sm font-medium text-yellow-800 mb-2">Significant differences (p &lt; 0.05):</p>
-                                {anovaResult.post_hoc.filter(p => p.significant).length > 0 ? (
-                                  <div className="flex flex-wrap gap-2">
-                                    {anovaResult.post_hoc.filter(p => p.significant).map((pair, idx) => (
-                                      <span key={idx} className="px-2 py-1 bg-red-100 text-red-800 rounded text-sm font-medium">
-                                        {pair.group1} ≠ {pair.group2}
-                                      </span>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-yellow-700">No significant pairwise differences found</p>
-                                )}
-                              </div>
-
                               <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                   <thead>
-                                    <tr className="border-b bg-gray-50">
-                                      <th className="text-left p-2">Group 1</th>
-                                      <th className="text-left p-2">Group 2</th>
-                                      <th className="text-right p-2">Mean Diff</th>
-                                      <th className="text-right p-2">p-value</th>
-                                      <th className="text-center p-2">Result</th>
+                                    <tr className="border-b">
+                                      <th className="text-left p-2">Comparison</th>
+                                      <th className="text-left p-2">Mean Diff</th>
+                                      <th className="text-left p-2">p-value</th>
+                                      <th className="text-left p-2">Sig.</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {anovaResult.post_hoc.map((pair, idx) => (
-                                      <tr key={idx} className={`border-b ${pair.significant ? "bg-red-50" : "hover:bg-gray-50"}`}>
-                                        <td className="p-2 font-medium">{pair.group1}</td>
-                                        <td className="p-2 font-medium">{pair.group2}</td>
-                                        <td className="p-2 text-right font-mono">
-                                          {pair.mean_diff > 0 ? '+' : ''}{pair.mean_diff?.toFixed(2)}
-                                        </td>
-                                        <td className={`p-2 text-right font-mono ${pair.significant ? "text-red-600 font-bold" : ""}`}>
+                                      <tr key={idx} className={`border-b ${pair.significant ? "bg-red-50" : ""}`}>
+                                        <td className="p-2 font-medium">{pair.group1} vs {pair.group2}</td>
+                                        <td className="p-2">{pair.mean_diff?.toFixed(2)}</td>
+                                        <td className={`p-2 ${pair.significant ? "text-red-600 font-semibold" : ""}`}>
                                           {pair.p_value?.toFixed(4)}
                                         </td>
-                                        <td className="p-2 text-center">
-                                          {pair.significant ? (
-                                            <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-bold">
-                                              DIFFERENT *
-                                            </span>
-                                          ) : (
-                                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
-                                              ns
-                                            </span>
-                                          )}
-                                        </td>
+                                        <td className="p-2">{pair.significant ? "✓ *" : ""}</td>
                                       </tr>
                                     ))}
                                   </tbody>
                                 </table>
                               </div>
-                              <p className="text-xs text-gray-500 mt-2">* p &lt; 0.05, ns = not significant</p>
                             </div>
                           )}
                         </>
