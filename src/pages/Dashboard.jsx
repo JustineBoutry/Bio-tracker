@@ -1207,35 +1207,25 @@ Return in JSON format:
                 !facetOffspringFactor ? (
                   <div>
                     <ResponsiveContainer width="100%" height={400}>
-                      <ComposedChart margin={{ top: 20, right: 30, left: 20, bottom: 100 }}>
+                      <ComposedChart 
+                        data={offspringChartResult.scatterData}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                      >
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis 
-                          type="category" 
-                          dataKey="name" 
+                          dataKey="name"
+                          type="category"
                           allowDuplicatedCategory={false}
-                          data={offspringChartResult.boxData}
                           angle={-45} 
                           textAnchor="end" 
                           height={100}
+                          interval={0}
                         />
                         <YAxis label={{ value: 'Offspring per Individual', angle: -90, position: 'insideLeft' }} />
                         <Tooltip 
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                               const data = payload[0].payload;
-                              if (data.median !== undefined) {
-                                return (
-                                  <div className="bg-white border rounded p-2 shadow text-sm">
-                                    <p className="font-semibold">{data.name} (n={data.n})</p>
-                                    <p>Max: {data.max}</p>
-                                    <p>Q3: {data.q3?.toFixed(1)}</p>
-                                    <p>Median: {data.median?.toFixed(1)}</p>
-                                    <p>Q1: {data.q1?.toFixed(1)}</p>
-                                    <p>Min: {data.min}</p>
-                                    <p>Mean: {data.mean?.toFixed(2)}</p>
-                                  </div>
-                                );
-                              }
                               return (
                                 <div className="bg-white border rounded p-2 shadow text-sm">
                                   <p>{data.name}: {data.y} offspring</p>
@@ -1245,29 +1235,15 @@ Return in JSON format:
                             return null;
                           }}
                         />
-                        {/* Box plot elements */}
-                        {offspringChartResult.boxData.map((box, idx) => (
-                          <React.Fragment key={box.name}>
-                            {/* Whisker line */}
-                            <rect
-                              x={`${(idx / offspringChartResult.boxData.length) * 100 + 50 / offspringChartResult.boxData.length - 0.5}%`}
-                              style={{ display: 'none' }}
-                            />
-                          </React.Fragment>
-                        ))}
-                        <Bar dataKey="max" data={offspringChartResult.boxData} fill="transparent" />
                         <Scatter 
-                          data={offspringChartResult.scatterData} 
+                          dataKey="y"
                           fill="#10b981" 
-                          fillOpacity={0.6}
-                        >
-                          {offspringChartResult.scatterData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} cx={entry.x} />
-                          ))}
-                        </Scatter>
+                          fillOpacity={0.7}
+                          shape="circle"
+                        />
                       </ComposedChart>
                     </ResponsiveContainer>
-                    {/* Custom boxplot visualization */}
+                    {/* Group statistics */}
                     <div className="flex justify-around mt-4 px-16">
                       {offspringChartResult.boxData.map((box, idx) => (
                         <div key={box.name} className="text-center text-xs">
@@ -1286,24 +1262,28 @@ Return in JSON format:
                         <div key={level} className="border rounded-lg p-4">
                           <h3 className="text-center font-semibold mb-3">{facetOffspringFactor}: {level}</h3>
                           <ResponsiveContainer width="100%" height={300}>
-                            <ComposedChart margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+                            <ComposedChart 
+                              data={facetResult.scatterData}
+                              margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+                            >
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis 
+                                dataKey="name"
                                 type="category" 
-                                dataKey="name" 
                                 allowDuplicatedCategory={false}
-                                data={facetResult.boxData}
                                 angle={-45} 
                                 textAnchor="end" 
                                 height={80}
                                 fontSize={12}
+                                interval={0}
                               />
                               <YAxis fontSize={12} label={{ value: 'Offspring', angle: -90, position: 'insideLeft' }} />
                               <Tooltip />
                               <Scatter 
-                                data={facetResult.scatterData} 
+                                dataKey="y"
                                 fill="#10b981" 
-                                fillOpacity={0.6}
+                                fillOpacity={0.7}
+                                shape="circle"
                               />
                             </ComposedChart>
                           </ResponsiveContainer>
