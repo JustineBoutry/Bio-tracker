@@ -136,19 +136,26 @@ export default function DataEntry() {
           red_signal_count: newCount,
           red_confirmed: newCount >= 3
         });
-        return ind.individual_id;
+        return { id: ind.individual_id, newCount, wasConfirmed: ind.red_confirmed, nowConfirmed: newCount >= 3 };
       });
 
       return await Promise.all(updates);
     },
-    onSuccess: async (ids) => {
+    onSuccess: async (results) => {
       queryClient.invalidateQueries(['individuals']);
 
-      const idsText = ids.join(', ');
+      const idsWithCounts = results.map(r => `${r.id} (${r.newCount})`).join(', ');
+      const newlyConfirmed = results.filter(r => !r.wasConfirmed && r.nowConfirmed);
+
+      let note = `Red signal on ${currentDataEntryDate}: ${results.length} individuals marked red (IDs: ${idsWithCounts})`;
+      if (newlyConfirmed.length > 0) {
+        const confirmedIds = newlyConfirmed.map(r => r.id).join(', ');
+        note += `. Newly confirmed red: ${confirmedIds}`;
+      }
 
       await base44.entities.LabNote.create({
         experiment_id: selectedExp,
-        note: `Red signal: ${ids.length} individuals marked red (IDs: ${idsText})`,
+        note: note,
         timestamp: new Date().toISOString()
       });
 
