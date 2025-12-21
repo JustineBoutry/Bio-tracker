@@ -288,7 +288,7 @@ export default function Dataset() {
                      'Cumulative Offspring', 'Infected', 'Spores Count', 'Spores Volume', 
                      'Red Signal Count', 'Red Confirmed'];
     
-    const factorKeys = individuals[0]?.factors ? Object.keys(individuals[0].factors) : [];
+    const factorKeys = experiment?.factors ? experiment.factors.map(f => f.name) : [];
     const allHeaders = [...factorKeys, ...headers];
     
     const rows = sortedIndividuals.map(ind => {
