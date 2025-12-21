@@ -619,7 +619,6 @@ export default function Dashboard() {
           return row;
         });
 
-        const { multiWayAnova } = await import('../components/dashboard/statisticsUtils');
         const results = multiWayAnova(data, anovaFactors);
 
         // Separate main effects and interactions
@@ -1343,7 +1342,10 @@ export default function Dashboard() {
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-green-800">
-                          One-Way ANOVA Results ({anovaFactors[0]})
+                          {anovaResult.isMultiWay 
+                            ? `${anovaResult.test_type || 'Multi-way ANOVA'} Results (${anovaFactors.join(' × ')})`
+                            : `One-Way ANOVA Results (${anovaFactors[0]})`
+                          }
                         </CardTitle>
                         <Button variant="ghost" size="sm" onClick={() => setAnovaResult(null)}>
                           <X className="w-4 h-4" />
@@ -1351,95 +1353,169 @@ export default function Dashboard() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="bg-white rounded p-4">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                          <div>
-                            <p className="text-sm text-gray-600">F-statistic</p>
-                            <p className="text-xl font-bold">
-                              {anovaResult.f_statistic?.toFixed(4) || "N/A"}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">P-value</p>
-                            <p className={`text-xl font-bold ${anovaResult.p_value < 0.05 ? "text-red-600" : "text-gray-900"}`}>
-                              {anovaResult.p_value?.toFixed(6) || "N/A"}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">df (between, within)</p>
-                            <p className="text-xl font-bold">
-                              {anovaResult.df_between}, {anovaResult.df_within}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">Effect Size (η²)</p>
-                            <p className="text-xl font-bold">
-                              {anovaResult.eta_squared?.toFixed(4) || "N/A"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className={`p-3 rounded ${anovaResult.significant ? "bg-red-50 text-red-800" : "bg-gray-50 text-gray-800"}`}>
-                          {anovaResult.significant ? "✓ Statistically significant (p < 0.05)" : "Not significant (p ≥ 0.05)"}
-                        </div>
-                      </div>
-
-                      {anovaResult.group_stats && (
-                        <div className="bg-white rounded p-4">
-                          <h4 className="font-semibold mb-3">Group Statistics</h4>
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="border-b">
-                                  <th className="text-left p-2">Group</th>
-                                  <th className="text-left p-2">N</th>
-                                  <th className="text-left p-2">Mean</th>
-                                  <th className="text-left p-2">Std Dev</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {anovaResult.group_stats.map((stat, idx) => (
-                                  <tr key={idx} className="border-b">
-                                    <td className="p-2 font-medium">{stat.name}</td>
-                                    <td className="p-2">{stat.n}</td>
-                                    <td className="p-2">{stat.mean?.toFixed(2)}</td>
-                                    <td className="p-2">{stat.std?.toFixed(2)}</td>
+                      {anovaResult.isMultiWay ? (
+                        <>
+                          {/* Main Effects */}
+                          <div className="bg-white rounded p-4">
+                            <h4 className="font-semibold mb-3">Main Effects</h4>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b">
+                                    <th className="text-left p-2">Factor</th>
+                                    <th className="text-left p-2">F</th>
+                                    <th className="text-left p-2">df</th>
+                                    <th className="text-left p-2">p-value</th>
+                                    <th className="text-left p-2">η²</th>
+                                    <th className="text-left p-2">Sig.</th>
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                                </thead>
+                                <tbody>
+                                  {anovaResult.main_effects?.map((effect, idx) => (
+                                    <tr key={idx} className="border-b">
+                                      <td className="p-2 font-medium">{effect.factor}</td>
+                                      <td className="p-2">{effect.f_statistic?.toFixed(3)}</td>
+                                      <td className="p-2">{effect.df}</td>
+                                      <td className={`p-2 ${effect.p_value < 0.05 ? "text-red-600 font-semibold" : ""}`}>
+                                        {effect.p_value?.toFixed(4)}
+                                      </td>
+                                      <td className="p-2">{effect.eta_squared?.toFixed(4)}</td>
+                                      <td className="p-2">{effect.significant ? "✓" : ""}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
-                        </div>
-                      )}
 
-                      {anovaResult.post_hoc && anovaResult.post_hoc.length > 0 && (
-                        <div className="bg-white rounded p-4">
-                          <h4 className="font-semibold mb-3">Post-hoc Comparisons (Tukey HSD)</h4>
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="border-b">
-                                  <th className="text-left p-2">Comparison</th>
-                                  <th className="text-left p-2">Mean Diff</th>
-                                  <th className="text-left p-2">p-value</th>
-                                  <th className="text-left p-2">Sig.</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {anovaResult.post_hoc.map((pair, idx) => (
-                                  <tr key={idx} className={`border-b ${pair.significant ? "bg-red-50" : ""}`}>
-                                    <td className="p-2 font-medium">{pair.group1} vs {pair.group2}</td>
-                                    <td className="p-2">{pair.mean_diff?.toFixed(2)}</td>
-                                    <td className={`p-2 ${pair.significant ? "text-red-600 font-semibold" : ""}`}>
-                                      {pair.p_value?.toFixed(4)}
-                                    </td>
-                                    <td className="p-2">{pair.significant ? "✓ *" : ""}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                          {/* Interactions */}
+                          {anovaResult.interactions && anovaResult.interactions.length > 0 && (
+                            <div className="bg-white rounded p-4">
+                              <h4 className="font-semibold mb-3">Interaction Effects</h4>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="border-b">
+                                      <th className="text-left p-2">Interaction</th>
+                                      <th className="text-left p-2">F</th>
+                                      <th className="text-left p-2">df</th>
+                                      <th className="text-left p-2">p-value</th>
+                                      <th className="text-left p-2">η²</th>
+                                      <th className="text-left p-2">Sig.</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {anovaResult.interactions.map((interaction, idx) => (
+                                      <tr key={idx} className="border-b">
+                                        <td className="p-2 font-medium">{interaction.factors?.join(' × ')}</td>
+                                        <td className="p-2">{interaction.f_statistic?.toFixed(3)}</td>
+                                        <td className="p-2">{interaction.df}</td>
+                                        <td className={`p-2 ${interaction.p_value < 0.05 ? "text-red-600 font-semibold" : ""}`}>
+                                          {interaction.p_value?.toFixed(4)}
+                                        </td>
+                                        <td className="p-2">{interaction.eta_squared?.toFixed(4)}</td>
+                                        <td className="p-2">{interaction.significant ? "✓" : ""}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <div className="bg-white rounded p-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                              <div>
+                                <p className="text-sm text-gray-600">F-statistic</p>
+                                <p className="text-xl font-bold">
+                                  {anovaResult.f_statistic?.toFixed(4) || "N/A"}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">P-value</p>
+                                <p className={`text-xl font-bold ${anovaResult.p_value < 0.05 ? "text-red-600" : "text-gray-900"}`}>
+                                  {anovaResult.p_value?.toFixed(6) || "N/A"}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">df (between, within)</p>
+                                <p className="text-xl font-bold">
+                                  {anovaResult.df_between}, {anovaResult.df_within}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Effect Size (η²)</p>
+                                <p className="text-xl font-bold">
+                                  {anovaResult.eta_squared?.toFixed(4) || "N/A"}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className={`p-3 rounded ${anovaResult.significant ? "bg-red-50 text-red-800" : "bg-gray-50 text-gray-800"}`}>
+                              {anovaResult.significant ? "✓ Statistically significant (p < 0.05)" : "Not significant (p ≥ 0.05)"}
+                            </div>
                           </div>
-                        </div>
+
+                          {anovaResult.group_stats && (
+                            <div className="bg-white rounded p-4">
+                              <h4 className="font-semibold mb-3">Group Statistics</h4>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="border-b">
+                                      <th className="text-left p-2">Group</th>
+                                      <th className="text-left p-2">N</th>
+                                      <th className="text-left p-2">Mean</th>
+                                      <th className="text-left p-2">Std Dev</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {anovaResult.group_stats.map((stat, idx) => (
+                                      <tr key={idx} className="border-b">
+                                        <td className="p-2 font-medium">{stat.name}</td>
+                                        <td className="p-2">{stat.n}</td>
+                                        <td className="p-2">{stat.mean?.toFixed(2)}</td>
+                                        <td className="p-2">{stat.std?.toFixed(2)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+
+                          {anovaResult.post_hoc && anovaResult.post_hoc.length > 0 && (
+                            <div className="bg-white rounded p-4">
+                              <h4 className="font-semibold mb-3">Post-hoc Comparisons (Tukey HSD)</h4>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="border-b">
+                                      <th className="text-left p-2">Comparison</th>
+                                      <th className="text-left p-2">Mean Diff</th>
+                                      <th className="text-left p-2">p-value</th>
+                                      <th className="text-left p-2">Sig.</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {anovaResult.post_hoc.map((pair, idx) => (
+                                      <tr key={idx} className={`border-b ${pair.significant ? "bg-red-50" : ""}`}>
+                                        <td className="p-2 font-medium">{pair.group1} vs {pair.group2}</td>
+                                        <td className="p-2">{pair.mean_diff?.toFixed(2)}</td>
+                                        <td className={`p-2 ${pair.significant ? "text-red-600 font-semibold" : ""}`}>
+                                          {pair.p_value?.toFixed(4)}
+                                        </td>
+                                        <td className="p-2">{pair.significant ? "✓ *" : ""}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
 
                       {anovaResult.interpretation && (
