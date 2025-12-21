@@ -45,6 +45,8 @@ export default function Dashboard() {
   const [anovaFactors, setAnovaFactors] = useState([]);
   const [anovaResult, setAnovaResult] = useState(null);
   const [runningAnova, setRunningAnova] = useState(false);
+  const [selectedSporeLoadGraphFactors, setSelectedSporeLoadGraphFactors] = useState([]);
+  const [facetSporeLoadFactor, setFacetSporeLoadFactor] = useState(null);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -136,6 +138,14 @@ export default function Dashboard() {
 
   const toggleOffspringGraphFactor = (factorName) => {
     setSelectedOffspringGraphFactors(prev => 
+      prev.includes(factorName) 
+        ? prev.filter(f => f !== factorName)
+        : [...prev, factorName]
+    );
+  };
+
+  const toggleSporeLoadGraphFactor = (factorName) => {
+    setSelectedSporeLoadGraphFactors(prev => 
       prev.includes(factorName) 
         ? prev.filter(f => f !== factorName)
         : [...prev, factorName]
@@ -484,6 +494,77 @@ export default function Dashboard() {
   const getOffspringFacetLevels = () => {
     if (!facetOffspringFactor) return null;
     const factor = experiment?.factors?.find(f => f.name === facetOffspringFactor);
+    return factor?.levels || [];
+  };
+
+  const parseVolume = (volumeStr) => {
+    if (!volumeStr) return null;
+    const match = volumeStr.match(/(\d+\.?\d*)/);
+    return match ? parseFloat(match[1]) : null;
+  };
+
+  const getSporeLoadChartData = (filterByFacet = null) => {
+    if (!experiment?.factors || selectedSporeLoadGraphFactors.length === 0) return { boxData: [] };
+
+    const groups = {};
+    
+    let filteredInds = filterByFacet 
+      ? allIndividuals.filter(ind => ind.factors?.[facetSporeLoadFactor] === filterByFacet)
+      : allIndividuals;
+    
+    if (excludeMales) {
+      filteredInds = filteredInds.filter(ind => ind.sex !== 'male');
+    }
+    
+    // Only include infected individuals with spore data
+    filteredInds = filteredInds.filter(ind => 
+      ind.infected === 'confirmed Yes' && 
+      ind.spores_count != null && 
+      ind.spores_volume
+    );
+    
+    filteredInds.forEach(ind => {
+      const groupKey = selectedSporeLoadGraphFactors
+        .map(factor => ind.factors?.[factor] || 'Unknown')
+        .join(' - ');
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = { name: groupKey, values: [] };
+      }
+      
+      const volume = parseVolume(ind.spores_volume);
+      if (volume && ind.spores_count) {
+        const sporeLoad = ind.spores_count * volume;
+        groups[groupKey].values.push(sporeLoad);
+      }
+    });
+
+    const sortedGroups = Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
+    
+    const boxData = sortedGroups.map((group, idx) => {
+      const values = [...group.values].sort((a, b) => a - b);
+      const n = values.length;
+      if (n === 0) return { name: group.name, min: 0, q1: 0, median: 0, q3: 0, max: 0, mean: 0, std: 0, se: 0, ci95: 0, n: 0 };
+      
+      const min = values[0];
+      const max = values[n - 1];
+      const median = n % 2 === 0 ? (values[n/2 - 1] + values[n/2]) / 2 : values[Math.floor(n/2)];
+      const mean = values.reduce((a, b) => a + b, 0) / n;
+      
+      const variance = values.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / (n - 1 || 1);
+      const std = Math.sqrt(variance);
+      const se = std / Math.sqrt(n);
+      const ci95 = 1.96 * se;
+      
+      return { name: group.name, min, median, max, mean, std, se, ci95, n, idx };
+    });
+
+    return { boxData };
+  };
+
+  const getSporeLoadFacetLevels = () => {
+    if (!facetSporeLoadFactor) return null;
+    const factor = experiment?.factors?.find(f => f.name === facetSporeLoadFactor);
     return factor?.levels || [];
   };
 
@@ -898,6 +979,8 @@ Return in JSON format:
   const sexFacetLevels = getSexFacetLevels();
   const offspringChartResult = !facetOffspringFactor ? getOffspringChartData() : null;
   const offspringFacetLevels = getOffspringFacetLevels();
+  const sporeLoadChartResult = !facetSporeLoadFactor ? getSporeLoadChartData() : null;
+  const sporeLoadFacetLevels = getSporeLoadFacetLevels();
 
   const handleInfectionBarClick = (data) => {
     if (!data) return;
@@ -2461,6 +2544,182 @@ Return in JSON format:
                       </div>
                     )}
                   </>
+                )
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  Select at least one factor to display the chart
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Spore Load by Group</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6 space-y-4">
+                <div>
+                  <p className="text-sm font-medium mb-2">Select factors to group by:</p>
+                  <div className="flex flex-wrap gap-4">
+                    {experiment.factors?.map(factor => (
+                      <div key={factor.name} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`spore-load-graph-${factor.name}`}
+                          checked={selectedSporeLoadGraphFactors.includes(factor.name)}
+                          onCheckedChange={() => toggleSporeLoadGraphFactor(factor.name)}
+                          disabled={facetSporeLoadFactor === factor.name}
+                        />
+                        <label htmlFor={`spore-load-graph-${factor.name}`} className="text-sm cursor-pointer">
+                          {factor.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium mb-2">Facet by (optional):</p>
+                  <select
+                    className="border rounded p-2 text-sm"
+                    value={facetSporeLoadFactor || ''}
+                    onChange={(e) => {
+                      const value = e.target.value || null;
+                      setFacetSporeLoadFactor(value);
+                      if (value && selectedSporeLoadGraphFactors.includes(value)) {
+                        setSelectedSporeLoadGraphFactors(selectedSporeLoadGraphFactors.filter(f => f !== value));
+                      }
+                    }}
+                  >
+                    <option value="">None</option>
+                    {experiment.factors?.map(factor => (
+                      <option key={factor.name} value={factor.name}>
+                        {factor.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {selectedSporeLoadGraphFactors.length > 0 ? (
+                !facetSporeLoadFactor ? (
+                  <div>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <ComposedChart 
+                        data={sporeLoadChartResult.boxData}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="name"
+                          angle={-45} 
+                          textAnchor="end" 
+                          height={100}
+                          interval={0}
+                        />
+                        <YAxis label={{ value: 'Mean Spore Load ± 95% CI', angle: -90, position: 'insideLeft' }} />
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              return (
+                                <div className="bg-white border rounded p-2 shadow text-sm">
+                                  <p className="font-semibold">{data.name}</p>
+                                  <p>n = {data.n}</p>
+                                  <p>Mean: {data.mean?.toFixed(2)}</p>
+                                  <p>SD: {data.std?.toFixed(2)}</p>
+                                  <p>SE: {data.se?.toFixed(2)}</p>
+                                  <p>95% CI: [{(data.mean - data.ci95)?.toFixed(2)}, {(data.mean + data.ci95)?.toFixed(2)}]</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar dataKey="mean" fill="#8b5cf6" name="Mean Spore Load">
+                          <ErrorBar dataKey="ci95" width={4} strokeWidth={2} stroke="#5b21b6" />
+                        </Bar>
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full text-sm border">
+                        <thead>
+                          <tr className="bg-gray-50 border-b">
+                            <th className="p-2 text-left">Group</th>
+                            <th className="p-2 text-right">n</th>
+                            <th className="p-2 text-right">Mean</th>
+                            <th className="p-2 text-right">SD</th>
+                            <th className="p-2 text-right">SE</th>
+                            <th className="p-2 text-right">95% CI</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sporeLoadChartResult.boxData.map((box) => (
+                            <tr key={box.name} className="border-b">
+                              <td className="p-2 font-medium">{box.name}</td>
+                              <td className="p-2 text-right">{box.n}</td>
+                              <td className="p-2 text-right">{box.mean?.toFixed(2)}</td>
+                              <td className="p-2 text-right">{box.std?.toFixed(2)}</td>
+                              <td className="p-2 text-right">{box.se?.toFixed(2)}</td>
+                              <td className="p-2 text-right">[{(box.mean - box.ci95)?.toFixed(2)}, {(box.mean + box.ci95)?.toFixed(2)}]</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {sporeLoadFacetLevels.map(level => {
+                      const facetResult = getSporeLoadChartData(level);
+                      return (
+                        <div key={level} className="border rounded-lg p-4">
+                          <h3 className="text-center font-semibold mb-3">{facetSporeLoadFactor}: {level}</h3>
+                          <ResponsiveContainer width="100%" height={300}>
+                            <ComposedChart 
+                              data={facetResult.boxData}
+                              margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis 
+                                dataKey="name"
+                                angle={-45} 
+                                textAnchor="end" 
+                                height={80}
+                                fontSize={12}
+                                interval={0}
+                              />
+                              <YAxis fontSize={12} label={{ value: 'Mean ± 95% CI', angle: -90, position: 'insideLeft' }} />
+                              <Tooltip 
+                                content={({ active, payload }) => {
+                                  if (active && payload && payload.length) {
+                                    const data = payload[0].payload;
+                                    return (
+                                      <div className="bg-white border rounded p-2 shadow text-xs">
+                                        <p className="font-semibold">{data.name}</p>
+                                        <p>n={data.n}, Mean={data.mean?.toFixed(2)} ± {data.ci95?.toFixed(2)}</p>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                }}
+                              />
+                              <Bar dataKey="mean" fill="#8b5cf6" name="Mean">
+                                <ErrorBar dataKey="ci95" width={4} strokeWidth={2} stroke="#5b21b6" />
+                              </Bar>
+                            </ComposedChart>
+                          </ResponsiveContainer>
+                          <div className="flex justify-around text-xs mt-2">
+                            {facetResult.boxData.map((box) => (
+                              <div key={box.name} className="text-center">
+                                <div className="text-gray-500">n={box.n}, μ={box.mean?.toFixed(1)} ± {box.ci95?.toFixed(1)}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )
               ) : (
                 <div className="text-center py-12 text-gray-500">
