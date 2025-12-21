@@ -78,7 +78,7 @@ export default function StatisticalTestPanel({ selectedBars, onClear, chartType 
           };
           
           // Add pairwise for consistency
-          results = {
+          const twoGroupResults = {
             global_test: globalTest,
             groups: groupData.map(g => ({
               name: g.name,
@@ -99,7 +99,7 @@ export default function StatisticalTestPanel({ selectedBars, onClear, chartType 
             }]
           };
           
-          setResults(results);
+          setResults(twoGroupResults);
           return;
         }
       } else {
@@ -166,7 +166,7 @@ export default function StatisticalTestPanel({ selectedBars, onClear, chartType 
           }));
         }
         
-        results = {
+        const multiGroupResults = {
           global_test: globalTest,
           groups: groupData.map(g => ({
             name: g.name,
@@ -177,7 +177,7 @@ export default function StatisticalTestPanel({ selectedBars, onClear, chartType 
           pairwise
         };
         
-        setResults(results);
+        setResults(multiGroupResults);
         return;
       }
       
