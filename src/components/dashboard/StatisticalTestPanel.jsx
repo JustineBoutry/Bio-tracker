@@ -374,15 +374,8 @@ Be precise with calculations. Use standard statistical formulas.`;
         )}
 
         {!results ? (
-          <Button onClick={runTest} disabled={loading} className="w-full">
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Running statistical test...
-              </>
-            ) : (
-              "Run Statistical Test"
-            )}
+          <Button onClick={runTest} className="w-full">
+            Run Statistical Test
           </Button>
         ) : (
           <div className="space-y-4">
