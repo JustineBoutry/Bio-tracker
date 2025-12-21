@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useExperiment } from "../components/ExperimentContext";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, LineChart, Line, ComposedChart, Scatter, ZAxis, ErrorBar } from 'recharts';
 import StatisticalTestPanel from "../components/dashboard/StatisticalTestPanel";
-import { oneWayAnova, tukeyHSD, logRankTest } from "../components/dashboard/statisticsUtils";
+import { oneWayAnova, tukeyHSD, logRankTest, multiWayAnova } from "../components/dashboard/statisticsUtils";
 
 export default function Dashboard() {
   const { activeExperimentId } = useExperiment();
@@ -571,49 +571,85 @@ export default function Dashboard() {
 
   const runAnovaTest = () => {
     if (anovaFactors.length === 0) return;
-    
+
     setRunningAnova(true);
     setAnovaResult(null);
-    
+
     try {
       let filteredInds = excludeMales 
         ? allIndividuals.filter(ind => ind.sex !== 'male')
         : allIndividuals;
-      
-      if (anovaFactors.length > 1) {
-        // Multi-way ANOVA not yet implemented in JS
-        alert('Multi-way ANOVA not yet implemented. Please select only one factor.');
-        setRunningAnova(false);
-        return;
-      }
-      
-      // One-way ANOVA
-      const groups = {};
-      const factor = anovaFactors[0];
-      
-      filteredInds.forEach(ind => {
-        const groupKey = ind.factors?.[factor] || 'Unknown';
-        if (!groups[groupKey]) {
-          groups[groupKey] = [];
+
+      if (anovaFactors.length === 1) {
+        // One-way ANOVA
+        const groups = {};
+        const factor = anovaFactors[0];
+
+        filteredInds.forEach(ind => {
+          const groupKey = ind.factors?.[factor] || 'Unknown';
+          if (!groups[groupKey]) {
+            groups[groupKey] = [];
+          }
+          groups[groupKey].push(Number(ind.cumulative_offspring) || 0);
+        });
+
+        const anovaResults = oneWayAnova(groups);
+
+        // Perform Tukey HSD if significant
+        let postHoc = [];
+        if (anovaResults.significant) {
+          postHoc = tukeyHSD(groups, anovaResults.ms_within, anovaResults.df_within);
         }
-        groups[groupKey].push(Number(ind.cumulative_offspring) || 0);
-      });
 
-      const anovaResults = oneWayAnova(groups);
+        setAnovaResult({
+          ...anovaResults,
+          post_hoc: postHoc,
+          isMultiWay: false,
+          interpretation: anovaResults.significant 
+            ? `Significant effect of ${factor} on offspring count (F(${anovaResults.df_between},${anovaResults.df_within}) = ${anovaResults.f_statistic.toFixed(2)}, p = ${anovaResults.p_value.toFixed(4)})`
+            : `No significant effect of ${factor} on offspring count (p = ${anovaResults.p_value.toFixed(4)})`
+        });
+      } else {
+        // Multi-way ANOVA
+        const data = filteredInds.map(ind => {
+          const row = { value: Number(ind.cumulative_offspring) || 0 };
+          anovaFactors.forEach(factor => {
+            row[factor] = ind.factors?.[factor] || 'Unknown';
+          });
+          return row;
+        });
 
-      // Perform Tukey HSD if significant
-      let postHoc = [];
-      if (anovaResults.significant) {
-        postHoc = tukeyHSD(groups, anovaResults.ms_within, anovaResults.df_within);
+        const { multiWayAnova } = await import('../components/dashboard/statisticsUtils');
+        const results = multiWayAnova(data, anovaFactors);
+
+        // Separate main effects and interactions
+        const mainEffects = results.effects.filter(e => e.type === 'main');
+        const interactions = results.effects.filter(e => e.type === 'interaction');
+
+        setAnovaResult({
+          isMultiWay: true,
+          test_type: `${anovaFactors.length}-way ANOVA`,
+          main_effects: mainEffects.map(e => ({
+            factor: e.factor,
+            f_statistic: e.f_statistic,
+            df: e.df,
+            p_value: e.p_value,
+            eta_squared: e.eta_squared,
+            significant: e.significant
+          })),
+          interactions: interactions.map(e => ({
+            factors: e.factors,
+            f_statistic: e.f_statistic,
+            df: e.df,
+            p_value: e.p_value,
+            eta_squared: e.eta_squared,
+            significant: e.significant
+          })),
+          df_error: results.df_error,
+          ms_error: results.ms_error,
+          interpretation: `${anovaFactors.length}-way ANOVA with ${interactions.length} interaction term(s)`
+        });
       }
-
-      setAnovaResult({
-        ...anovaResults,
-        post_hoc: postHoc,
-        interpretation: anovaResults.significant 
-          ? `Significant effect of ${factor} on offspring count (F(${anovaResults.df_between},${anovaResults.df_within}) = ${anovaResults.f_statistic.toFixed(2)}, p = ${anovaResults.p_value.toFixed(4)})`
-          : `No significant effect of ${factor} on offspring count (p = ${anovaResults.p_value.toFixed(4)})`
-      });
     } catch (error) {
       alert('ANOVA test failed: ' + error.message);
     } finally {
@@ -1258,7 +1294,7 @@ export default function Dashboard() {
               <div className="mt-6 border-t pt-6">
                 <h3 className="font-semibold mb-4">ANOVA Test for Offspring</h3>
                 <div className="mb-4">
-                  <label className="text-sm font-medium block mb-2">Select factor to test:</label>
+                  <label className="text-sm font-medium block mb-2">Select factor(s) to test:</label>
                   <div className="flex flex-wrap gap-4 mb-3">
                     {experiment.factors?.map(factor => (
                       <div key={factor.name} className="flex items-center gap-2">
@@ -1267,9 +1303,9 @@ export default function Dashboard() {
                           checked={anovaFactors.includes(factor.name)}
                           onCheckedChange={(checked) => {
                             if (checked) {
-                              setAnovaFactors([factor.name]);
+                              setAnovaFactors([...anovaFactors, factor.name]);
                             } else {
-                              setAnovaFactors([]);
+                              setAnovaFactors(anovaFactors.filter(f => f !== factor.name));
                             }
                             setAnovaResult(null);
                           }}
@@ -1281,11 +1317,15 @@ export default function Dashboard() {
                     ))}
                   </div>
                   <div className="text-sm text-gray-500 mb-3">
-                    {anovaFactors.length === 0 ? "Select one factor" : "One-way ANOVA"}
+                    {anovaFactors.length === 0 && "Select at least one factor"}
+                    {anovaFactors.length === 1 && "One-way ANOVA"}
+                    {anovaFactors.length === 2 && "Two-way ANOVA (with interaction)"}
+                    {anovaFactors.length === 3 && "Three-way ANOVA (with interactions)"}
+                    {anovaFactors.length > 3 && "Multi-way ANOVA (max 3 factors supported)"}
                   </div>
                   <Button 
                     onClick={runAnovaTest} 
-                    disabled={anovaFactors.length === 0 || runningAnova}
+                    disabled={anovaFactors.length === 0 || anovaFactors.length > 3 || runningAnova}
                   >
                     {runningAnova ? (
                       <>

@@ -487,6 +487,170 @@ function logGamma(x) {
   return Math.log(gamma(x));
 }
 
+// Multi-way ANOVA (supports up to 3-way with interactions)
+export function multiWayAnova(data, factorNames) {
+  // data: array of objects with factor values and response value
+  // e.g., [{factor1: 'A', factor2: 'B', value: 10}, ...]
+  
+  const n = data.length;
+  const grandMean = data.reduce((sum, d) => sum + d.value, 0) / n;
+  
+  // Calculate total sum of squares
+  const ssTotal = data.reduce((sum, d) => sum + Math.pow(d.value - grandMean, 2), 0);
+  
+  // Main effects and interactions
+  const effects = [];
+  
+  // Single factors (main effects)
+  factorNames.forEach(factor => {
+    const groups = {};
+    data.forEach(d => {
+      const level = d[factor];
+      if (!groups[level]) groups[level] = [];
+      groups[level].push(d.value);
+    });
+    
+    const levelNames = Object.keys(groups);
+    let ss = 0;
+    levelNames.forEach(level => {
+      const values = groups[level];
+      const mean = values.reduce((a, b) => a + b, 0) / values.length;
+      ss += values.length * Math.pow(mean - grandMean, 2);
+    });
+    
+    const df = levelNames.length - 1;
+    const ms = ss / df;
+    
+    effects.push({
+      factor,
+      ss,
+      df,
+      ms,
+      type: 'main'
+    });
+  });
+  
+  // Two-way interactions
+  if (factorNames.length >= 2) {
+    for (let i = 0; i < factorNames.length; i++) {
+      for (let j = i + 1; j < factorNames.length; j++) {
+        const f1 = factorNames[i];
+        const f2 = factorNames[j];
+        
+        const groups = {};
+        data.forEach(d => {
+          const key = `${d[f1]}|${d[f2]}`;
+          if (!groups[key]) groups[key] = [];
+          groups[key].push(d.value);
+        });
+        
+        // Calculate interaction SS
+        let ss = 0;
+        Object.entries(groups).forEach(([key, values]) => {
+          const [lev1, lev2] = key.split('|');
+          const cellMean = values.reduce((a, b) => a + b, 0) / values.length;
+          
+          // Get marginal means
+          const margin1 = data.filter(d => d[f1] === lev1);
+          const mean1 = margin1.reduce((a, b) => a + b.value, 0) / margin1.length;
+          
+          const margin2 = data.filter(d => d[f2] === lev2);
+          const mean2 = margin2.reduce((a, b) => a + b.value, 0) / margin2.length;
+          
+          ss += values.length * Math.pow(cellMean - mean1 - mean2 + grandMean, 2);
+        });
+        
+        const levels1 = [...new Set(data.map(d => d[f1]))].length;
+        const levels2 = [...new Set(data.map(d => d[f2]))].length;
+        const df = (levels1 - 1) * (levels2 - 1);
+        const ms = ss / df;
+        
+        effects.push({
+          factors: [f1, f2],
+          ss,
+          df,
+          ms,
+          type: 'interaction'
+        });
+      }
+    }
+  }
+  
+  // Three-way interaction
+  if (factorNames.length === 3) {
+    const [f1, f2, f3] = factorNames;
+    const groups = {};
+    
+    data.forEach(d => {
+      const key = `${d[f1]}|${d[f2]}|${d[f3]}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(d.value);
+    });
+    
+    // Simplified 3-way interaction calculation
+    let ss = 0;
+    Object.values(groups).forEach(values => {
+      const cellMean = values.reduce((a, b) => a + b, 0) / values.length;
+      ss += values.length * Math.pow(cellMean - grandMean, 2);
+    });
+    
+    // Subtract main effects and 2-way interactions
+    effects.forEach(effect => {
+      if (effect.type === 'main' || effect.type === 'interaction') {
+        ss -= effect.ss;
+      }
+    });
+    
+    const levels1 = [...new Set(data.map(d => d[f1]))].length;
+    const levels2 = [...new Set(data.map(d => d[f2]))].length;
+    const levels3 = [...new Set(data.map(d => d[f3]))].length;
+    const df = (levels1 - 1) * (levels2 - 1) * (levels3 - 1);
+    const ms = df > 0 ? ss / df : 0;
+    
+    if (df > 0) {
+      effects.push({
+        factors: [f1, f2, f3],
+        ss,
+        df,
+        ms,
+        type: 'interaction'
+      });
+    }
+  }
+  
+  // Error (within-groups) sum of squares
+  let ssError = ssTotal;
+  effects.forEach(effect => {
+    ssError -= effect.ss;
+  });
+  
+  const dfError = n - effects.reduce((sum, e) => sum + e.df, 0) - 1;
+  const msError = ssError / dfError;
+  
+  // Calculate F-statistics and p-values
+  const results = effects.map(effect => {
+    const f = effect.ms / msError;
+    const pValue = 1 - fCDF(f, effect.df, dfError);
+    const etaSquared = effect.ss / ssTotal;
+    
+    return {
+      ...effect,
+      f_statistic: f,
+      p_value: pValue,
+      eta_squared: etaSquared,
+      significant: pValue < 0.05
+    };
+  });
+  
+  return {
+    effects: results,
+    ss_error: ssError,
+    df_error: dfError,
+    ms_error: msError,
+    ss_total: ssTotal
+  };
+}
+
 // Log-rank test for survival analysis
 export function logRankTest(survivalData) {
   // survivalData is object: { groupName: [{time, status}...] }
