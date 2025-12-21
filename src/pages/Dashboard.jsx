@@ -535,7 +535,7 @@ export default function Dashboard() {
       }
       
       const volume = parseVolume(ind.spores_volume);
-      if (volume && ind.spores_count) {
+      if (volume && ind.spores_count != null) {
         const sporeLoad = ind.spores_count * volume;
         if (!excludeZeroSporeLoad || sporeLoad > 0) {
           groups[groupKey].values.push(sporeLoad);
