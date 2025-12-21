@@ -45,6 +45,7 @@ export default function Dashboard() {
   const [survivalCurveByRedStatus, setSurvivalCurveByRedStatus] = useState(false);
   const [selectedSporeLoadGraphFactors, setSelectedSporeLoadGraphFactors] = useState([]);
   const [facetSporeLoadFactor, setFacetSporeLoadFactor] = useState(null);
+  const [excludeZeroSporeLoad, setExcludeZeroSporeLoad] = useState(false);
   const [anovaFactors, setAnovaFactors] = useState([]);
   const [anovaResult, setAnovaResult] = useState(null);
   const [runningAnova, setRunningAnova] = useState(false);
@@ -536,7 +537,9 @@ export default function Dashboard() {
       const volume = parseVolume(ind.spores_volume);
       if (volume && ind.spores_count) {
         const sporeLoad = ind.spores_count * volume;
-        groups[groupKey].values.push(sporeLoad);
+        if (!excludeZeroSporeLoad || sporeLoad > 0) {
+          groups[groupKey].values.push(sporeLoad);
+        }
       }
     });
 
@@ -2586,6 +2589,17 @@ export default function Dashboard() {
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="exclude-zero-spore-load"
+                    checked={excludeZeroSporeLoad}
+                    onCheckedChange={setExcludeZeroSporeLoad}
+                  />
+                  <label htmlFor="exclude-zero-spore-load" className="text-sm cursor-pointer">
+                    Exclude individuals with 0 spore load
+                  </label>
                 </div>
               </div>
 
