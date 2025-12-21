@@ -288,3 +288,282 @@ function incompleteGamma(s, x) {
     return gamma(s) - Math.exp(-x + s * Math.log(x)) * term;
   }
 }
+
+// One-way ANOVA
+export function oneWayAnova(groups) {
+  // groups is an object: { groupName: [values...] }
+  const groupNames = Object.keys(groups);
+  const allValues = [];
+  const groupSizes = [];
+  
+  groupNames.forEach(name => {
+    allValues.push(...groups[name]);
+    groupSizes.push(groups[name].length);
+  });
+  
+  const N = allValues.length;
+  const k = groupNames.length;
+  
+  // Grand mean
+  const grandMean = allValues.reduce((a, b) => a + b, 0) / N;
+  
+  // Between-group sum of squares
+  let ssBetween = 0;
+  groupNames.forEach(name => {
+    const groupMean = groups[name].reduce((a, b) => a + b, 0) / groups[name].length;
+    ssBetween += groups[name].length * Math.pow(groupMean - grandMean, 2);
+  });
+  
+  // Within-group sum of squares
+  let ssWithin = 0;
+  groupNames.forEach(name => {
+    const groupMean = groups[name].reduce((a, b) => a + b, 0) / groups[name].length;
+    groups[name].forEach(value => {
+      ssWithin += Math.pow(value - groupMean, 2);
+    });
+  });
+  
+  // Total sum of squares
+  const ssTotal = ssBetween + ssWithin;
+  
+  // Degrees of freedom
+  const dfBetween = k - 1;
+  const dfWithin = N - k;
+  
+  // Mean squares
+  const msBetween = ssBetween / dfBetween;
+  const msWithin = ssWithin / dfWithin;
+  
+  // F-statistic
+  const fStat = msBetween / msWithin;
+  
+  // P-value (F-distribution CDF)
+  const pValue = 1 - fCDF(fStat, dfBetween, dfWithin);
+  
+  // Effect size (eta-squared)
+  const etaSquared = ssBetween / ssTotal;
+  
+  // Group statistics
+  const groupStats = groupNames.map(name => {
+    const values = groups[name];
+    const n = values.length;
+    const mean = values.reduce((a, b) => a + b, 0) / n;
+    const variance = values.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / (n - 1 || 1);
+    const std = Math.sqrt(variance);
+    
+    return { name, n, mean, std };
+  });
+  
+  return {
+    f_statistic: fStat,
+    p_value: pValue,
+    df_between: dfBetween,
+    df_within: dfWithin,
+    eta_squared: etaSquared,
+    significant: pValue < 0.05,
+    group_stats: groupStats,
+    ss_between: ssBetween,
+    ss_within: ssWithin,
+    ms_within: msWithin
+  };
+}
+
+// Tukey HSD post-hoc test
+export function tukeyHSD(groups, msWithin, dfWithin) {
+  const groupNames = Object.keys(groups);
+  const comparisons = [];
+  
+  // Calculate group means
+  const groupMeans = {};
+  groupNames.forEach(name => {
+    groupMeans[name] = groups[name].reduce((a, b) => a + b, 0) / groups[name].length;
+  });
+  
+  // All pairwise comparisons
+  for (let i = 0; i < groupNames.length; i++) {
+    for (let j = i + 1; j < groupNames.length; j++) {
+      const g1 = groupNames[i];
+      const g2 = groupNames[j];
+      
+      const mean1 = groupMeans[g1];
+      const mean2 = groupMeans[g2];
+      const n1 = groups[g1].length;
+      const n2 = groups[g2].length;
+      
+      // Mean difference
+      const meanDiff = mean1 - mean2;
+      
+      // Standard error
+      const se = Math.sqrt(msWithin * (1/n1 + 1/n2));
+      
+      // Studentized range statistic (q)
+      const q = Math.abs(meanDiff) / se;
+      
+      // Approximate p-value using Tukey distribution
+      // For simplicity, we'll use a conservative approximation
+      const pValue = 1 - tukeyQCDF(q, groupNames.length, dfWithin);
+      
+      comparisons.push({
+        group1: g1,
+        group2: g2,
+        mean_diff: meanDiff,
+        p_value: pValue,
+        significant: pValue < 0.05
+      });
+    }
+  }
+  
+  return comparisons;
+}
+
+// Helper: F-distribution CDF
+function fCDF(x, df1, df2) {
+  if (x <= 0) return 0;
+  
+  // Use beta distribution relationship: F ~ (df1*X)/(df1*X + df2)
+  // where X ~ Beta(df1/2, df2/2)
+  const y = (df1 * x) / (df1 * x + df2);
+  return betaCDF(y, df1/2, df2/2);
+}
+
+// Helper: Beta distribution CDF (incomplete beta function)
+function betaCDF(x, a, b) {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  
+  return incompleteBeta(x, a, b) / beta(a, b);
+}
+
+// Helper: Beta function
+function beta(a, b) {
+  return gamma(a) * gamma(b) / gamma(a + b);
+}
+
+// Helper: Incomplete beta function
+function incompleteBeta(x, a, b) {
+  if (x === 0) return 0;
+  if (x === 1) return beta(a, b);
+  
+  // Use continued fraction
+  const lbeta = Math.log(beta(a, b));
+  const front = Math.exp(Math.log(x) * a + Math.log(1 - x) * b - lbeta) / a;
+  
+  let f = 1.0;
+  let c = 1.0;
+  let d = 0.0;
+  
+  for (let i = 0; i <= 200; i++) {
+    const m = i / 2;
+    
+    let numerator;
+    if (i === 0) {
+      numerator = 1.0;
+    } else if (i % 2 === 0) {
+      numerator = (m * (b - m) * x) / ((a + 2 * m - 1) * (a + 2 * m));
+    } else {
+      numerator = -((a + m) * (a + b + m) * x) / ((a + 2 * m) * (a + 2 * m + 1));
+    }
+    
+    d = 1.0 + numerator * d;
+    if (Math.abs(d) < 1e-30) d = 1e-30;
+    d = 1.0 / d;
+    
+    c = 1.0 + numerator / c;
+    if (Math.abs(c) < 1e-30) c = 1e-30;
+    
+    const cd = c * d;
+    f *= cd;
+    
+    if (Math.abs(1.0 - cd) < 1e-10) {
+      return front * f;
+    }
+  }
+  
+  return front * f;
+}
+
+// Helper: Tukey Q distribution CDF (approximation)
+function tukeyQCDF(q, k, df) {
+  // Approximation using normal distribution
+  // This is a simplified version; exact calculation is complex
+  const sqrtDf = Math.sqrt(df);
+  const z = (q * sqrtDf - Math.sqrt(k)) / Math.sqrt(2);
+  return Math.pow(normalCDF(z), k);
+}
+
+// Log-rank test for survival analysis
+export function logRankTest(survivalData) {
+  // survivalData is object: { groupName: [{time, status}...] }
+  const groups = Object.keys(survivalData);
+  
+  // Collect all unique event times
+  const allTimes = new Set();
+  groups.forEach(group => {
+    survivalData[group].forEach(obs => {
+      if (obs.status === 1) { // Only death events
+        allTimes.add(obs.time);
+      }
+    });
+  });
+  
+  const sortedTimes = Array.from(allTimes).sort((a, b) => a - b);
+  
+  // For each time, calculate observed and expected deaths per group
+  const observed = {};
+  const expected = {};
+  const variance = {};
+  
+  groups.forEach(g => {
+    observed[g] = 0;
+    expected[g] = 0;
+    variance[g] = 0;
+  });
+  
+  sortedTimes.forEach(t => {
+    // Count at risk and deaths at this time
+    const atRisk = {};
+    let totalAtRisk = 0;
+    let totalDeaths = 0;
+    
+    groups.forEach(group => {
+      atRisk[group] = survivalData[group].filter(obs => obs.time >= t).length;
+      totalAtRisk += atRisk[group];
+      
+      const deaths = survivalData[group].filter(obs => obs.time === t && obs.status === 1).length;
+      observed[group] += deaths;
+      totalDeaths += deaths;
+    });
+    
+    if (totalAtRisk === 0 || totalDeaths === 0) return;
+    
+    // Expected deaths for each group
+    groups.forEach(group => {
+      const exp = (atRisk[group] / totalAtRisk) * totalDeaths;
+      expected[group] += exp;
+      
+      // Variance (for chi-square calculation)
+      const v = exp * (totalAtRisk - atRisk[group]) * (totalAtRisk - totalDeaths) / 
+                (totalAtRisk * totalAtRisk * (totalAtRisk - 1 || 1));
+      variance[group] += v;
+    });
+  });
+  
+  // Chi-square statistic
+  let chiSquare = 0;
+  groups.forEach(group => {
+    const diff = observed[group] - expected[group];
+    chiSquare += (diff * diff) / (expected[group] || 1);
+  });
+  
+  const df = groups.length - 1;
+  const pValue = 1 - chiSquareCDF(chiSquare, df);
+  
+  return {
+    test_statistic: chiSquare,
+    degrees_of_freedom: df,
+    p_value: pValue,
+    significant: pValue < 0.05,
+    observed,
+    expected
+  };
+}

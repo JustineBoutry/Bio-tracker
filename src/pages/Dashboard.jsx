@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useExperiment } from "../components/ExperimentContext";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, LineChart, Line, ComposedChart, Scatter, ZAxis, ErrorBar } from 'recharts';
 import StatisticalTestPanel from "../components/dashboard/StatisticalTestPanel";
+import { oneWayAnova, tukeyHSD, logRankTest } from "../components/dashboard/statisticsUtils";
 
 export default function Dashboard() {
   const { activeExperimentId } = useExperiment();
@@ -568,7 +569,7 @@ export default function Dashboard() {
     return factor?.levels || [];
   };
 
-  const runAnovaTest = async () => {
+  const runAnovaTest = () => {
     if (anovaFactors.length === 0) return;
     
     setRunningAnova(true);
@@ -579,223 +580,41 @@ export default function Dashboard() {
         ? allIndividuals.filter(ind => ind.sex !== 'male')
         : allIndividuals;
       
-      const isMultiWay = anovaFactors.length > 1;
-      
-      if (isMultiWay) {
-        // Multi-way ANOVA - prepare data with all factor combinations
-        const dataRows = filteredInds.map(ind => {
-          const row = { offspring: Number(ind.cumulative_offspring) || 0 };
-          anovaFactors.forEach(f => {
-            row[f] = ind.factors?.[f] || 'Unknown';
-          });
-          return row;
-        });
-
-        const prompt = `Perform a ${anovaFactors.length}-way ANOVA test on offspring count data with factors: ${anovaFactors.join(', ')}.
-
-Data (each row is one individual):
-${JSON.stringify(dataRows.slice(0, 500))}
-${dataRows.length > 500 ? `... and ${dataRows.length - 500} more rows` : ''}
-
-Total N = ${dataRows.length}
-
-Instructions:
-1. Calculate main effects for each factor
-2. Calculate interaction effects (if 2+ factors)
-3. For each effect, provide F-statistic, p-value, and eta-squared
-4. Provide group means for each factor level
-5. If any main effect is significant (p < 0.05), mention which pairwise comparisons would be significant
-
-Return in JSON format:
-{
-  "test_type": "${anovaFactors.length}-way ANOVA",
-  "factors": ["factor1", "factor2", ...],
-  "main_effects": [
-    {
-      "factor": "string",
-      "f_statistic": number,
-      "p_value": number,
-      "df": number,
-      "eta_squared": number,
-      "significant": boolean
-    }
-  ],
-  "interactions": [
-    {
-      "factors": ["factor1", "factor2"],
-      "f_statistic": number,
-      "p_value": number,
-      "df": number,
-      "eta_squared": number,
-      "significant": boolean
-    }
-  ],
-  "group_stats": [
-    {
-      "factor": "string",
-      "level": "string",
-      "n": number,
-      "mean": number,
-      "std": number
-    }
-  ],
-  "df_residual": number,
-  "interpretation": "string"
-}`;
-
-        const response = await base44.integrations.Core.InvokeLLM({
-          prompt,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              test_type: { type: "string" },
-              factors: { type: "array", items: { type: "string" } },
-              main_effects: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    factor: { type: "string" },
-                    f_statistic: { type: "number" },
-                    p_value: { type: "number" },
-                    df: { type: "number" },
-                    eta_squared: { type: "number" },
-                    significant: { type: "boolean" }
-                  }
-                }
-              },
-              interactions: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    factors: { type: "array", items: { type: "string" } },
-                    f_statistic: { type: "number" },
-                    p_value: { type: "number" },
-                    df: { type: "number" },
-                    eta_squared: { type: "number" },
-                    significant: { type: "boolean" }
-                  }
-                }
-              },
-              group_stats: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    factor: { type: "string" },
-                    level: { type: "string" },
-                    n: { type: "number" },
-                    mean: { type: "number" },
-                    std: { type: "number" }
-                  }
-                }
-              },
-              df_residual: { type: "number" },
-              interpretation: { type: "string" }
-            }
-          }
-        });
-
-        setAnovaResult({ ...response, isMultiWay: true });
-      } else {
-        // One-way ANOVA
-        const groups = {};
-        const factor = anovaFactors[0];
-        
-        filteredInds.forEach(ind => {
-          const groupKey = ind.factors?.[factor] || 'Unknown';
-          if (!groups[groupKey]) {
-            groups[groupKey] = [];
-          }
-          groups[groupKey].push(Number(ind.cumulative_offspring) || 0);
-        });
-
-        const prompt = `Perform a one-way ANOVA test on the following offspring count data grouped by "${factor}":
-
-${Object.entries(groups).map(([group, values]) => 
-  `Group "${group}": [${values.join(', ')}]`
-).join('\n')}
-
-Instructions:
-1. Calculate the F-statistic
-2. Calculate the p-value
-3. Calculate degrees of freedom (between groups and within groups)
-4. Calculate effect size (eta-squared)
-5. Provide group means and standard deviations
-6. If significant (p < 0.05), perform post-hoc Tukey HSD test for pairwise comparisons
-
-Return in JSON format:
-{
-  "f_statistic": number,
-  "p_value": number,
-  "df_between": number,
-  "df_within": number,
-  "eta_squared": number,
-  "significant": boolean,
-  "group_stats": [
-    {
-      "name": "string",
-      "n": number,
-      "mean": number,
-      "std": number
-    }
-  ],
-  "post_hoc": [
-    {
-      "group1": "string",
-      "group2": "string",
-      "mean_diff": number,
-      "p_value": number,
-      "significant": boolean
-    }
-  ],
-  "interpretation": "string"
-}`;
-
-        const response = await base44.integrations.Core.InvokeLLM({
-          prompt,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              f_statistic: { type: "number" },
-              p_value: { type: "number" },
-              df_between: { type: "number" },
-              df_within: { type: "number" },
-              eta_squared: { type: "number" },
-              significant: { type: "boolean" },
-              group_stats: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    name: { type: "string" },
-                    n: { type: "number" },
-                    mean: { type: "number" },
-                    std: { type: "number" }
-                  }
-                }
-              },
-              post_hoc: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    group1: { type: "string" },
-                    group2: { type: "string" },
-                    mean_diff: { type: "number" },
-                    p_value: { type: "number" },
-                    significant: { type: "boolean" }
-                  }
-                }
-              },
-              interpretation: { type: "string" }
-            }
-          }
-        });
-
-        setAnovaResult({ ...response, isMultiWay: false });
+      if (anovaFactors.length > 1) {
+        // Multi-way ANOVA not yet implemented in JS
+        alert('Multi-way ANOVA not yet implemented. Please select only one factor.');
+        setRunningAnova(false);
+        return;
       }
+      
+      // One-way ANOVA
+      const groups = {};
+      const factor = anovaFactors[0];
+      
+      filteredInds.forEach(ind => {
+        const groupKey = ind.factors?.[factor] || 'Unknown';
+        if (!groups[groupKey]) {
+          groups[groupKey] = [];
+        }
+        groups[groupKey].push(Number(ind.cumulative_offspring) || 0);
+      });
+
+      const anovaResults = oneWayAnova(groups);
+      
+      // Perform Tukey HSD if significant
+      let postHoc = [];
+      if (anovaResults.significant) {
+        postHoc = tukeyHSD(groups, anovaResults.ms_within, anovaResults.df_within);
+      }
+
+      setAnovaResult({
+        ...anovaResults,
+        post_hoc: postHoc,
+        isMultiWay: false,
+        interpretation: anovaResults.significant 
+          ? `Significant effect of ${factor} on offspring count (F(${anovaResults.df_between},${anovaResults.df_within}) = ${anovaResults.f_statistic.toFixed(2)}, p = ${anovaResults.p_value.toFixed(4)})`
+          : `No significant effect of ${factor} on offspring count (p = ${anovaResults.p_value.toFixed(4)})`
+      });
     } catch (error) {
       alert('ANOVA test failed: ' + error.message);
     } finally {
@@ -890,7 +709,7 @@ Return in JSON format:
     setLogRankTestResult(null);
   };
 
-  const runLogRankTest = async () => {
+  const runLogRankTest = () => {
     setRunningLogRank(true);
     setLogRankTestResult(null);
     
@@ -898,10 +717,19 @@ Return in JSON format:
       // Prepare survival data for selected groups
       const survivalData = {};
       
-      allIndividuals.forEach(ind => {
-        const groupKey = selectedSurvivalCurveFactors
+      let filteredInds = excludeMales 
+        ? allIndividuals.filter(ind => ind.sex !== 'male')
+        : allIndividuals;
+      
+      filteredInds.forEach(ind => {
+        let groupKey = selectedSurvivalCurveFactors
           .map(factor => ind.factors?.[factor] || 'Unknown')
           .join(' - ');
+        
+        if (survivalCurveByRedStatus) {
+          const redStatus = ind.red_confirmed ? 'Red+' : 'Red-';
+          groupKey = groupKey ? `${groupKey} | ${redStatus}` : redStatus;
+        }
         
         if (!selectedSurvivalCurves.includes(groupKey)) return;
         
@@ -922,43 +750,14 @@ Return in JSON format:
         }
       });
 
-      const prompt = `Perform a log-rank test on the following survival data:
-
-${Object.entries(survivalData).map(([group, data]) => 
-  `Group: ${group}
-  Data: ${JSON.stringify(data)}`
-).join('\n\n')}
-
-Instructions:
-1. Calculate the log-rank test statistic (chi-square)
-2. Calculate degrees of freedom (number of groups - 1)
-3. Calculate the p-value
-4. Provide interpretation
-
-Return in JSON format:
-{
-  "test_statistic": number,
-  "degrees_of_freedom": number,
-  "p_value": number,
-  "significant": boolean (p < 0.05),
-  "interpretation": "string describing the result"
-}`;
-
-      const response = await base44.integrations.Core.InvokeLLM({
-        prompt,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            test_statistic: { type: "number" },
-            degrees_of_freedom: { type: "number" },
-            p_value: { type: "number" },
-            significant: { type: "boolean" },
-            interpretation: { type: "string" }
-          }
-        }
+      const result = logRankTest(survivalData);
+      
+      setLogRankTestResult({
+        ...result,
+        interpretation: result.significant
+          ? `Survival curves differ significantly between groups (χ² = ${result.test_statistic.toFixed(2)}, df = ${result.degrees_of_freedom}, p = ${result.p_value.toFixed(4)})`
+          : `No significant difference in survival between groups (p = ${result.p_value.toFixed(4)})`
       });
-
-      setLogRankTestResult(response);
     } catch (error) {
       alert('Log-rank test failed: ' + error.message);
     } finally {
