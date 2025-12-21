@@ -419,82 +419,87 @@ export function tukeyHSD(groups, msWithin, dfWithin) {
   return comparisons;
 }
 
-// Helper: F-distribution CDF
+// Helper: F-distribution CDF using regularized incomplete beta
 function fCDF(x, df1, df2) {
   if (x <= 0) return 0;
   if (!isFinite(x) || !isFinite(df1) || !isFinite(df2)) return 0.5;
   
-  // Use beta distribution relationship
-  const y = (df1 * x) / (df1 * x + df2);
-  
-  // Direct incomplete beta calculation to avoid division
-  const result = incompleteBetaFunc(y, df1/2, df2/2);
-  
-  return result;
+  // F(df1, df2) CDF at x equals the regularized incomplete beta function
+  // I_w(a, b) where w = df1*x / (df1*x + df2), a = df1/2, b = df2/2
+  const w = (df1 * x) / (df1 * x + df2);
+  return regularizedIncompleteBeta(w, df1/2, df2/2);
 }
 
-// Helper: Beta function
-function beta(a, b) {
-  if (!isFinite(a) || !isFinite(b) || a <= 0 || b <= 0) return 1;
-  return Math.exp(logGamma(a) + logGamma(b) - logGamma(a + b));
-}
-
-// Helper: Incomplete beta function (different name to avoid conflict)
-function incompleteBetaFunc(x, a, b) {
+// Regularized incomplete beta function I_x(a,b) = B_x(a,b) / B(a,b)
+function regularizedIncompleteBeta(x, a, b) {
   if (x <= 0) return 0;
   if (x >= 1) return 1;
-  
-  // Avoid numerical issues
   if (!isFinite(a) || !isFinite(b) || a <= 0 || b <= 0) return 0.5;
   
-  // Use symmetry relation if needed
+  // Use symmetry if needed
   if (x > (a + 1) / (a + b + 2)) {
-    return 1 - incompleteBetaFunc(1 - x, b, a);
+    return 1 - regularizedIncompleteBeta(1 - x, b, a);
   }
   
-  // Compute using continued fraction
-  const logBeta = logGamma(a) + logGamma(b) - logGamma(a + b);
-  const logPrefix = a * Math.log(x) + b * Math.log(1 - x) - logBeta;
+  // Compute log of the beta function
+  const logBetaAB = logGamma(a) + logGamma(b) - logGamma(a + b);
   
-  if (!isFinite(logPrefix)) return 0.5;
+  // Compute the coefficient
+  const logCoef = a * Math.log(x) + b * Math.log(1 - x) - logBetaAB;
   
-  const prefix = Math.exp(logPrefix);
+  if (!isFinite(logCoef) || logCoef < -700) return 0; // Underflow
   
-  // Lentz's algorithm for continued fraction
+  const coef = Math.exp(logCoef);
+  
+  // Continued fraction using Lentz's method
+  const cf = betaContFrac(x, a, b);
+  
+  return coef * cf / a;
+}
+
+// Continued fraction for incomplete beta
+function betaContFrac(x, a, b) {
+  const maxIter = 200;
+  const eps = 1e-10;
+  
   let f = 1.0;
   let c = 1.0;
   let d = 0.0;
   
-  for (let m = 0; m <= 200; m++) {
-    const m2 = 2 * m;
-    let numerator;
+  for (let m = 0; m < maxIter; m++) {
+    let num;
     
     if (m === 0) {
-      numerator = 1.0;
-    } else if (m % 2 === 1) {
-      const mm = (m - 1) / 2;
-      numerator = -((a + mm) * (a + b + mm) * x) / ((a + m2 - 1) * (a + m2));
+      num = 1.0;
     } else {
-      const mm = m / 2;
-      numerator = (mm * (b - mm) * x) / ((a + m2 - 2) * (a + m2 - 1));
+      const m2 = 2 * m;
+      if (m % 2 === 0) {
+        // Even m
+        const mHalf = m / 2;
+        num = (mHalf * (b - mHalf) * x) / ((a + m2 - 2) * (a + m2 - 1));
+      } else {
+        // Odd m
+        const mHalf = (m - 1) / 2;
+        num = -((a + mHalf) * (a + b + mHalf) * x) / ((a + m2 - 1) * (a + m2));
+      }
     }
     
-    d = 1.0 + numerator * d;
-    if (Math.abs(d) < 1e-30) d = 1e-30;
+    d = 1.0 + num * d;
+    if (Math.abs(d) < eps) d = eps;
     d = 1.0 / d;
     
-    c = 1.0 + numerator / c;
-    if (Math.abs(c) < 1e-30) c = 1e-30;
+    c = 1.0 + num / c;
+    if (Math.abs(c) < eps) c = eps;
     
     const delta = c * d;
     f *= delta;
     
-    if (Math.abs(delta - 1.0) < 1e-10) {
-      break;
+    if (Math.abs(delta - 1.0) < eps) {
+      return f;
     }
   }
   
-  return prefix * f / a;
+  return f;
 }
 
 // Helper: Tukey Q distribution CDF (approximation)
