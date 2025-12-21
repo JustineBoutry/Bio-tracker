@@ -1,22 +1,202 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, X, AlertCircle } from "lucide-react";
+import { X, AlertCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { chiSquareTest, fisherExactTest, zTestProportions, correctPValues } from "./statisticsUtils";
 
 export default function StatisticalTestPanel({ selectedBars, onClear, chartType }) {
   const [results, setResults] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [testType, setTestType] = useState("auto");
   const [correctionMethod, setCorrectionMethod] = useState("fdr");
 
-  const runTest = async () => {
-    setLoading(true);
+  const runTest = () => {
     setResults(null);
     
     try {
-      const prompt = `You are a biostatistician. Perform statistical testing on the following data:
+      // Extract counts based on chart type
+      const extractCounts = (bar) => {
+        if (chartType === 'infection') {
+          return [bar.data.confirmedYes, bar.data.confirmedNo];
+        } else if (chartType === 'survival') {
+          return [bar.data.alive, bar.data.dead];
+        } else if (chartType === 'reproduction') {
+          return [bar.data.reproduced, bar.data.notReproduced];
+        } else if (chartType === 'red_signal') {
+          return [bar.data.red3plus, bar.data.noRed]; // Compare confirmed red vs not red
+        } else if (chartType === 'sex') {
+          return [bar.data.male, bar.data.female];
+        }
+        return [0, 0];
+      };
+
+      const groupData = selectedBars.map(bar => {
+        const counts = extractCounts(bar);
+        return {
+          name: bar.name,
+          success: counts[0],
+          failure: counts[1],
+          total: counts[0] + counts[1]
+        };
+      });
+
+      let globalTest;
+      let warnings = [];
+
+      if (selectedBars.length === 2) {
+        // Two-group comparison
+        const g1 = groupData[0];
+        const g2 = groupData[1];
+        
+        // Check expected counts for Fisher's exact test
+        const pooledP = (g1.success + g2.success) / (g1.total + g2.total);
+        const expected1 = g1.total * pooledP;
+        const expected2 = g2.total * pooledP;
+        
+        const useFisher = testType === 'fisher' || 
+                         (testType === 'auto' && (expected1 < 5 || expected2 < 5 || 
+                          g1.total - expected1 < 5 || g2.total - expected2 < 5));
+        
+        if (useFisher || testType === 'fisher') {
+          const fisher = fisherExactTest(g1.success, g1.failure, g2.success, g2.failure);
+          globalTest = {
+            test_name: "Fisher's Exact Test",
+            statistic: fisher.oddsRatio,
+            p_value: fisher.pValue,
+            significant: fisher.pValue < 0.05,
+            warnings: expected1 < 5 || expected2 < 5 ? 
+              ["Expected counts < 5, Fisher's exact test is appropriate"] : []
+          };
+        } else {
+          const zTest = zTestProportions(g1.success, g1.total, g2.success, g2.total);
+          globalTest = {
+            test_name: "Two-Sample Z-Test for Proportions",
+            statistic: zTest.statistic,
+            p_value: zTest.pValue,
+            significant: zTest.pValue < 0.05,
+            warnings: []
+          };
+          
+          // Add pairwise for consistency
+          results = {
+            global_test: globalTest,
+            groups: groupData.map(g => ({
+              name: g.name,
+              count: g.success,
+              total: g.total,
+              proportion: g.success / g.total
+            })),
+            pairwise: [{
+              group1: g1.name,
+              group2: g2.name,
+              test_name: globalTest.test_name,
+              p_value: zTest.pValue,
+              p_value_corrected: zTest.pValue,
+              effect_size: zTest.difference,
+              ci_lower: zTest.ciLower,
+              ci_upper: zTest.ciUpper,
+              interpretation: `Difference in proportions: ${(zTest.difference * 100).toFixed(1)}%`
+            }]
+          };
+          
+          setResults(results);
+          return;
+        }
+      } else {
+        // Multiple groups - chi-square test
+        const contingencyTable = groupData.map(g => [g.success, g.failure]);
+        const chiSq = chiSquareTest(contingencyTable);
+        
+        globalTest = {
+          test_name: "Chi-Square Test of Independence",
+          statistic: chiSq.statistic,
+          p_value: chiSq.pValue,
+          significant: chiSq.pValue < 0.05,
+          warnings: chiSq.warnings
+        };
+        
+        // Pairwise comparisons if significant
+        let pairwise = [];
+        if (chiSq.pValue < 0.05) {
+          const pairs = [];
+          for (let i = 0; i < groupData.length; i++) {
+            for (let j = i + 1; j < groupData.length; j++) {
+              const g1 = groupData[i];
+              const g2 = groupData[j];
+              
+              // Check if Fisher's exact is needed for this pair
+              const pooledP = (g1.success + g2.success) / (g1.total + g2.total);
+              const expected1 = g1.total * pooledP;
+              const expected2 = g2.total * pooledP;
+              const useFisher = expected1 < 5 || expected2 < 5 || 
+                               g1.total - expected1 < 5 || g2.total - expected2 < 5;
+              
+              if (useFisher) {
+                const fisher = fisherExactTest(g1.success, g1.failure, g2.success, g2.failure);
+                pairs.push({
+                  group1: g1.name,
+                  group2: g2.name,
+                  test_name: "Fisher's Exact",
+                  p_value: fisher.pValue,
+                  effect_size: (g1.success / g1.total) - (g2.success / g2.total)
+                });
+              } else {
+                const zTest = zTestProportions(g1.success, g1.total, g2.success, g2.total);
+                pairs.push({
+                  group1: g1.name,
+                  group2: g2.name,
+                  test_name: "Z-Test",
+                  p_value: zTest.pValue,
+                  effect_size: zTest.difference,
+                  ci_lower: zTest.ciLower,
+                  ci_upper: zTest.ciUpper
+                });
+              }
+            }
+          }
+          
+          // Apply correction
+          const rawPValues = pairs.map(p => p.p_value);
+          const correctedPValues = correctPValues(rawPValues, correctionMethod);
+          
+          pairwise = pairs.map((p, idx) => ({
+            ...p,
+            p_value_corrected: correctedPValues[idx],
+            interpretation: `Difference: ${(p.effect_size * 100).toFixed(1)}%`
+          }));
+        }
+        
+        results = {
+          global_test: globalTest,
+          groups: groupData.map(g => ({
+            name: g.name,
+            count: g.success,
+            total: g.total,
+            proportion: g.success / g.total
+          })),
+          pairwise
+        };
+        
+        setResults(results);
+        return;
+      }
+      
+      setResults({
+        global_test: globalTest,
+        groups: groupData.map(g => ({
+          name: g.name,
+          count: g.success,
+          total: g.total,
+          proportion: g.success / g.total
+        })),
+        pairwise: []
+      });
+    } catch (error) {
+      alert("Test failed: " + error.message);
+    }
+  };
+
+  const runTestOld = async () => {
 
 Selected groups: ${selectedBars.map(b => b.name).join(", ")}
 
