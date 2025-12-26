@@ -660,7 +660,7 @@ export default function Dashboard() {
     }
   };
 
-  const getSurvivalCurveData = () => {
+  const getSurvivalCurveData = (infectionFilter = null) => {
     if (!experiment?.factors || selectedSurvivalCurveFactors.length === 0 || !experiment?.start_date) return [];
 
     const groups = {};
@@ -670,11 +670,9 @@ export default function Dashboard() {
       ? allIndividuals.filter(ind => ind.sex !== 'male')
       : allIndividuals;
     
-    // Filter out individuals with unknown infection status if split by infection is enabled
-    if (survivalCurveByInfectionStatus) {
-      filteredInds = filteredInds.filter(ind => 
-        ind.infected === 'confirmed Yes' || ind.infected === 'confirmed No'
-      );
+    // Filter by infection status if specified
+    if (infectionFilter) {
+      filteredInds = filteredInds.filter(ind => ind.infected === infectionFilter);
     }
     
     filteredInds.forEach(ind => {
@@ -686,12 +684,6 @@ export default function Dashboard() {
       if (survivalCurveByRedStatus) {
         const redStatus = ind.red_confirmed ? 'Red+' : 'Red-';
         groupKey = groupKey ? `${groupKey} | ${redStatus}` : redStatus;
-      }
-      
-      // Add infection status to group key if enabled
-      if (survivalCurveByInfectionStatus) {
-        const infectionStatus = ind.infected === 'confirmed Yes' ? 'Infected' : 'Not Infected';
-        groupKey = groupKey ? `${groupKey} | ${infectionStatus}` : infectionStatus;
       }
       
       if (!groups[groupKey]) {
@@ -782,11 +774,6 @@ export default function Dashboard() {
           groupKey = groupKey ? `${groupKey} | ${redStatus}` : redStatus;
         }
         
-        if (survivalCurveByInfectionStatus) {
-          const infectionStatus = ind.infected === 'confirmed Yes' ? 'Infected' : 'Not Infected';
-          groupKey = groupKey ? `${groupKey} | ${infectionStatus}` : infectionStatus;
-        }
-        
         if (!selectedSurvivalCurves.includes(groupKey)) return;
         
         if (!survivalData[groupKey]) {
@@ -827,7 +814,7 @@ export default function Dashboard() {
   const infectionFacetLevels = getInfectionFacetLevels();
   const reproductionChartData = !facetReproductionFactor ? getReproductionChartData() : null;
   const reproductionFacetLevels = getReproductionFacetLevels();
-  const survivalCurveData = getSurvivalCurveData();
+  const survivalCurveData = !survivalCurveByInfectionStatus ? getSurvivalCurveData() : null;
   const redSignalChartData = !facetRedSignalFactor ? getRedSignalChartData() : null;
   const redSignalFacetLevels = getRedSignalFacetLevels();
   const sexChartData = !facetSexFactor ? getSexChartData() : null;
@@ -1763,6 +1750,7 @@ export default function Dashboard() {
               </div>
 
               {selectedSurvivalCurveFactors.length > 0 ? (
+                !survivalCurveByInfectionStatus ? (
                 <>
                   <ResponsiveContainer width="100%" height={400}>
                     <LineChart data={survivalCurveData}>
@@ -1888,6 +1876,57 @@ export default function Dashboard() {
                     </div>
                   )}
                 </>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {['confirmed Yes', 'confirmed No'].map(infectionStatus => {
+                      const facetData = getSurvivalCurveData(infectionStatus);
+                      const facetLabel = infectionStatus === 'confirmed Yes' ? 'Infected' : 'Not Infected';
+                      return (
+                        <div key={infectionStatus} className="border rounded-lg p-4">
+                          <h3 className="text-center font-semibold mb-3">{facetLabel}</h3>
+                          <ResponsiveContainer width="100%" height={300}>
+                            <LineChart data={facetData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis 
+                                dataKey="day" 
+                                label={{ value: 'Days', position: 'insideBottom', offset: -5 }}
+                                fontSize={12}
+                              />
+                              <YAxis 
+                                label={{ value: 'Survival (%)', angle: -90, position: 'insideLeft' }}
+                                domain={[0, 100]}
+                                fontSize={12}
+                              />
+                              <Tooltip formatter={(value) => `${value.toFixed(1)}%`} />
+                              <Legend 
+                                onClick={(e) => handleSurvivalCurveClick(e.value)}
+                                wrapperStyle={{ cursor: 'pointer' }}
+                              />
+                              {Object.keys(facetData[0] || {})
+                                .filter(key => key !== 'day')
+                                .map((groupName, idx) => {
+                                  const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+                                  const isSelected = selectedSurvivalCurves.includes(groupName);
+                                  return (
+                                    <Line
+                                      key={groupName}
+                                      type="stepAfter"
+                                      dataKey={groupName}
+                                      stroke={colors[idx % colors.length]}
+                                      strokeWidth={isSelected ? 3 : 2}
+                                      opacity={selectedSurvivalCurves.length > 0 && !isSelected ? 0.3 : 1}
+                                      dot={false}
+                                      name={groupName}
+                                    />
+                                  );
+                                })}
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
               ) : (
                 <div className="text-center py-12 text-gray-500">
                   Select at least one factor to display survival curves
