@@ -43,6 +43,7 @@ export default function Dashboard() {
   const [offspringByRedStatus, setOffspringByRedStatus] = useState(false);
   const [survivalByRedStatus, setSurvivalByRedStatus] = useState(false);
   const [survivalCurveByRedStatus, setSurvivalCurveByRedStatus] = useState(false);
+  const [survivalCurveByInfectionStatus, setSurvivalCurveByInfectionStatus] = useState(false);
   const [selectedSporeLoadGraphFactors, setSelectedSporeLoadGraphFactors] = useState([]);
   const [facetSporeLoadFactor, setFacetSporeLoadFactor] = useState(null);
   const [excludeZeroSporeLoad, setExcludeZeroSporeLoad] = useState(false);
@@ -669,6 +670,13 @@ export default function Dashboard() {
       ? allIndividuals.filter(ind => ind.sex !== 'male')
       : allIndividuals;
     
+    // Filter out individuals with unknown infection status if split by infection is enabled
+    if (survivalCurveByInfectionStatus) {
+      filteredInds = filteredInds.filter(ind => 
+        ind.infected === 'confirmed Yes' || ind.infected === 'confirmed No'
+      );
+    }
+    
     filteredInds.forEach(ind => {
       let groupKey = selectedSurvivalCurveFactors
         .map(factor => ind.factors?.[factor] || 'Unknown')
@@ -678,6 +686,12 @@ export default function Dashboard() {
       if (survivalCurveByRedStatus) {
         const redStatus = ind.red_confirmed ? 'Red+' : 'Red-';
         groupKey = groupKey ? `${groupKey} | ${redStatus}` : redStatus;
+      }
+      
+      // Add infection status to group key if enabled
+      if (survivalCurveByInfectionStatus) {
+        const infectionStatus = ind.infected === 'confirmed Yes' ? 'Infected' : 'Not Infected';
+        groupKey = groupKey ? `${groupKey} | ${infectionStatus}` : infectionStatus;
       }
       
       if (!groups[groupKey]) {
@@ -766,6 +780,11 @@ export default function Dashboard() {
         if (survivalCurveByRedStatus) {
           const redStatus = ind.red_confirmed ? 'Red+' : 'Red-';
           groupKey = groupKey ? `${groupKey} | ${redStatus}` : redStatus;
+        }
+        
+        if (survivalCurveByInfectionStatus) {
+          const infectionStatus = ind.infected === 'confirmed Yes' ? 'Infected' : 'Not Infected';
+          groupKey = groupKey ? `${groupKey} | ${infectionStatus}` : infectionStatus;
         }
         
         if (!selectedSurvivalCurves.includes(groupKey)) return;
@@ -1728,6 +1747,17 @@ export default function Dashboard() {
                   />
                   <label htmlFor="survival-curve-by-red" className="text-sm cursor-pointer">
                     Differentiate by red status (Red+ vs Red-)
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="survival-curve-by-infection"
+                    checked={survivalCurveByInfectionStatus}
+                    onCheckedChange={setSurvivalCurveByInfectionStatus}
+                  />
+                  <label htmlFor="survival-curve-by-infection" className="text-sm cursor-pointer">
+                    Differentiate by infection status (Infected vs Not Infected) - excludes not tested
                   </label>
                 </div>
               </div>
