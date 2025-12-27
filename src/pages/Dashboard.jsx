@@ -80,6 +80,7 @@ export default function Dashboard() {
     dead: filteredIndividuals.filter(i => !i.alive).length,
     infected: filteredIndividuals.filter(i => i.infected === "confirmed Yes").length,
     redConfirmed: filteredIndividuals.filter(i => i.red_confirmed).length,
+    redConfirmedAlive: filteredIndividuals.filter(i => i.red_confirmed && i.alive).length,
     totalOffspring: filteredIndividuals.reduce((sum, i) => sum + (i.cumulative_offspring || 0), 0),
   };
 
@@ -1071,14 +1072,14 @@ export default function Dashboard() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600">Red Confirmed</CardTitle>
+                <CardTitle className="text-sm font-medium text-gray-600">Red Confirmed (Alive)</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-3xl font-bold text-red-600">{stats.redConfirmed}</div>
+                    <div className="text-3xl font-bold text-red-600">{stats.redConfirmedAlive}</div>
                     <div className="text-sm text-gray-500">
-                      {stats.total > 0 ? ((stats.redConfirmed / stats.total) * 100).toFixed(1) : 0}% of total
+                      {stats.total > 0 ? ((stats.redConfirmedAlive / stats.total) * 100).toFixed(1) : 0}% of total
                     </div>
                   </div>
                   <Droplet className="w-8 h-8 text-red-500" />
