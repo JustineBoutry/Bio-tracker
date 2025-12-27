@@ -1072,14 +1072,16 @@ export default function Dashboard() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600">Red Confirmed (Alive)</CardTitle>
+                <CardTitle className="text-sm font-medium text-gray-600">Red Confirmed</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-3xl font-bold text-red-600">{stats.redConfirmedAlive}</div>
+                    <div className="text-3xl font-bold text-red-600">
+                      {stats.redConfirmedAlive} / {stats.redConfirmed}
+                    </div>
                     <div className="text-sm text-gray-500">
-                      {stats.total > 0 ? ((stats.redConfirmedAlive / stats.total) * 100).toFixed(1) : 0}% of total
+                      {stats.redConfirmed > 0 ? ((stats.redConfirmedAlive / stats.redConfirmed) * 100).toFixed(1) : 0}% alive
                     </div>
                   </div>
                   <Droplet className="w-8 h-8 text-red-500" />
