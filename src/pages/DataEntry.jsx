@@ -51,7 +51,14 @@ export default function DataEntry() {
           query[`factors.${key}`] = value;
         }
       });
-      return base44.entities.Individual.filter(query);
+      const results = await base44.entities.Individual.filter(query);
+      
+      // Sort individuals by numeric order
+      return results.sort((a, b) => {
+        const numA = parseFloat(a.individual_id.replace(/\D/g, '')) || 0;
+        const numB = parseFloat(b.individual_id.replace(/\D/g, '')) || 0;
+        return numA - numB;
+      });
     },
     enabled: !!selectedExp
   });
