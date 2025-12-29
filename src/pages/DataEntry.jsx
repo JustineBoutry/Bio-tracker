@@ -374,25 +374,48 @@ export default function DataEntry() {
       {selectedExp && experiment?.factors &&
       <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Filter by Category</CardTitle>
+            <CardTitle>Filter by Category (select multiple)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {experiment.factors.map((factor) =>
-            <div key={factor.name}>
-                  <label className="text-sm font-medium">{factor.name}</label>
-                  <select
-                className="w-full border rounded p-2 mt-1"
-                value={categoryFilters[factor.name] || 'all'}
-                onChange={(e) => updateCategoryFilter(factor.name, e.target.value)}>
-
-                    <option value="all">All</option>
-                    {factor.levels.map((level) =>
-                <option key={level} value={level}>
-                        {level}
-                      </option>
-                )}
-                  </select>
+            <div key={factor.name} className="border rounded p-3">
+                  <label className="text-sm font-semibold block mb-2">{factor.name}</label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`${factor.name}-all`}
+                        checked={!categoryFilters[factor.name] || categoryFilters[factor.name].length === 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            updateCategoryFilter(factor.name, []);
+                          }
+                        }}
+                      />
+                      <label htmlFor={`${factor.name}-all`} className="text-sm cursor-pointer font-medium">
+                        All
+                      </label>
+                    </div>
+                    {factor.levels.map((level) => (
+                      <div key={level} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`${factor.name}-${level}`}
+                          checked={categoryFilters[factor.name]?.includes(level)}
+                          onCheckedChange={(checked) => {
+                            const current = categoryFilters[factor.name] || [];
+                            if (checked) {
+                              updateCategoryFilter(factor.name, [...current, level]);
+                            } else {
+                              updateCategoryFilter(factor.name, current.filter(l => l !== level));
+                            }
+                          }}
+                        />
+                        <label htmlFor={`${factor.name}-${level}`} className="text-sm cursor-pointer">
+                          {level}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
             )}
             </div>
