@@ -45,16 +45,21 @@ export default function DataEntry() {
   const { data: individuals = [] } = useQuery({
     queryKey: ['individuals', selectedExp, categoryFilters],
     queryFn: async () => {
-      let query = { experiment_id: selectedExp, alive: true };
-      Object.entries(categoryFilters).forEach(([key, value]) => {
-        if (value !== 'all') {
-          query[`factors.${key}`] = value;
-        }
+      const results = await base44.entities.Individual.filter({ 
+        experiment_id: selectedExp, 
+        alive: true 
       });
-      const results = await base44.entities.Individual.filter(query);
+      
+      // Filter by selected categories (client-side for multiple selection support)
+      const filtered = results.filter(ind => {
+        return Object.entries(categoryFilters).every(([key, values]) => {
+          if (!values || values.length === 0) return true; // "All" selected
+          return values.includes(ind.factors?.[key]);
+        });
+      });
       
       // Sort individuals by numeric order
-      return results.sort((a, b) => {
+      return filtered.sort((a, b) => {
         const numA = parseFloat(a.individual_id.replace(/\D/g, '')) || 0;
         const numB = parseFloat(b.individual_id.replace(/\D/g, '')) || 0;
         return numA - numB;
