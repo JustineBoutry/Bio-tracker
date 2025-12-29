@@ -362,38 +362,61 @@ export default function Dataset() {
       {selectedExp && experiment && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Filter by Category</CardTitle>
+            <CardTitle>Filter by Category (select multiple)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {experiment.factors?.map(factor => {
                 const uniqueLevels = [...new Set(
                   individuals.map(ind => ind.factors?.[factor.name]).filter(Boolean)
                 )];
 
                 return (
-                  <div key={factor.name}>
-                    <label className="text-sm font-medium block mb-1">{factor.name}</label>
-                    <select
-                      multiple
-                      className="w-full border rounded p-2 text-sm"
-                      size={Math.min(uniqueLevels.length + 1, 5)}
-                      value={factorFilters[factor.name] || []}
-                      onChange={(e) => {
-                        const selected = Array.from(e.target.selectedOptions, option => option.value);
-                        setFactorFilters({
-                          ...factorFilters,
-                          [factor.name]: selected.length === 0 ? [] : selected
-                        });
-                      }}
-                    >
-                      <option value="">All</option>
+                  <div key={factor.name} className="border rounded p-3">
+                    <label className="text-sm font-semibold block mb-2">{factor.name}</label>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`${factor.name}-all`}
+                          checked={!factorFilters[factor.name] || factorFilters[factor.name].length === 0}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              const newFilters = { ...factorFilters };
+                              delete newFilters[factor.name];
+                              setFactorFilters(newFilters);
+                            }
+                          }}
+                        />
+                        <label htmlFor={`${factor.name}-all`} className="text-sm cursor-pointer font-medium">
+                          All
+                        </label>
+                      </div>
                       {uniqueLevels.map(level => (
-                        <option key={level} value={level}>{level}</option>
+                        <div key={level} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`${factor.name}-${level}`}
+                            checked={factorFilters[factor.name]?.includes(level)}
+                            onCheckedChange={(checked) => {
+                              const current = factorFilters[factor.name] || [];
+                              const newFilters = { ...factorFilters };
+                              if (checked) {
+                                newFilters[factor.name] = [...current, level];
+                              } else {
+                                const filtered = current.filter(l => l !== level);
+                                if (filtered.length === 0) {
+                                  delete newFilters[factor.name];
+                                } else {
+                                  newFilters[factor.name] = filtered;
+                                }
+                              }
+                              setFactorFilters(newFilters);
+                            }}
+                          />
+                          <label htmlFor={`${factor.name}-${level}`} className="text-sm cursor-pointer">
+                            {level}
+                          </label>
+                        </div>
                       ))}
-                    </select>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Hold Ctrl/Cmd to select multiple
                     </div>
                   </div>
                 );
