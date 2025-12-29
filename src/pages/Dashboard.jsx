@@ -676,6 +676,9 @@ export default function Dashboard() {
       filteredInds = filteredInds.filter(ind => ind.infected === infectionFilter);
     }
     
+    // Calculate the maximum observation time (current date or last death, whichever is later)
+    const currentDay = differenceInDays(new Date(), new Date(experiment.start_date));
+    
     filteredInds.forEach(ind => {
       let groupKey = selectedSurvivalCurveFactors
         .map(factor => ind.factors?.[factor] || 'Unknown')
@@ -696,10 +699,13 @@ export default function Dashboard() {
         groups[groupKey].push({ day: daysSinceStart, event: 'death' });
         maxDay = Math.max(maxDay, daysSinceStart);
       } else {
-        // For censored (alive), use the latest death date in the dataset
-        groups[groupKey].push({ day: null, event: 'censored' });
+        // For censored (alive), use current time for censoring
+        groups[groupKey].push({ day: currentDay, event: 'censored' });
       }
     });
+    
+    // Extend maxDay to at least the current observation time
+    maxDay = Math.max(maxDay, currentDay);
 
     // Calculate Kaplan-Meier survival curves
     const curves = {};
