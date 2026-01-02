@@ -1272,6 +1272,9 @@ export default function Dashboard() {
                         {selectedCategoryIndividuals.individuals.map(ind => (
                           <div key={ind.id} className="flex items-center gap-3 p-2 bg-white rounded border text-sm">
                             <span className="font-mono font-semibold">{ind.individual_id}</span>
+                            {ind.factors?.Basket && (
+                              <span className="text-gray-700 font-medium">Basket: {ind.factors.Basket}</span>
+                            )}
                             <span className="text-gray-600">
                               {categorySummaryFactors.map(f => `${f}: ${ind.factors?.[f] || 'N/A'}`).join(', ')}
                             </span>
