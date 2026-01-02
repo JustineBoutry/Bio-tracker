@@ -1124,6 +1124,88 @@ export default function Dashboard() {
 
           <Card className="mt-6">
             <CardHeader>
+              <CardTitle>Category Summary Table</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4">
+                <label className="text-sm font-medium block mb-2">Select factor to summarize:</label>
+                <select
+                  className="border rounded p-2 text-sm"
+                  onChange={(e) => {
+                    const factor = e.target.value;
+                    if (!factor) return;
+                    const summary = {};
+                    const factor_obj = experiment.factors.find(f => f.name === factor);
+
+                    factor_obj.levels.forEach(level => {
+                      const inds = filteredIndividuals.filter(ind => ind.factors?.[factor] === level);
+                      const redCount = inds.filter(ind => ind.red_confirmed).length;
+                      summary[level] = {
+                        total: inds.length,
+                        red: redCount,
+                        nonRed: inds.length - redCount
+                      };
+                    });
+
+                    // Display table
+                    const table = document.getElementById('category-summary-table');
+                    table.innerHTML = `
+                      <thead>
+                        <tr class="bg-gray-50 border-b">
+                          <th class="p-3 text-left font-semibold">${factor}</th>
+                          <th class="p-3 text-right font-semibold">Total</th>
+                          <th class="p-3 text-right font-semibold">Red Confirmed</th>
+                          <th class="p-3 text-right font-semibold">Non-Red</th>
+                          <th class="p-3 text-right font-semibold">% Red</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${factor_obj.levels.map(level => {
+                          const data = summary[level];
+                          const pctRed = data.total > 0 ? ((data.red / data.total) * 100).toFixed(1) : '0.0';
+                          return `
+                            <tr class="border-b hover:bg-gray-50">
+                              <td class="p-3 font-medium">${level}</td>
+                              <td class="p-3 text-right">${data.total}</td>
+                              <td class="p-3 text-right text-red-600 font-semibold">${data.red}</td>
+                              <td class="p-3 text-right">${data.nonRed}</td>
+                              <td class="p-3 text-right">${pctRed}%</td>
+                            </tr>
+                          `;
+                        }).join('')}
+                        <tr class="bg-gray-100 font-semibold">
+                          <td class="p-3">Total</td>
+                          <td class="p-3 text-right">${filteredIndividuals.length}</td>
+                          <td class="p-3 text-right text-red-600">${filteredIndividuals.filter(ind => ind.red_confirmed).length}</td>
+                          <td class="p-3 text-right">${filteredIndividuals.filter(ind => !ind.red_confirmed).length}</td>
+                          <td class="p-3 text-right">${filteredIndividuals.length > 0 ? ((filteredIndividuals.filter(ind => ind.red_confirmed).length / filteredIndividuals.length) * 100).toFixed(1) : '0.0'}%</td>
+                        </tr>
+                      </tbody>
+                    `;
+                  }}
+                >
+                  <option value="">-- Select a factor --</option>
+                  {experiment.factors?.map(factor => (
+                    <option key={factor.name} value={factor.name}>
+                      {factor.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="overflow-x-auto border rounded-lg">
+                <table id="category-summary-table" className="w-full text-sm">
+                  <tbody>
+                    <tr>
+                      <td className="p-8 text-center text-gray-500">Select a factor above to view summary</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
               <CardTitle>Total Offspring by Group</CardTitle>
             </CardHeader>
             <CardContent>
