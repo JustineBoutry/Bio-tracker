@@ -1125,83 +1125,103 @@ export default function Dashboard() {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Category Summary Table</CardTitle>
+              <CardTitle>Category Summary Table (Alive Individuals Only)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="mb-4">
-                <label className="text-sm font-medium block mb-2">Select factor to summarize:</label>
-                <select
-                  className="border rounded p-2 text-sm"
-                  onChange={(e) => {
-                    const factor = e.target.value;
-                    if (!factor) return;
-                    const summary = {};
-                    const factor_obj = experiment.factors.find(f => f.name === factor);
-
-                    factor_obj.levels.forEach(level => {
-                      const inds = filteredIndividuals.filter(ind => ind.factors?.[factor] === level);
-                      const redCount = inds.filter(ind => ind.red_confirmed).length;
-                      summary[level] = {
-                        total: inds.length,
-                        red: redCount,
-                        nonRed: inds.length - redCount
-                      };
-                    });
-
-                    // Display table
-                    const table = document.getElementById('category-summary-table');
-                    table.innerHTML = `
-                      <thead>
-                        <tr class="bg-gray-50 border-b">
-                          <th class="p-3 text-left font-semibold">${factor}</th>
-                          <th class="p-3 text-right font-semibold">Total</th>
-                          <th class="p-3 text-right font-semibold">Red Confirmed</th>
-                          <th class="p-3 text-right font-semibold">Non-Red</th>
-                          <th class="p-3 text-right font-semibold">% Red</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${factor_obj.levels.map(level => {
-                          const data = summary[level];
-                          const pctRed = data.total > 0 ? ((data.red / data.total) * 100).toFixed(1) : '0.0';
-                          return `
-                            <tr class="border-b hover:bg-gray-50">
-                              <td class="p-3 font-medium">${level}</td>
-                              <td class="p-3 text-right">${data.total}</td>
-                              <td class="p-3 text-right text-red-600 font-semibold">${data.red}</td>
-                              <td class="p-3 text-right">${data.nonRed}</td>
-                              <td class="p-3 text-right">${pctRed}%</td>
-                            </tr>
-                          `;
-                        }).join('')}
-                        <tr class="bg-gray-100 font-semibold">
-                          <td class="p-3">Total</td>
-                          <td class="p-3 text-right">${filteredIndividuals.length}</td>
-                          <td class="p-3 text-right text-red-600">${filteredIndividuals.filter(ind => ind.red_confirmed).length}</td>
-                          <td class="p-3 text-right">${filteredIndividuals.filter(ind => !ind.red_confirmed).length}</td>
-                          <td class="p-3 text-right">${filteredIndividuals.length > 0 ? ((filteredIndividuals.filter(ind => ind.red_confirmed).length / filteredIndividuals.length) * 100).toFixed(1) : '0.0'}%</td>
-                        </tr>
-                      </tbody>
-                    `;
-                  }}
-                >
-                  <option value="">-- Select a factor --</option>
+                <label className="text-sm font-medium block mb-2">Select factors to summarize:</label>
+                <div className="flex flex-wrap gap-4">
                   {experiment.factors?.map(factor => (
-                    <option key={factor.name} value={factor.name}>
-                      {factor.name}
-                    </option>
+                    <div key={factor.name} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`summary-${factor.name}`}
+                        checked={categorySummaryFactors.includes(factor.name)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setCategorySummaryFactors([...categorySummaryFactors, factor.name]);
+                          } else {
+                            setCategorySummaryFactors(categorySummaryFactors.filter(f => f !== factor.name));
+                          }
+                        }}
+                      />
+                      <label htmlFor={`summary-${factor.name}`} className="text-sm cursor-pointer">
+                        {factor.name}
+                      </label>
+                    </div>
                   ))}
-                </select>
+                </div>
               </div>
-              <div className="overflow-x-auto border rounded-lg">
-                <table id="category-summary-table" className="w-full text-sm">
-                  <tbody>
-                    <tr>
-                      <td className="p-8 text-center text-gray-500">Select a factor above to view summary</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              {categorySummaryFactors.length > 0 ? (
+                <div className="overflow-x-auto border rounded-lg">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 border-b">
+                        <th className="p-3 text-left font-semibold">Category</th>
+                        <th className="p-3 text-right font-semibold">Alive</th>
+                        <th className="p-3 text-right font-semibold">Red</th>
+                        <th className="p-3 text-right font-semibold">Non-Red</th>
+                        <th className="p-3 text-right font-semibold">% Red</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const aliveInds = filteredIndividuals.filter(ind => ind.alive);
+                        const groups = {};
+
+                        aliveInds.forEach(ind => {
+                          const groupKey = categorySummaryFactors
+                            .map(factor => ind.factors?.[factor] || 'Unknown')
+                            .join(' - ');
+
+                          if (!groups[groupKey]) {
+                            groups[groupKey] = { alive: 0, red: 0, nonRed: 0 };
+                          }
+
+                          groups[groupKey].alive++;
+                          if (ind.red_confirmed) {
+                            groups[groupKey].red++;
+                          } else {
+                            groups[groupKey].nonRed++;
+                          }
+                        });
+
+                        const sortedGroups = Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
+                        const totalAlive = aliveInds.length;
+                        const totalRed = aliveInds.filter(ind => ind.red_confirmed).length;
+                        const totalNonRed = totalAlive - totalRed;
+
+                        return (
+                          <>
+                            {sortedGroups.map(([groupName, data]) => {
+                              const pctRed = data.alive > 0 ? ((data.red / data.alive) * 100).toFixed(1) : '0.0';
+                              return (
+                                <tr key={groupName} className="border-b hover:bg-gray-50">
+                                  <td className="p-3 font-medium">{groupName}</td>
+                                  <td className="p-3 text-right">{data.alive}</td>
+                                  <td className="p-3 text-right text-red-600 font-semibold">{data.red}</td>
+                                  <td className="p-3 text-right">{data.nonRed}</td>
+                                  <td className="p-3 text-right">{pctRed}%</td>
+                                </tr>
+                              );
+                            })}
+                            <tr className="bg-gray-100 font-semibold border-t-2">
+                              <td className="p-3">Total</td>
+                              <td className="p-3 text-right">{totalAlive}</td>
+                              <td className="p-3 text-right text-red-600">{totalRed}</td>
+                              <td className="p-3 text-right">{totalNonRed}</td>
+                              <td className="p-3 text-right">{totalAlive > 0 ? ((totalRed / totalAlive) * 100).toFixed(1) : '0.0'}%</td>
+                            </tr>
+                          </>
+                        );
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-8 text-center text-gray-500 border rounded-lg">
+                  Select one or more factors above to view summary
+                </div>
+              )}
             </CardContent>
           </Card>
 
