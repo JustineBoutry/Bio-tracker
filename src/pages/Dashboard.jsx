@@ -50,6 +50,7 @@ export default function Dashboard() {
   const [anovaFactors, setAnovaFactors] = useState([]);
   const [anovaResult, setAnovaResult] = useState(null);
   const [runningAnova, setRunningAnova] = useState(false);
+  const [categorySummaryFactors, setCategorySummaryFactors] = useState([]);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
