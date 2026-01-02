@@ -51,6 +51,7 @@ export default function Dashboard() {
   const [anovaResult, setAnovaResult] = useState(null);
   const [runningAnova, setRunningAnova] = useState(false);
   const [categorySummaryFactors, setCategorySummaryFactors] = useState([]);
+  const [selectedCategoryIndividuals, setSelectedCategoryIndividuals] = useState(null);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', selectedExp],
@@ -1152,71 +1153,137 @@ export default function Dashboard() {
                 </div>
               </div>
               {categorySummaryFactors.length > 0 ? (
-                <div className="overflow-x-auto border rounded-lg">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-gray-50 border-b">
-                        <th className="p-3 text-left font-semibold">Category</th>
-                        <th className="p-3 text-right font-semibold">Alive</th>
-                        <th className="p-3 text-right font-semibold">Red</th>
-                        <th className="p-3 text-right font-semibold">Non-Red</th>
-                        <th className="p-3 text-right font-semibold">% Red</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(() => {
-                        const aliveInds = filteredIndividuals.filter(ind => ind.alive);
-                        const groups = {};
+                <>
+                  <div className="overflow-x-auto border rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50 border-b">
+                          <th className="p-3 text-left font-semibold">Category</th>
+                          <th className="p-3 text-right font-semibold">Alive</th>
+                          <th className="p-3 text-right font-semibold">Red</th>
+                          <th className="p-3 text-right font-semibold">Non-Red</th>
+                          <th className="p-3 text-right font-semibold">% Red</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const aliveInds = filteredIndividuals.filter(ind => ind.alive);
+                          const groups = {};
+                          const groupIndividuals = {};
 
-                        aliveInds.forEach(ind => {
-                          const groupKey = categorySummaryFactors
-                            .map(factor => ind.factors?.[factor] || 'Unknown')
-                            .join(' - ');
+                          aliveInds.forEach(ind => {
+                            const groupKey = categorySummaryFactors
+                              .map(factor => ind.factors?.[factor] || 'Unknown')
+                              .join(' - ');
 
-                          if (!groups[groupKey]) {
-                            groups[groupKey] = { alive: 0, red: 0, nonRed: 0 };
-                          }
+                            if (!groups[groupKey]) {
+                              groups[groupKey] = { alive: 0, red: 0, nonRed: 0 };
+                              groupIndividuals[groupKey] = { all: [], red: [], nonRed: [] };
+                            }
 
-                          groups[groupKey].alive++;
-                          if (ind.red_confirmed) {
-                            groups[groupKey].red++;
-                          } else {
-                            groups[groupKey].nonRed++;
-                          }
-                        });
+                            groups[groupKey].alive++;
+                            groupIndividuals[groupKey].all.push(ind);
 
-                        const sortedGroups = Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
-                        const totalAlive = aliveInds.length;
-                        const totalRed = aliveInds.filter(ind => ind.red_confirmed).length;
-                        const totalNonRed = totalAlive - totalRed;
+                            if (ind.red_confirmed) {
+                              groups[groupKey].red++;
+                              groupIndividuals[groupKey].red.push(ind);
+                            } else {
+                              groups[groupKey].nonRed++;
+                              groupIndividuals[groupKey].nonRed.push(ind);
+                            }
+                          });
 
-                        return (
-                          <>
-                            {sortedGroups.map(([groupName, data]) => {
-                              const pctRed = data.alive > 0 ? ((data.red / data.alive) * 100).toFixed(1) : '0.0';
-                              return (
-                                <tr key={groupName} className="border-b hover:bg-gray-50">
-                                  <td className="p-3 font-medium">{groupName}</td>
-                                  <td className="p-3 text-right">{data.alive}</td>
-                                  <td className="p-3 text-right text-red-600 font-semibold">{data.red}</td>
-                                  <td className="p-3 text-right">{data.nonRed}</td>
-                                  <td className="p-3 text-right">{pctRed}%</td>
-                                </tr>
-                              );
-                            })}
-                            <tr className="bg-gray-100 font-semibold border-t-2">
-                              <td className="p-3">Total</td>
-                              <td className="p-3 text-right">{totalAlive}</td>
-                              <td className="p-3 text-right text-red-600">{totalRed}</td>
-                              <td className="p-3 text-right">{totalNonRed}</td>
-                              <td className="p-3 text-right">{totalAlive > 0 ? ((totalRed / totalAlive) * 100).toFixed(1) : '0.0'}%</td>
-                            </tr>
-                          </>
-                        );
-                      })()}
-                    </tbody>
-                  </table>
-                </div>
+                          const sortedGroups = Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
+                          const totalAlive = aliveInds.length;
+                          const totalRed = aliveInds.filter(ind => ind.red_confirmed).length;
+                          const totalNonRed = totalAlive - totalRed;
+
+                          return (
+                            <>
+                              {sortedGroups.map(([groupName, data]) => {
+                                const pctRed = data.alive > 0 ? ((data.red / data.alive) * 100).toFixed(1) : '0.0';
+                                return (
+                                  <tr key={groupName} className="border-b hover:bg-gray-50">
+                                    <td className="p-3 font-medium">{groupName}</td>
+                                    <td 
+                                      className="p-3 text-right cursor-pointer hover:bg-blue-100 hover:font-semibold"
+                                      onClick={() => setSelectedCategoryIndividuals({ title: `${groupName} - Alive`, individuals: groupIndividuals[groupName].all })}
+                                    >
+                                      {data.alive}
+                                    </td>
+                                    <td 
+                                      className="p-3 text-right text-red-600 font-semibold cursor-pointer hover:bg-red-100"
+                                      onClick={() => setSelectedCategoryIndividuals({ title: `${groupName} - Red`, individuals: groupIndividuals[groupName].red })}
+                                    >
+                                      {data.red}
+                                    </td>
+                                    <td 
+                                      className="p-3 text-right cursor-pointer hover:bg-gray-200 hover:font-semibold"
+                                      onClick={() => setSelectedCategoryIndividuals({ title: `${groupName} - Non-Red`, individuals: groupIndividuals[groupName].nonRed })}
+                                    >
+                                      {data.nonRed}
+                                    </td>
+                                    <td className="p-3 text-right">{pctRed}%</td>
+                                  </tr>
+                                );
+                              })}
+                              <tr className="bg-gray-100 font-semibold border-t-2">
+                                <td className="p-3">Total</td>
+                                <td 
+                                  className="p-3 text-right cursor-pointer hover:bg-blue-200"
+                                  onClick={() => setSelectedCategoryIndividuals({ title: 'All Alive', individuals: aliveInds })}
+                                >
+                                  {totalAlive}
+                                </td>
+                                <td 
+                                  className="p-3 text-right text-red-600 cursor-pointer hover:bg-red-200"
+                                  onClick={() => setSelectedCategoryIndividuals({ title: 'All Red', individuals: aliveInds.filter(ind => ind.red_confirmed) })}
+                                >
+                                  {totalRed}
+                                </td>
+                                <td 
+                                  className="p-3 text-right cursor-pointer hover:bg-gray-300"
+                                  onClick={() => setSelectedCategoryIndividuals({ title: 'All Non-Red', individuals: aliveInds.filter(ind => !ind.red_confirmed) })}
+                                >
+                                  {totalNonRed}
+                                </td>
+                                <td className="p-3 text-right">{totalAlive > 0 ? ((totalRed / totalAlive) * 100).toFixed(1) : '0.0'}%</td>
+                              </tr>
+                            </>
+                          );
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {selectedCategoryIndividuals && (
+                    <div className="mt-4 border rounded-lg p-4 bg-gray-50">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold">{selectedCategoryIndividuals.title} ({selectedCategoryIndividuals.individuals.length} individuals)</h3>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setSelectedCategoryIndividuals(null)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="max-h-60 overflow-y-auto space-y-1">
+                        {selectedCategoryIndividuals.individuals.map(ind => (
+                          <div key={ind.id} className="flex items-center gap-3 p-2 bg-white rounded border text-sm">
+                            <span className="font-mono font-semibold">{ind.individual_id}</span>
+                            <span className="text-gray-600">
+                              {categorySummaryFactors.map(f => `${f}: ${ind.factors?.[f] || 'N/A'}`).join(', ')}
+                            </span>
+                            {ind.red_confirmed && (
+                              <span className="ml-auto text-red-600 font-semibold">Red</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="p-8 text-center text-gray-500 border rounded-lg">
                   Select one or more factors above to view summary
