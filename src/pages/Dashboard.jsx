@@ -673,6 +673,9 @@ export default function Dashboard() {
       ? allIndividuals.filter(ind => ind.sex !== 'male')
       : allIndividuals;
     
+    // Exclude lost individuals
+    filteredInds = filteredInds.filter(ind => ind.death_date !== 'lost');
+    
     // Filter by infection status if specified
     if (infectionFilter) {
       filteredInds = filteredInds.filter(ind => ind.infected === infectionFilter);
