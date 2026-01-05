@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, Trash2, CheckCircle, Edit2, X } from "lucide-react";
+import { AlertTriangle, Trash2, CheckCircle, Edit2, X, UserX } from "lucide-react";
 import { useExperiment } from "../components/ExperimentContext";
 import { Input } from "@/components/ui/input";
 
@@ -21,6 +21,8 @@ export default function CleanupData() {
   const [deathDateMismatches, setDeathDateMismatches] = useState([]);
   const [scanningDeathDates, setScanningDeathDates] = useState(false);
   const [deathDateActions, setDeathDateActions] = useState({});
+  const [lostIndividuals, setLostIndividuals] = useState('');
+  const [markingLost, setMarkingLost] = useState(false);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', activeExperimentId],
@@ -395,6 +397,38 @@ export default function CleanupData() {
     },
   });
 
+  const markLostMutation = useMutation({
+    mutationFn: async (ids) => {
+      const individuals = await base44.entities.Individual.filter({ 
+        experiment_id: activeExperimentId 
+      });
+      
+      const toUpdate = individuals.filter(ind => ids.includes(ind.individual_id));
+      
+      const updates = toUpdate.map(ind =>
+        base44.entities.Individual.update(ind.id, {
+          alive: false,
+          death_date: 'lost'
+        })
+      );
+      
+      await Promise.all(updates);
+      return toUpdate.length;
+    },
+    onSuccess: async (count) => {
+      queryClient.invalidateQueries(['individuals']);
+      
+      await base44.entities.LabNote.create({
+        experiment_id: activeExperimentId,
+        note: `Marked ${count} individuals as lost: ${lostIndividuals}`,
+        timestamp: new Date().toISOString(),
+      });
+
+      setLostIndividuals('');
+      alert(`Marked ${count} individuals as lost!`);
+    },
+  });
+
   const cleanupMutation = useMutation({
     mutationFn: async () => {
       const affectedIndividuals = new Set();
@@ -612,6 +646,43 @@ export default function CleanupData() {
           </CardContent>
         </Card>
       )}
+
+      <Card className="mb-6 mt-8">
+        <CardHeader>
+          <CardTitle>Mark Individuals as Lost</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Mark individuals that have been lost during the experiment. 
+            They will remain in the dataset but won't be counted as alive or dead (death_date = "lost").
+          </p>
+          <div className="space-y-3">
+            <textarea
+              className="w-full border rounded p-3 font-mono text-sm"
+              rows="4"
+              placeholder="Enter individual IDs (space or comma separated)&#10;Example: A1-1 A1-2 A2-3"
+              value={lostIndividuals}
+              onChange={(e) => setLostIndividuals(e.target.value)}
+            />
+            <Button 
+              onClick={() => {
+                const ids = lostIndividuals.split(/[\s,]+/).map(id => id.trim()).filter(Boolean);
+                if (ids.length === 0) {
+                  alert('Please enter at least one individual ID');
+                  return;
+                }
+                if (confirm(`Mark ${ids.length} individual(s) as lost?`)) {
+                  markLostMutation.mutate(ids);
+                }
+              }}
+              disabled={markingLost || !lostIndividuals.trim()}
+            >
+              <UserX className="w-4 h-4 mr-2" />
+              {markingLost ? 'Marking...' : 'Mark as Lost'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="mb-6 mt-8">
         <CardHeader>
