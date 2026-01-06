@@ -7,7 +7,7 @@ import { LogOut, Download, Menu, X, Settings, Database, History, BarChart3, Book
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useTranslation } from 'react-i18next';
-import '../i18n';
+import './i18n';
 
 function LayoutContent({ children, currentPageName }) {
   const navigate = useNavigate();
