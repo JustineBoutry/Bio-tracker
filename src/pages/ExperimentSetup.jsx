@@ -9,8 +9,10 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import MatrixLayout from "../components/experiment/MatrixLayout";
 import { useExperiment } from "../components/ExperimentContext";
+import { useTranslation } from 'react-i18next';
 
 export default function ExperimentSetup() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { activeExperimentId, exitExperiment } = useExperiment();
@@ -242,8 +244,8 @@ export default function ExperimentSetup() {
               }}
               autoFocus
             />
-            <Button onClick={handleRename}>Save</Button>
-            <Button variant="outline" onClick={() => setIsEditingName(false)}>Cancel</Button>
+            <Button onClick={handleRename}>{t('common.save')}</Button>
+            <Button variant="outline" onClick={() => setIsEditingName(false)}>{t('common.cancel')}</Button>
           </div>
         ) : (
           <div className="flex items-center gap-3">
@@ -263,7 +265,7 @@ export default function ExperimentSetup() {
           disabled={deleteExperimentMutation.isPending}
         >
           <Trash2 className="w-4 h-4 mr-2" />
-          {deleteExperimentMutation.isPending ? 'Deleting...' : 'Delete Experiment'}
+          {deleteExperimentMutation.isPending ? t('setup.deleting') : t('setup.delete')}
         </Button>
       </div>
 
@@ -271,25 +273,25 @@ export default function ExperimentSetup() {
         <>
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>1. Code Generation Mode</CardTitle>
+              <CardTitle>{t('setup.codeGenMode')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium block mb-2">Mode</label>
+                <label className="text-sm font-medium block mb-2">{t('setup.mode')}</label>
                 <select 
                   className="w-full border rounded p-2"
                   value={codeMode}
                   onChange={(e) => setCodeMode(e.target.value)}
                 >
-                  <option value="factor_based">Factor-based (e.g., Basket-Genotype-001)</option>
-                  <option value="numeric_id">Simple numeric ID</option>
+                  <option value="factor_based">{t('setup.factorBasedExample')}</option>
+                  <option value="numeric_id">{t('setup.simpleNumericId')}</option>
                 </select>
               </div>
 
               {codeMode === 'numeric_id' && (
                 <>
                   <div>
-                    <label className="text-sm font-medium">Prefix</label>
+                    <label className="text-sm font-medium">{t('setup.prefix')}</label>
                     <Input
                       value={codePrefix}
                       onChange={(e) => setCodePrefix(e.target.value)}
@@ -297,7 +299,7 @@ export default function ExperimentSetup() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Starting Number</label>
+                    <label className="text-sm font-medium">{t('setup.startNumber')}</label>
                     <Input
                       type="number"
                       value={codeStartingNumber}
@@ -308,19 +310,19 @@ export default function ExperimentSetup() {
                 </>
               )}
 
-              <Button onClick={saveCodeSettings}>Save Code Settings</Button>
+              <Button onClick={saveCodeSettings}>{t('setup.saveCodeSettings')}</Button>
             </CardContent>
           </Card>
 
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>2. Define Factors</CardTitle>
+              <CardTitle>{t('setup.defineFactors')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {factors.map((factor, fIndex) => (
                 <div key={fIndex} className="border p-4 rounded space-y-3">
                   <div>
-                    <label className="text-sm font-medium">Factor Name</label>
+                    <label className="text-sm font-medium">{t('setup.factorName')}</label>
                     <Input
                       value={factor.name}
                       onChange={(e) => updateFactorName(fIndex, e.target.value)}
@@ -328,7 +330,7 @@ export default function ExperimentSetup() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Levels</label>
+                    <label className="text-sm font-medium">{t('setup.levels')}</label>
                     {factor.levels.map((level, lIndex) => (
                       <div key={lIndex} className="flex gap-2 mb-2">
                         {editingLevel?.factorIndex === fIndex && editingLevel?.levelIndex === lIndex ? (
@@ -388,7 +390,7 @@ export default function ExperimentSetup() {
                     ))}
                     <Button variant="outline" size="sm" onClick={() => addLevel(fIndex)}>
                       <Plus className="w-4 h-4 mr-2" />
-                      Add Level
+                      {t('setup.addLevel')}
                     </Button>
                   </div>
                 </div>
@@ -396,9 +398,9 @@ export default function ExperimentSetup() {
               <div className="flex gap-2">
                 <Button variant="outline" onClick={addFactor}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Add Factor
+                  {t('setup.addFactor')}
                 </Button>
-                <Button onClick={saveFactors}>Save Factors</Button>
+                <Button onClick={saveFactors}>{t('common.save')} {t('setup.factors')}</Button>
               </div>
             </CardContent>
           </Card>
@@ -413,13 +415,13 @@ export default function ExperimentSetup() {
       ) : (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-lg mb-4">✓ Individuals generated</p>
+            <p className="text-lg mb-4">{t('setup.individualsGeneratedMsg')}</p>
             <div className="flex gap-3 justify-center">
               <Button onClick={() => navigate(createPageUrl("DataEntry"))}>
-                Go to Data Entry
+                {t('setup.goToDataEntry')}
               </Button>
               <Button variant="outline" onClick={() => navigate(createPageUrl("Dataset"))}>
-                View Dataset
+                {t('setup.viewDataset')}
               </Button>
             </div>
           </CardContent>

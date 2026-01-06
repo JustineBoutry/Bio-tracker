@@ -8,8 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2, Download } from "lucide-react";
 import { useExperiment } from "../components/ExperimentContext";
 import { format } from "date-fns";
+import { useTranslation } from 'react-i18next';
 
 export default function LabNotebook() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { activeExperimentId } = useExperiment();
   const [showNoteForm, setShowNoteForm] = useState(false);
@@ -122,7 +124,7 @@ export default function LabNotebook() {
   if (!activeExperimentId) {
     return (
       <div className="p-8">
-        <p className="text-gray-600">Please select an experiment first.</p>
+        <p className="text-gray-600">{t('notebook.noExperiment')}</p>
       </div>
     );
   }
@@ -130,15 +132,15 @@ export default function LabNotebook() {
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Lab Notebook</h1>
+        <h1 className="text-3xl font-bold">{t('notebook.title')}</h1>
         <div className="flex gap-2">
           <Button onClick={exportToCSV} variant="outline" disabled={notes.length === 0}>
             <Download className="w-4 h-4 mr-2" />
-            Export CSV
+            {t('common.export')} CSV
           </Button>
           <Button onClick={() => setShowNoteForm(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            Add Note
+            {t('notebook.addNote')}
           </Button>
         </div>
       </div>
@@ -146,32 +148,32 @@ export default function LabNotebook() {
       {showNoteForm && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>{editingNote ? 'Edit Note' : 'New Note'}</CardTitle>
+            <CardTitle>{editingNote ? t('common.edit') + ' ' + t('notebook.addNote') : t('notebook.addNote')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Title (optional)</label>
+              <label className="text-sm font-medium">{t('notebook.noteTitle')}</label>
               <Input
                 value={noteTitle}
                 onChange={(e) => setNoteTitle(e.target.value)}
-                placeholder="Short title"
+                placeholder={t('notebook.noteTitle')}
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Note</label>
+              <label className="text-sm font-medium">{t('notebook.noteContent')}</label>
               <Textarea
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
-                placeholder="Write your note here..."
+                placeholder={t('notebook.noteContent')}
                 rows={6}
               />
             </div>
             <div className="flex gap-2">
               <Button onClick={handleSaveNote} disabled={!noteText.trim()}>
-                Save
+                {t('common.save')}
               </Button>
               <Button variant="outline" onClick={handleCancel}>
-                Cancel
+                {t('common.cancel')}
               </Button>
             </div>
           </CardContent>
@@ -182,7 +184,7 @@ export default function LabNotebook() {
         {notes.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center text-gray-600">
-              No notes yet. Add your first note!
+              {t('notebook.noNotes')}
             </CardContent>
           </Card>
         ) : (

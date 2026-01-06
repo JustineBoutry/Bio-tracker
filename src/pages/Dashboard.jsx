@@ -11,8 +11,10 @@ import { useExperiment } from "../components/ExperimentContext";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, LineChart, Line, ComposedChart, Scatter, ZAxis, ErrorBar } from 'recharts';
 import StatisticalTestPanel from "../components/dashboard/StatisticalTestPanel";
 import { oneWayAnova, tukeyHSD, logRankTest, multiWayAnova } from "../components/dashboard/statisticsUtils";
+import { useTranslation } from 'react-i18next';
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const { activeExperimentId } = useExperiment();
   const selectedExp = activeExperimentId;
   const [categoryFilters, setCategoryFilters] = useState({});
@@ -936,30 +938,30 @@ export default function Dashboard() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+      <h1 className="text-3xl font-bold mb-6">{t('dashboard.title')}</h1>
 
       {experiment && (
         <>
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Experiment Information</CardTitle>
+              <CardTitle>{t('dashboard.experimentInfo')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <p className="text-sm text-gray-600">Start Date</p>
+                  <p className="text-sm text-gray-600">{t('dashboard.startDate')}</p>
                   <p className="font-semibold">{format(new Date(experiment.start_date), "MMM d, yyyy")}</p>
                 </div>
 
                 {experiment.infection_date && (
                   <>
                     <div>
-                      <p className="text-sm text-gray-600">Infection Date</p>
+                      <p className="text-sm text-gray-600">{t('dashboard.infectionDate')}</p>
                       <p className="font-semibold">{format(new Date(experiment.infection_date), "MMM d, yyyy")}</p>
                     </div>
 
                     <div>
-                      <p className="text-sm text-gray-600">Days Post Infection</p>
+                      <p className="text-sm text-gray-600">{t('dashboard.daysPostInfection')}</p>
                       <p className="text-2xl font-bold text-blue-600">{daysPostInfection}</p>
                     </div>
                   </>
@@ -967,7 +969,7 @@ export default function Dashboard() {
 
                 {!experiment.infection_date && (
                   <div>
-                    <p className="text-sm text-gray-600 mb-2">Set Infection Date</p>
+                    <p className="text-sm text-gray-600 mb-2">{t('dashboard.setInfectionDate')}</p>
                     <Input
                       type="date"
                       onChange={async (e) => {
@@ -988,7 +990,7 @@ export default function Dashboard() {
           {experiment.factors && experiment.factors.length > 0 && (
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle>Filter by Category</CardTitle>
+                <CardTitle>{t('dashboard.filterByCategory')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1015,25 +1017,25 @@ export default function Dashboard() {
                 )}
 
                 <Card className="mb-6">
-                <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
-                <Checkbox
-                  id="exclude-males"
-                  checked={excludeMales}
-                  onCheckedChange={setExcludeMales}
-                />
-                <label htmlFor="exclude-males" className="text-sm font-medium cursor-pointer">
-                  Exclude males from all graphs and statistics
-                </label>
-                </div>
-                </CardContent>
-                </Card>
+                  <CardContent className="pt-6">
+                  <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="exclude-males"
+                    checked={excludeMales}
+                    onCheckedChange={setExcludeMales}
+                  />
+                  <label htmlFor="exclude-males" className="text-sm font-medium cursor-pointer">
+                    {t('dashboard.excludeMales')}
+                  </label>
+                  </div>
+                  </CardContent>
+                  </Card>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600">Total Individuals</CardTitle>
-              </CardHeader>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-gray-600">{t('dashboard.totalIndividuals')}</CardTitle>
+                </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="text-3xl font-bold">{stats.total}</div>
@@ -1044,13 +1046,13 @@ export default function Dashboard() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600">Alive / Dead</CardTitle>
+                <CardTitle className="text-sm font-medium text-gray-600">{t('dashboard.aliveDead')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-3xl font-bold text-green-600">{stats.alive}</div>
-                    <div className="text-sm text-gray-500">{stats.dead} deceased</div>
+                    <div className="text-sm text-gray-500">{stats.dead} {t('dashboard.deceased')}</div>
                   </div>
                   <Skull className="w-8 h-8 text-gray-400" />
                 </div>
@@ -1059,7 +1061,7 @@ export default function Dashboard() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600">Infected</CardTitle>
+                <CardTitle className="text-sm font-medium text-gray-600">{t('dataEntry.infected')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
@@ -1071,8 +1073,8 @@ export default function Dashboard() {
                         const confirmedNo = filteredIndividuals.filter(i => i.infected === "confirmed No").length;
                         const totalConfirmed = confirmedYes + confirmedNo;
                         return totalConfirmed > 0 && stats.total > 0 
-                          ? `${((totalConfirmed / stats.total) * 100).toFixed(1)}% tested`
-                          : '0% tested';
+                          ? `${((totalConfirmed / stats.total) * 100).toFixed(1)}% ${t('dashboard.tested')}`
+                          : `0% ${t('dashboard.tested')}`;
                       })()}
                     </div>
                   </div>
@@ -1083,7 +1085,7 @@ export default function Dashboard() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600">Red Confirmed</CardTitle>
+                <CardTitle className="text-sm font-medium text-gray-600">{t('dashboard.red')} {t('common.confirmed')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
@@ -1092,7 +1094,7 @@ export default function Dashboard() {
                       {stats.redConfirmedAlive} / {stats.redConfirmed}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {stats.redConfirmed > 0 ? ((stats.redConfirmedAlive / stats.redConfirmed) * 100).toFixed(1) : 0}% alive
+                      {stats.redConfirmed > 0 ? ((stats.redConfirmedAlive / stats.redConfirmed) * 100).toFixed(1) : 0}% {t('common.alive')}
                     </div>
                   </div>
                   <Droplet className="w-8 h-8 text-red-500" />
@@ -1103,22 +1105,22 @@ export default function Dashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Reproduction Statistics</CardTitle>
+              <CardTitle>{t('dashboard.reproductionStats')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Offspring</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('dashboard.totalOffspring')}</p>
                   <p className="text-3xl font-bold text-green-600">{stats.totalOffspring}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Average per Individual</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('dashboard.avgPerIndividual')}</p>
                   <p className="text-3xl font-bold">
                     {stats.total > 0 ? (stats.totalOffspring / stats.total).toFixed(1) : 0}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Reproducing Individuals</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('dashboard.reproducingIndividuals')}</p>
                   <p className="text-3xl font-bold">
                     {filteredIndividuals.filter(i => (i.cumulative_offspring || 0) > 0).length}
                   </p>
@@ -1129,11 +1131,11 @@ export default function Dashboard() {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Category Summary Table (Alive Individuals Only)</CardTitle>
+              <CardTitle>{t('dashboard.categorySummary')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="mb-4">
-                <label className="text-sm font-medium block mb-2">Select factors to summarize:</label>
+                <label className="text-sm font-medium block mb-2">{t('dashboard.selectFactorsSummary')}</label>
                 <div className="flex flex-wrap gap-4">
                   {experiment.factors?.map(factor => (
                     <div key={factor.name} className="flex items-center gap-2">
@@ -1161,11 +1163,11 @@ export default function Dashboard() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-gray-50 border-b">
-                          <th className="p-3 text-left font-semibold">Category</th>
-                          <th className="p-3 text-right font-semibold">Alive</th>
-                          <th className="p-3 text-right font-semibold">Red</th>
-                          <th className="p-3 text-right font-semibold">Non-Red</th>
-                          <th className="p-3 text-right font-semibold">% Red</th>
+                          <th className="p-3 text-left font-semibold">{t('dashboard.category')}</th>
+                          <th className="p-3 text-right font-semibold">{t('common.alive')}</th>
+                          <th className="p-3 text-right font-semibold">{t('dashboard.red')}</th>
+                          <th className="p-3 text-right font-semibold">{t('dashboard.nonRed')}</th>
+                          <th className="p-3 text-right font-semibold">{t('dashboard.percentRed')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1231,7 +1233,7 @@ export default function Dashboard() {
                                 );
                               })}
                               <tr className="bg-gray-100 font-semibold border-t-2">
-                                <td className="p-3">Total</td>
+                                <td className="p-3">{t('common.total')}</td>
                                 <td 
                                   className="p-3 text-right cursor-pointer hover:bg-blue-200"
                                   onClick={() => setSelectedCategoryIndividuals({ title: 'All Alive', individuals: aliveInds })}
@@ -1300,12 +1302,12 @@ export default function Dashboard() {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Total Offspring by Group</CardTitle>
+              <CardTitle>{t('dashboard.offspringByGroup')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="mb-6 space-y-4">
                 <div>
-                  <p className="text-sm font-medium mb-2">Select factors to group by:</p>
+                  <p className="text-sm font-medium mb-2">{t('dashboard.selectFactors')}</p>
                   <div className="flex flex-wrap gap-4">
                     {experiment.factors?.map(factor => (
                       <div key={factor.name} className="flex items-center gap-2">
@@ -1352,7 +1354,7 @@ export default function Dashboard() {
                     onCheckedChange={setOffspringByRedStatus}
                   />
                   <label htmlFor="offspring-by-red" className="text-sm cursor-pointer">
-                    Differentiate by red status (Red+ vs Red-)
+                    {t('dashboard.differentiateByRed')}
                   </label>
                 </div>
               </div>
@@ -1485,9 +1487,9 @@ export default function Dashboard() {
               )}
 
               <div className="mt-6 border-t pt-6">
-                <h3 className="font-semibold mb-4">ANOVA Test for Offspring</h3>
+                <h3 className="font-semibold mb-4">{t('dashboard.anovaTest')}</h3>
                 <div className="mb-4">
-                  <label className="text-sm font-medium block mb-2">Select factor(s) to test:</label>
+                  <label className="text-sm font-medium block mb-2">{t('dashboard.selectFactorsTest')}</label>
                   <div className="flex flex-wrap gap-4 mb-3">
                     {experiment.factors?.map(factor => (
                       <div key={factor.name} className="flex items-center gap-2">
@@ -1523,10 +1525,10 @@ export default function Dashboard() {
                     {runningAnova ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Running ANOVA...
+                        {t('common.loading')}
                       </>
                     ) : (
-                      "Run ANOVA"
+                      t('dashboard.runAnova')
                     )}
                   </Button>
                 </div>
@@ -1726,7 +1728,7 @@ export default function Dashboard() {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Survival by Group</CardTitle>
+              <CardTitle>{t('dashboard.survivalByGroup')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="mb-6 space-y-4">
@@ -1778,7 +1780,7 @@ export default function Dashboard() {
                     onCheckedChange={setSurvivalByRedStatus}
                   />
                   <label htmlFor="survival-by-red" className="text-sm cursor-pointer">
-                    Differentiate by red status (Red+ vs Red-)
+                    {t('dashboard.differentiateByRed')}
                   </label>
                 </div>
               </div>
@@ -1889,7 +1891,7 @@ export default function Dashboard() {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Survival Curves</CardTitle>
+              <CardTitle>{t('dashboard.survivalCurves')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="mb-6 space-y-4">
@@ -2122,7 +2124,7 @@ export default function Dashboard() {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Reproduction by Group</CardTitle>
+              <CardTitle>{t('dashboard.reproductionByGroup')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="mb-6 space-y-4">
@@ -2274,7 +2276,7 @@ export default function Dashboard() {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Red Signal by Group</CardTitle>
+              <CardTitle>{t('dashboard.redSignalByGroup')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="mb-6 space-y-4">
@@ -2463,7 +2465,7 @@ export default function Dashboard() {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Sex Distribution by Group</CardTitle>
+              <CardTitle>{t('dashboard.sexByGroup')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="mb-6 space-y-4">
@@ -2615,7 +2617,7 @@ export default function Dashboard() {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Infection by Group</CardTitle>
+              <CardTitle>{t('dashboard.infectionByGroup')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="mb-6 space-y-4">
@@ -2667,7 +2669,7 @@ export default function Dashboard() {
                     onCheckedChange={setExcludeNotTested}
                   />
                   <label htmlFor="exclude-not-tested" className="text-sm cursor-pointer">
-                    Exclude "Not Tested" from proportion calculation
+                    {t('dashboard.excludeNotTested')}
                   </label>
                 </div>
               </div>
@@ -2800,7 +2802,7 @@ export default function Dashboard() {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Spore Load by Category (Infected Only)</CardTitle>
+              <CardTitle>{t('dashboard.sporeLoadByCategory')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="mb-6 space-y-4">
@@ -2852,7 +2854,7 @@ export default function Dashboard() {
                     onCheckedChange={setExcludeZeroSporeLoad}
                   />
                   <label htmlFor="exclude-zero-spore-load" className="text-sm cursor-pointer">
-                    Exclude individuals with 0 spore load
+                    {t('dashboard.excludeZeroSpores')}
                   </label>
                 </div>
               </div>

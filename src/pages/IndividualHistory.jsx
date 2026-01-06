@@ -9,8 +9,10 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useExperiment } from "../components/ExperimentContext";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useTranslation } from 'react-i18next';
 
 export default function IndividualHistory() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { activeExperimentId } = useExperiment();
   const selectedExp = activeExperimentId;
@@ -89,12 +91,12 @@ export default function IndividualHistory() {
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Individual Life History</h1>
+      <h1 className="text-3xl font-bold mb-6">{t('history.lifeHistory')}</h1>
       
       {selectedExp && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Search Individual</CardTitle>
+            <CardTitle>{t('history.searchIndividual')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex gap-3">
@@ -103,12 +105,12 @@ export default function IndividualHistory() {
                 <Input
                   value={individualId}
                   onChange={(e) => setIndividualId(e.target.value)}
-                  placeholder="Enter individual code"
+                  placeholder={t('history.enterCode')}
                   className="pl-10"
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 />
               </div>
-              <Button onClick={handleSearch}>Search</Button>
+              <Button onClick={handleSearch}>{t('common.search')}</Button>
             </div>
           </CardContent>
         </Card>
@@ -119,14 +121,14 @@ export default function IndividualHistory() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>Individual Summary</span>
+                <span>{t('history.individualSummary')}</span>
                 <span className="font-mono text-lg">{selectedIndividual.individual_id}</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Factors</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('dataset.factors')}</p>
                   <div className="space-y-1">
                     {selectedIndividual.factors && Object.entries(selectedIndividual.factors).map(([k, v]) => (
                       <Badge key={k} variant="secondary">{k}: {v}</Badge>
@@ -135,50 +137,50 @@ export default function IndividualHistory() {
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Status</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('common.status')}</p>
                   <Badge variant={selectedIndividual.alive ? "default" : "secondary"}>
-                    {selectedIndividual.alive ? "Alive" : "Dead"}
+                    {selectedIndividual.alive ? t('common.alive') : t('common.dead')}
                   </Badge>
                   {selectedIndividual.death_date && (
-                    <p className="text-sm mt-1">Died: {selectedIndividual.death_date}</p>
+                    <p className="text-sm mt-1">{t('dataEntry.deathDate')}: {selectedIndividual.death_date}</p>
                   )}
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Infected</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('dataEntry.infected')}</p>
                   <Badge variant={selectedIndividual.infected === "confirmed Yes" ? "destructive" : "outline"}>
-                    {selectedIndividual.infected === "confirmed Yes" ? "Confirmed Yes" : 
-                     selectedIndividual.infected === "confirmed No" ? "Confirmed No" : "Not Tested"}
+                    {selectedIndividual.infected === "confirmed Yes" ? t('common.confirmedYes') : 
+                     selectedIndividual.infected === "confirmed No" ? t('common.confirmedNo') : t('common.notTested')}
                   </Badge>
                   {selectedIndividual.infected === "confirmed Yes" && (
                     <div className="text-sm mt-1">
-                      <div>Spores: {selectedIndividual.spores_count || 'N/A'}</div>
-                      <div>Volume: {selectedIndividual.spores_volume || 'N/A'}</div>
+                      <div>{t('history.spores')} {selectedIndividual.spores_count || 'N/A'}</div>
+                      <div>{t('history.volume')} {selectedIndividual.spores_volume || 'N/A'}</div>
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Red Status</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('history.redStatus')}</p>
                   <div>
                     <Badge variant={selectedIndividual.red_confirmed ? "destructive" : "outline"}>
-                      {selectedIndividual.red_confirmed ? 'Confirmed' : 'Not Confirmed'}
+                      {selectedIndividual.red_confirmed ? t('common.confirmed') : t('history.notConfirmed')}
                     </Badge>
-                    <p className="text-sm mt-1">Signals: {selectedIndividual.red_signal_count || 0}</p>
+                    <p className="text-sm mt-1">{t('common.signals')}: {selectedIndividual.red_signal_count || 0}</p>
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Offspring</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('history.totalOffspring')}</p>
                   <p className="text-2xl font-bold">{selectedIndividual.cumulative_offspring || 0}</p>
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Reproduction Period</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('history.reproductionPeriod')}</p>
                   {selectedIndividual.first_reproduction_date ? (
                     <div className="text-sm">
-                      <div>First: {selectedIndividual.first_reproduction_date}</div>
-                      <div>Last: {selectedIndividual.last_reproduction_date}</div>
+                      <div>{t('history.first')} {selectedIndividual.first_reproduction_date}</div>
+                      <div>{t('history.last')} {selectedIndividual.last_reproduction_date}</div>
                     </div>
                   ) : (
                     <p className="text-sm">-</p>
@@ -190,7 +192,7 @@ export default function IndividualHistory() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Cumulative Offspring Over Time</CardTitle>
+              <CardTitle>{t('history.cumulativeOverTime')}</CardTitle>
             </CardHeader>
             <CardContent>
               {reproductionEvents.length > 0 ? (
@@ -217,7 +219,7 @@ export default function IndividualHistory() {
                     <YAxis />
                     <Tooltip 
                       labelFormatter={(date) => format(new Date(date), 'MMM d, yyyy')}
-                      formatter={(value) => [value, 'Offspring']}
+                      formatter={(value) => [value, t('common.offspring')]}
                     />
                     <Line 
                       type="stepAfter" 
@@ -229,14 +231,14 @@ export default function IndividualHistory() {
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-gray-600">No reproduction events recorded</p>
+                <p className="text-gray-600">{t('history.noEvents')}</p>
               )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Reproduction Events</CardTitle>
+              <CardTitle>{t('history.reproductionEvents')}</CardTitle>
             </CardHeader>
             <CardContent>
               {reproductionEvents.length > 0 ? (
@@ -258,10 +260,10 @@ export default function IndividualHistory() {
                               className="w-24"
                               autoFocus
                             />
-                            <span className="text-sm text-gray-600">offspring</span>
+                            <span className="text-sm text-gray-600">{t('common.offspring')}</span>
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-600">{event.offspring_count} offspring</p>
+                          <p className="text-sm text-gray-600">{event.offspring_count} {t('common.offspring')}</p>
                         )}
                       </div>
                       {editingEventId === event.id ? (
@@ -296,7 +298,7 @@ export default function IndividualHistory() {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-600">No reproduction events recorded</p>
+                <p className="text-gray-600">{t('history.noEvents')}</p>
               )}
             </CardContent>
           </Card>
@@ -306,7 +308,7 @@ export default function IndividualHistory() {
       {selectedExp && !selectedIndividual && individualId && (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-gray-600">No individual found with code: {individualId}</p>
+            <p className="text-gray-600">{t('history.noIndividualFound')} {individualId}</p>
           </CardContent>
         </Card>
       )}
