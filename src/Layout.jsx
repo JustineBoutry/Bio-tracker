@@ -1,16 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useExperiment, ExperimentProvider } from "./components/ExperimentContext";
 import { Button } from "@/components/ui/button";
-import { LogOut, Download, Menu, X, Settings, Database, History, BarChart3, BookOpen, Trash2, PenLine } from "lucide-react";
+import { LogOut, Download, Menu, X, Settings, Database, History, BarChart3, BookOpen, Trash2, PenLine, Languages } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { useTranslation } from 'react-i18next';
+import '../i18n';
 
 function LayoutContent({ children, currentPageName }) {
   const navigate = useNavigate();
   const { activeExperimentId, exitExperiment } = useExperiment();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { t, i18n } = useTranslation();
+  const currentLanguage = i18n.language;
+  const isRTL = currentLanguage === 'he' || currentLanguage === 'ar';
+
+  useEffect(() => {
+    document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+    document.documentElement.lang = currentLanguage;
+  }, [isRTL, currentLanguage]);
+
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
+    localStorage.setItem('language', lng);
+  };
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', activeExperimentId],
@@ -64,13 +79,13 @@ function LayoutContent({ children, currentPageName }) {
   }
 
   const navItems = [
-    { name: "ExperimentSetup", label: "Setup", icon: Settings },
-    { name: "DataEntry", label: "Enter Data", icon: PenLine },
-    { name: "Dataset", label: "Dataset", icon: Database },
-    { name: "IndividualHistory", label: "Individual History", icon: History },
-    { name: "Dashboard", label: "Dashboard", icon: BarChart3 },
-    { name: "LabNotebook", label: "Lab Notebook", icon: BookOpen },
-    { name: "CleanupData", label: "Cleanup", icon: Trash2 },
+    { name: "ExperimentSetup", label: t('nav.setup'), icon: Settings },
+    { name: "DataEntry", label: t('nav.dataEntry'), icon: PenLine },
+    { name: "Dataset", label: t('nav.dataset'), icon: Database },
+    { name: "IndividualHistory", label: t('nav.history'), icon: History },
+    { name: "Dashboard", label: t('nav.dashboard'), icon: BarChart3 },
+    { name: "LabNotebook", label: t('nav.notebook'), icon: BookOpen },
+    { name: "CleanupData", label: t('nav.cleanup'), icon: Trash2 },
   ];
 
   return (
@@ -85,10 +100,10 @@ function LayoutContent({ children, currentPageName }) {
 
       {/* Sidebar */}
       <aside className={`
-        fixed lg:static inset-y-0 left-0 z-50
-        w-64 bg-white border-r shadow-sm
+        fixed lg:static inset-y-0 ${isRTL ? 'right-0' : 'left-0'} z-50
+        w-64 bg-white ${isRTL ? 'border-l' : 'border-r'} shadow-sm
         transform transition-transform duration-200 ease-in-out
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        ${sidebarOpen ? 'translate-x-0' : (isRTL ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0')}
       `}>
         <div className="flex flex-col h-full">
           {/* Header */}
@@ -138,7 +153,7 @@ function LayoutContent({ children, currentPageName }) {
               className="w-full flex items-center justify-center gap-2"
             >
               <Download className="w-4 h-4" />
-              Download Data
+              {t('nav.download')}
             </Button>
 
             <Button 
@@ -148,7 +163,7 @@ function LayoutContent({ children, currentPageName }) {
               className="w-full flex items-center justify-center gap-2"
             >
               <LogOut className="w-4 h-4" />
-              Exit Experiment
+              {t('nav.exit')}
             </Button>
           </div>
         </div>
@@ -168,6 +183,22 @@ function LayoutContent({ children, currentPageName }) {
             {experiment?.experiment_name || 'Loading...'}
           </div>
         </header>
+
+        {/* Language switcher */}
+        <div className={`fixed top-4 ${isRTL ? 'left-4' : 'right-4'} z-50`}>
+          <div className="flex items-center gap-2 bg-white rounded-lg shadow-md p-2 border">
+            <Languages className="w-4 h-4 text-gray-600" />
+            <select
+              value={currentLanguage}
+              onChange={(e) => changeLanguage(e.target.value)}
+              className="text-sm border-none bg-transparent outline-none cursor-pointer"
+            >
+              <option value="en">English</option>
+              <option value="he">עברית</option>
+              <option value="ar">العربية</option>
+            </select>
+          </div>
+        </div>
 
         {/* Page content */}
         <main className="flex-1 overflow-auto">
