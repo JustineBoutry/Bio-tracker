@@ -6,8 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, Trash2, CheckCircle, Edit2, X, UserX } from "lucide-react";
 import { useExperiment } from "../components/ExperimentContext";
 import { Input } from "@/components/ui/input";
+import { useTranslation } from 'react-i18next';
 
 export default function CleanupData() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { activeExperimentId } = useExperiment();
   const [duplicatesFound, setDuplicatesFound] = useState([]);
@@ -490,29 +492,28 @@ export default function CleanupData() {
   if (!activeExperimentId) {
     return (
       <div className="p-8">
-        <p className="text-gray-600">No experiment selected</p>
+        <p className="text-gray-600">{t('cleanup.noExperiment')}</p>
       </div>
     );
   }
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Data Cleanup</h1>
+      <h1 className="text-3xl font-bold mb-6">{t('cleanup.title')}</h1>
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Scan for Duplicate Reproduction Events</CardTitle>
+          <CardTitle>{t('cleanup.scanDuplicates')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-gray-600">
-            This tool will scan for duplicate reproduction events (same individual, same date) 
-            and allow you to remove them while recalculating cumulative offspring counts.
+            {t('cleanup.scanDuplicatesDesc')}
           </p>
           <Button 
             onClick={scanForDuplicates}
             disabled={scanning}
           >
-            {scanning ? 'Scanning...' : 'Scan for Duplicates'}
+            {scanning ? t('common.loading') : t('cleanup.scan')}
           </Button>
         </CardContent>
       </Card>
@@ -522,7 +523,7 @@ export default function CleanupData() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-3 text-green-700">
               <CheckCircle className="w-5 h-5" />
-              <p className="font-medium">Data cleaned successfully!</p>
+              <p className="font-medium">{t('cleanup.cleanSuccess')}</p>
             </div>
           </CardContent>
         </Card>
@@ -533,7 +534,7 @@ export default function CleanupData() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-yellow-800">
               <AlertTriangle className="w-5 h-5" />
-              Found {duplicatesFound.length} Duplicate Groups
+              {t('cleanup.foundDuplicates', { count: duplicatesFound.length })}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -558,7 +559,7 @@ export default function CleanupData() {
               variant="destructive"
             >
               <Trash2 className="w-4 h-4 mr-2" />
-              {cleanupMutation.isPending ? 'Cleaning...' : 'Remove Duplicates & Fix Data'}
+              {cleanupMutation.isPending ? t('cleanup.cleaning') : t('cleanup.removeDuplicates')}
             </Button>
           </CardContent>
         </Card>
@@ -574,18 +575,17 @@ export default function CleanupData() {
 
       <Card className="mb-6 mt-8">
         <CardHeader>
-          <CardTitle>Scan for High Offspring Events (&gt;15)</CardTitle>
+          <CardTitle>{t('cleanup.scanHighOffspring')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-gray-600">
-            This tool will scan for reproduction events with more than 15 offspring. 
-            You can choose to edit, delete, or ignore each event.
+            {t('cleanup.scanHighOffspringDesc')}
           </p>
           <Button 
             onClick={scanForHighOffspring}
             disabled={scanningHighOffspring}
           >
-            {scanningHighOffspring ? 'Scanning...' : 'Scan for High Offspring'}
+            {scanningHighOffspring ? t('common.loading') : t('cleanup.scanHigh')}
           </Button>
         </CardContent>
       </Card>
@@ -595,7 +595,7 @@ export default function CleanupData() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-orange-800">
               <AlertTriangle className="w-5 h-5" />
-              Found {highOffspringEvents.length} Events with &gt;15 Offspring
+              {t('cleanup.foundHigh', { count: highOffspringEvents.length })}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -616,9 +616,9 @@ export default function CleanupData() {
                         value={eventActions[event.id]?.action || 'ignore'}
                         onChange={(e) => setEventAction(event.id, e.target.value)}
                       >
-                        <option value="ignore">Ignore</option>
-                        <option value="edit">Edit</option>
-                        <option value="delete">Delete</option>
+                        <option value="ignore">{t('cleanup.ignore')}</option>
+                        <option value="edit">{t('common.edit')}</option>
+                        <option value="delete">{t('common.delete')}</option>
                       </select>
                       
                       {eventActions[event.id]?.action === 'edit' && (
@@ -641,7 +641,7 @@ export default function CleanupData() {
               disabled={processHighOffspringMutation.isPending || 
                 Object.values(eventActions).every(a => a.action === 'ignore')}
             >
-              {processHighOffspringMutation.isPending ? 'Processing...' : 'Apply Changes'}
+              {processHighOffspringMutation.isPending ? t('cleanup.processing') : t('cleanup.applyChanges')}
             </Button>
           </CardContent>
         </Card>
@@ -649,18 +649,17 @@ export default function CleanupData() {
 
       <Card className="mb-6 mt-8">
         <CardHeader>
-          <CardTitle>Mark Individuals as Lost</CardTitle>
+          <CardTitle>{t('cleanup.markLost')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-gray-600">
-            Mark individuals that have been lost during the experiment. 
-            They will remain in the dataset but won't be counted as alive or dead (death_date = "lost").
+            {t('cleanup.markLostDesc')}
           </p>
           <div className="space-y-3">
             <textarea
               className="w-full border rounded p-3 font-mono text-sm"
               rows="4"
-              placeholder="Enter individual IDs (space or comma separated)&#10;Example: A1-1 A1-2 A2-3"
+              placeholder={t('cleanup.enterIds')}
               value={lostIndividuals}
               onChange={(e) => setLostIndividuals(e.target.value)}
             />
@@ -678,7 +677,7 @@ export default function CleanupData() {
               disabled={markingLost || !lostIndividuals.trim()}
             >
               <UserX className="w-4 h-4 mr-2" />
-              {markingLost ? 'Marking...' : 'Mark as Lost'}
+              {markingLost ? t('cleanup.marking') : t('cleanup.markLost')}
             </Button>
           </div>
         </CardContent>
@@ -686,40 +685,34 @@ export default function CleanupData() {
 
       <Card className="mb-6 mt-8">
         <CardHeader>
-          <CardTitle>Fix Infection Status</CardTitle>
+          <CardTitle>{t('cleanup.fixInfection')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-gray-600">
-            This tool scans for infection status errors by:
-            <br />• Checking lab notebook for infection entries
-            <br />• Marking alive individuals as "not_tested" unless confirmed in notebook
-            <br />• Fixing old boolean values (true/false)
-            <br />• Detecting status without corresponding notebook entries
+            {t('cleanup.fixInfectionDesc')}
           </p>
           <Button 
             onClick={scanInfectionStatus}
             disabled={scanningInfection}
           >
-            {scanningInfection ? 'Scanning...' : 'Scan Infection Status'}
+            {scanningInfection ? t('common.loading') : t('cleanup.scanInfection')}
           </Button>
         </CardContent>
       </Card>
 
       <Card className="mb-6 mt-8">
         <CardHeader>
-          <CardTitle>Fix Death Date Mismatches</CardTitle>
+          <CardTitle>{t('cleanup.fixDeathDates')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-gray-600">
-            This tool scans for cases where the recorded death date doesn't match the date 
-            when the death was reported in the lab notebook. This can happen when the data entry 
-            date wasn't updated before recording deaths.
+            {t('cleanup.fixDeathDatesDesc')}
           </p>
           <Button 
             onClick={scanDeathDateMismatches}
             disabled={scanningDeathDates}
           >
-            {scanningDeathDates ? 'Scanning...' : 'Scan Death Dates'}
+            {scanningDeathDates ? t('common.loading') : t('cleanup.scanDeathDates')}
           </Button>
         </CardContent>
       </Card>
@@ -729,7 +722,7 @@ export default function CleanupData() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-purple-800">
               <AlertTriangle className="w-5 h-5" />
-              Found {deathDateMismatches.length} Death Date Mismatches
+              {t('cleanup.foundMismatches', { count: deathDateMismatches.length })}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -775,7 +768,7 @@ export default function CleanupData() {
               disabled={fixDeathDatesMutation.isPending || 
                 Object.values(deathDateActions).every(a => a.action === 'ignore')}
             >
-              {fixDeathDatesMutation.isPending ? 'Fixing...' : 'Apply Fixes'}
+              {fixDeathDatesMutation.isPending ? t('cleanup.fixing') : t('cleanup.applyFixes')}
             </Button>
           </CardContent>
         </Card>
@@ -785,7 +778,7 @@ export default function CleanupData() {
         <Card className="mb-6 border-blue-200 bg-blue-50">
           <CardHeader>
             <CardTitle className="text-blue-800">
-              Found {infectionPreview.corrections.length} Status Corrections
+              {t('cleanup.foundCorrections', { count: infectionPreview.corrections.length })}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -815,14 +808,14 @@ export default function CleanupData() {
                     onClick={() => fixInfectionMutation.mutate()}
                     disabled={fixInfectionMutation.isPending}
                   >
-                    {fixInfectionMutation.isPending ? 'Fixing...' : 'Apply Corrections'}
+                    {fixInfectionMutation.isPending ? t('cleanup.fixing') : t('cleanup.applyCorrections')}
                   </Button>
                   <Button 
                     variant="outline"
                     onClick={scanInfectionStatus}
                     disabled={fixInfectionMutation.isPending || scanningInfection}
                   >
-                    Re-scan
+                    {t('cleanup.scanInfection')}
                   </Button>
                 </div>
               </>
@@ -830,7 +823,7 @@ export default function CleanupData() {
 
             {infectionPreview.corrections.length === 0 && (
               <div className="text-center py-4 text-green-700">
-                ✓ No corrections needed!
+                ✓ {t('cleanup.noCorrections')}
               </div>
             )}
           </CardContent>
