@@ -8,8 +8,10 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useExperiment } from "../components/ExperimentContext";
 import { Upload } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 export default function Home() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { selectExperiment } = useExperiment();
@@ -153,13 +155,13 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-8">
       <div className="max-w-2xl w-full space-y-6">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">BioTracker</h1>
-          <p className="text-gray-600">Select or create an experiment to begin</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">{t('home.title')}</h1>
+          <p className="text-gray-600">{t('home.selectOrCreate')}</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Enter Existing Experiment</CardTitle>
+            <CardTitle>{t('home.enterExisting')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <select 
@@ -167,10 +169,10 @@ export default function Home() {
               value={selectedExp || ''}
               onChange={(e) => setSelectedExp(e.target.value)}
             >
-              <option value="">Choose experiment...</option>
+              <option value="">{t('home.chooseExperiment')}</option>
               {experiments.map((exp) => (
                 <option key={exp.id} value={exp.id}>
-                  {exp.experiment_name} (Started: {exp.start_date})
+                  {exp.experiment_name} ({t('home.started')} {exp.start_date})
                 </option>
               ))}
             </select>
@@ -180,16 +182,16 @@ export default function Home() {
               onClick={enterExperiment}
               disabled={!selectedExp}
             >
-              Enter this experiment
+              {t('home.enterThisExperiment')}
             </Button>
           </CardContent>
         </Card>
 
-        <div className="text-center text-gray-500">or</div>
+        <div className="text-center text-gray-500">{t('common.or')}</div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Import Experiment from File</CardTitle>
+            <CardTitle>{t('home.importFromFile')}</CardTitle>
           </CardHeader>
           <CardContent>
             <input
@@ -209,29 +211,29 @@ export default function Home() {
                 type="button"
               >
                 <Upload className="w-4 h-4 mr-2" />
-                {importing ? 'Importing...' : 'Import experiment from file'}
+                {importing ? t('home.importing') : t('home.importFromFileButton')}
               </Button>
             </label>
           </CardContent>
         </Card>
 
-        <div className="text-center text-gray-500">or</div>
+        <div className="text-center text-gray-500">{t('common.or')}</div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Create New Experiment</CardTitle>
+            <CardTitle>{t('home.createNewExperiment')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Experiment Name</label>
+              <label className="block text-sm font-medium mb-2">{t('home.experimentName')}</label>
               <Input
-                placeholder="Enter experiment name"
+                placeholder={t('home.experimentName')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Start Date</label>
+              <label className="block text-sm font-medium mb-2">{t('home.startDate')}</label>
               <Input
                 type="date"
                 value={startDate}
@@ -244,7 +246,7 @@ export default function Home() {
               onClick={createExperiment}
               disabled={!name}
             >
-              Create new experiment
+              {t('home.createNewExperimentButton')}
             </Button>
           </CardContent>
         </Card>
