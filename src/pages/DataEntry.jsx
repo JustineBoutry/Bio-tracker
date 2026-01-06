@@ -9,8 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useExperiment } from "../components/ExperimentContext";
 import { Calendar, Loader2 } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 
 export default function DataEntry() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { activeExperimentId } = useExperiment();
   const selectedExp = activeExperimentId;
@@ -339,7 +341,7 @@ export default function DataEntry() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Data Entry</h1>
+      <h1 className="text-3xl font-bold mb-6">{t('dataEntry.title')}</h1>
 
       {selectedExp &&
       <Card className="mb-6 bg-blue-50 border-blue-200">
@@ -348,7 +350,7 @@ export default function DataEntry() {
               <Calendar className="w-5 h-5 text-blue-600" />
               <div className="flex-1">
                 <label className="text-sm font-medium text-gray-700 block mb-1">
-                  Current data entry date
+                  {t('dataEntry.currentDateEntry')}
                 </label>
                 <div className="flex items-center gap-2">
                   <Input
@@ -362,7 +364,7 @@ export default function DataEntry() {
                   size="sm"
                   onClick={resetToToday}>
 
-                    Use today's date
+                    {t('dataEntry.useTodayDate')}
                   </Button>
                 </div>
               </div>
@@ -374,7 +376,7 @@ export default function DataEntry() {
       {selectedExp && experiment?.factors &&
       <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Filter by Category (select multiple)</CardTitle>
+            <CardTitle>{t('dataEntry.filterMultiple')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -393,7 +395,7 @@ export default function DataEntry() {
                         }}
                       />
                       <label htmlFor={`${factor.name}-all`} className="text-sm cursor-pointer font-medium">
-                        All
+                        {t('common.all')}
                       </label>
                     </div>
                     {factor.levels.map((level) => (
@@ -426,22 +428,22 @@ export default function DataEntry() {
       {selectedExp &&
       <Tabs defaultValue="reproduction">
           <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="reproduction" className="text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Reproduction</TabsTrigger>
-            <TabsTrigger value="death" className="bg-slate-500 text-slate-50 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Death</TabsTrigger>
-            <TabsTrigger value="redness" className="bg-[#f7c5c5] text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Redness</TabsTrigger>
-            <TabsTrigger value="infection" className="text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Infection</TabsTrigger>
-            <TabsTrigger value="sex" className="text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">Sex</TabsTrigger>
+            <TabsTrigger value="reproduction" className="text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">{t('dataEntry.reproduction')}</TabsTrigger>
+            <TabsTrigger value="death" className="bg-slate-500 text-slate-50 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">{t('dataEntry.death')}</TabsTrigger>
+            <TabsTrigger value="redness" className="bg-[#f7c5c5] text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">{t('dataEntry.redness')}</TabsTrigger>
+            <TabsTrigger value="infection" className="text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">{t('dataEntry.infection')}</TabsTrigger>
+            <TabsTrigger value="sex" className="text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">{t('dataEntry.sex')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="reproduction">
             {!showOffspringEntry ?
           <Card>
                 <CardHeader>
-                  <CardTitle>Select individuals that reproduced today</CardTitle>
+                  <CardTitle>{t('dataEntry.selectIndividualsReproduced')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="mb-4 text-sm text-gray-600">
-                    {individuals.length} individuals | {selectedIds.length} selected
+                    {individuals.length} {t('common.individuals')} | {selectedIds.length} {t('common.selected')}
                   </div>
                   <div className="space-y-2 max-h-96 overflow-auto mb-4">
                     {individuals.map((ind) =>
@@ -463,14 +465,14 @@ export default function DataEntry() {
                 }}
                 disabled={selectedIds.length === 0}>
 
-                    Enter offspring counts
+                    {t('dataEntry.enterOffspring')}
                   </Button>
                 </CardContent>
               </Card> :
 
           <Card>
                 <CardHeader>
-                  <CardTitle>Enter offspring counts</CardTitle>
+                  <CardTitle>{t('dataEntry.enterOffspring')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 max-h-96 overflow-auto mb-4">
@@ -495,7 +497,7 @@ export default function DataEntry() {
                   </div>
                   <div className="flex gap-2">
                     <Button onClick={() => reproductionMutation.mutate()}>
-                      Submit
+                      {t('common.submit')}
                     </Button>
                     <Button
                   variant="outline"
@@ -504,7 +506,7 @@ export default function DataEntry() {
                     setSelectedIds([]);
                   }}>
 
-                      Cancel
+                      {t('common.cancel')}
                     </Button>
                   </div>
                 </CardContent>
@@ -515,11 +517,11 @@ export default function DataEntry() {
           <TabsContent value="death">
             <Card className="bg-slate-500 text-card-foreground rounded-xl border shadow">
               <CardHeader>
-                <CardTitle className="text-slate-50 font-semibold tracking-tight leading-none">Select individuals that died today</CardTitle>
+                <CardTitle className="text-slate-50 font-semibold tracking-tight leading-none">{t('dataEntry.selectIndividualsDied')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-slate-50 mb-4 text-sm">
-                  {individuals.length} individuals | {selectedIds.length} selected
+                  {individuals.length} {t('common.individuals')} | {selectedIds.length} {t('common.selected')}
                 </div>
                 <div className="space-y-2 max-h-96 overflow-auto mb-4">
                   {individuals.map((ind) =>
@@ -536,7 +538,7 @@ export default function DataEntry() {
                 onClick={() => deathMutation.mutate()}
                 disabled={selectedIds.length === 0}>
 
-                  Mark as dead
+                  {t('dataEntry.markAsDead')}
                 </Button>
               </CardContent>
             </Card>
@@ -545,11 +547,11 @@ export default function DataEntry() {
           <TabsContent value="redness">
             <Card className="bg-[#fdd9d9] text-card-foreground rounded-xl border shadow">
               <CardHeader>
-                <CardTitle>Select individuals that look red today</CardTitle>
+                <CardTitle>{t('dataEntry.selectIndividualsRed')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="mb-4 text-sm text-gray-600">
-                  {individuals.length} individuals | {selectedIds.length} selected
+                  {individuals.length} {t('common.individuals')} | {selectedIds.length} {t('common.selected')}
                 </div>
                 <div className="space-y-2 max-h-96 overflow-auto mb-4">
                   {individuals.map((ind) =>
@@ -560,8 +562,8 @@ export default function DataEntry() {
 
                       <span className="font-mono flex-1">{ind.individual_id}</span>
                       <span className="text-sm text-gray-600">
-                        Signals: {ind.red_signal_count || 0}
-                        {ind.red_confirmed && ' ✓ Confirmed'}
+                        {t('common.signals')}: {ind.red_signal_count || 0}
+                        {ind.red_confirmed && ` ✓ ${t('common.confirmed')}`}
                       </span>
                     </div>
                 )}
@@ -570,7 +572,7 @@ export default function DataEntry() {
                 onClick={() => rednessMutation.mutate()}
                 disabled={selectedIds.length === 0}>
 
-                  Mark red signal (+1)
+                  {t('dataEntry.markRedSignal')}
                 </Button>
               </CardContent>
             </Card>
@@ -579,13 +581,13 @@ export default function DataEntry() {
           <TabsContent value="infection">
             <Card>
               <CardHeader>
-                <CardTitle>Infection Status</CardTitle>
+                <CardTitle>{t('dataEntry.infectionStatus')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h3 className="font-semibold mb-2">Mark as NOT Infected</h3>
+                  <h3 className="font-semibold mb-2">{t('dataEntry.markNotInfected')}</h3>
                   <Textarea
-                  placeholder="Enter individual codes (comma or space separated)"
+                  placeholder={t('dataEntry.enterIndividualCodes')}
                   value={nonInfectedIds}
                   onChange={(e) => setNonInfectedIds(e.target.value)}
                   rows={3} />
@@ -597,20 +599,20 @@ export default function DataEntry() {
                     {markNonInfectedMutation.isPending ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Processing...
+                        {t('dataEntry.processing')}
                       </>
                     ) : (
-                      "Mark as Non-Infected"
+                      t('dataEntry.markAsNonInfected')
                     )}
                   </Button>
                 </div>
 
                 <div className="border-t pt-6">
-                  <h3 className="font-semibold mb-2">Mark as Infected + Enter Spores</h3>
+                  <h3 className="font-semibold mb-2">{t('dataEntry.markInfectedSpores')}</h3>
                   {!showSporeEntry ?
                 <>
                       <Textarea
-                    placeholder="Enter infected individual codes (comma or space separated)"
+                    placeholder={t('dataEntry.enterInfectedCodes')}
                     value={infectedIds}
                     onChange={(e) => setInfectedIds(e.target.value)}
                     rows={3} />
@@ -620,7 +622,7 @@ export default function DataEntry() {
                     onClick={parseInfectedIds}
                     disabled={!infectedIds.trim()}>
 
-                        Enter Spore Data
+                        {t('dataEntry.enterSporeData')}
                       </Button>
                     </> :
 
@@ -631,7 +633,7 @@ export default function DataEntry() {
                             <div className="font-mono font-semibold">{individualId}</div>
                             <div className="grid grid-cols-2 gap-3">
                               <div>
-                                <label className="text-sm">Spore Volume</label>
+                                <label className="text-sm">{t('dataEntry.sporeVolume')}</label>
                                 <Input
                             placeholder="e.g., 10µL"
                             value={sporeData[individualId].volume}
@@ -642,10 +644,10 @@ export default function DataEntry() {
 
                               </div>
                               <div>
-                                <label className="text-sm">Spore Count</label>
+                                <label className="text-sm">{t('dataEntry.sporeCount')}</label>
                                 <Input
                             type="number"
-                            placeholder="Count"
+                            placeholder={t('dataEntry.sporeCount')}
                             value={sporeData[individualId].count}
                             onChange={(e) => setSporeData({
                               ...sporeData,
@@ -659,7 +661,7 @@ export default function DataEntry() {
                       </div>
                       <div className="flex gap-2">
                         <Button onClick={() => saveInfectedMutation.mutate()}>
-                          Save Infection Data
+                          {t('dataEntry.saveInfectionData')}
                         </Button>
                         <Button
                       variant="outline"
@@ -669,7 +671,7 @@ export default function DataEntry() {
                         setSporeData({});
                       }}>
 
-                          Cancel
+                          {t('common.cancel')}
                         </Button>
                       </div>
                     </>
@@ -682,16 +684,16 @@ export default function DataEntry() {
           <TabsContent value="sex">
             <Card>
               <CardHeader>
-                <CardTitle>Mark Males</CardTitle>
+                <CardTitle>{t('dataEntry.markMales')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h3 className="font-semibold mb-2">Enter Male Individual IDs</h3>
+                  <h3 className="font-semibold mb-2">{t('dataEntry.enterMaleIds')}</h3>
                   <p className="text-sm text-gray-600 mb-2">
-                    Enter the IDs of individuals that are males (comma or space separated)
+                    {t('dataEntry.maleIdsDescription')}
                   </p>
                   <Textarea
-                    placeholder="Enter male individual codes (comma or space separated)"
+                    placeholder={t('dataEntry.enterMaleCodes')}
                     value={maleIds}
                     onChange={(e) => setMaleIds(e.target.value)}
                     rows={3}
@@ -704,10 +706,10 @@ export default function DataEntry() {
                     {markMalesMutation.isPending ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Processing...
+                        {t('dataEntry.processing')}
                       </>
                     ) : (
-                      "Mark as Male"
+                      t('dataEntry.markAsMale')
                     )}
                   </Button>
                 </div>
