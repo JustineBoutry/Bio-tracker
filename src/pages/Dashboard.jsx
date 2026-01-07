@@ -941,6 +941,22 @@ export default function Dashboard() {
       <h1 className="text-3xl font-bold mb-2">{t('dashboard.title')}</h1>
       <p className="text-gray-600 mb-6">{t('dashboard.description')}</p>
 
+      <Card className="mb-6 border-orange-300 bg-orange-50">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-3">
+            <div className="text-orange-600 text-xl">⚠️</div>
+            <div>
+              <h3 className="font-semibold text-orange-900 mb-2">Statistical Tests - Work in Progress</h3>
+              <p className="text-sm text-orange-800">
+                The statistical tests and analyses provided in this dashboard are <strong>not finalized</strong> and may contain errors. 
+                Please use them with <strong>extreme caution</strong> and do not rely on them for important interpretations or conclusions 
+                without double-checking through dedicated statistical analysis software. These tools are provided for exploratory purposes only.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {experiment && (
         <>
           <Card className="mb-6">
