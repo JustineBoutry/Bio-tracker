@@ -231,6 +231,10 @@ export default function ExperimentSetup() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">{t('setup.title')}</h1>
+        <p className="text-gray-600">{t('setup.description')}</p>
+      </div>
       <div className="flex items-center justify-between mb-8">
         {isEditingName ? (
           <div className="flex items-center gap-2">
@@ -246,11 +250,10 @@ export default function ExperimentSetup() {
             />
             <Button onClick={handleRename}>{t('common.save')}</Button>
             <Button variant="outline" onClick={() => setIsEditingName(false)}>{t('common.cancel')}</Button>
-            </>
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold">{experiment.experiment_name}</h1>
+            <span className="text-lg font-semibold text-gray-700">{experiment.experiment_name}</span>
             <Button 
               variant="ghost" 
               size="icon"
