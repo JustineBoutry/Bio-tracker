@@ -233,7 +233,7 @@ export default function ExperimentSetup() {
     <div className="p-8 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">{t('setup.title')}</h1>
-        <p className="text-gray-600">{t('setup.description')}</p>
+        <p className="text-gray-600 font-semibold">{experiment.experiment_name}</p>
       </div>
       <div className="flex items-center justify-between mb-8">
         {isEditingName ? (
