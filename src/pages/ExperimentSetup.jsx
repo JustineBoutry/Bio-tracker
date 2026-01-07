@@ -246,6 +246,7 @@ export default function ExperimentSetup() {
             />
             <Button onClick={handleRename}>{t('common.save')}</Button>
             <Button variant="outline" onClick={() => setIsEditingName(false)}>{t('common.cancel')}</Button>
+            </>
           </div>
         ) : (
           <div className="flex items-center gap-3">

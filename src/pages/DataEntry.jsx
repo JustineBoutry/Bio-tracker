@@ -341,7 +341,8 @@ export default function DataEntry() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">{t('dataEntry.title')}</h1>
+      <h1 className="text-3xl font-bold mb-2">{t('dataEntry.title')}</h1>
+      <p className="text-gray-600 mb-6">{t('dataEntry.description')}</p>
 
       {selectedExp &&
       <Card className="mb-6 bg-blue-50 border-blue-200">

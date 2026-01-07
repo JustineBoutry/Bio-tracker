@@ -91,7 +91,8 @@ export default function IndividualHistory() {
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">{t('history.lifeHistory')}</h1>
+      <h1 className="text-3xl font-bold mb-2">{t('history.title')}</h1>
+      <p className="text-gray-600 mb-6">{t('history.description')}</p>
       
       {selectedExp && (
         <Card className="mb-6">

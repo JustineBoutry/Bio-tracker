@@ -75,6 +75,7 @@ const resources = {
       
       // Experiment Setup
       "setup.title": "Experiment Setup",
+      "setup.description": "Configure your experiment by defining factors, setting code generation mode, and generating individuals. Once individuals are generated, you can proceed to data entry.",
       "setup.experimentName": "Experiment Name",
       "setup.rename": "Rename Experiment",
       "setup.delete": "Delete Experiment",
@@ -106,6 +107,7 @@ const resources = {
       
       // Data Entry
       "dataEntry.title": "Data Entry",
+      "dataEntry.description": "Enter measurements for each individual. Change the date if entering previously generated data, and use filters to reduce confusion by showing only the individuals you're looking for.",
       "dataEntry.currentDate": "Current Date",
       "dataEntry.selectCategory": "Select a category below to enter data",
       "dataEntry.reproduction": "Reproduction",
@@ -159,6 +161,7 @@ const resources = {
       
       // Dataset
       "dataset.title": "Dataset",
+      "dataset.description": "View and edit all individual records. Filter by status, search for specific individuals, export data to CSV, or make bulk changes to your dataset.",
       "dataset.individuals": "Individuals",
       "dataset.addIndividual": "Add Individual",
       "dataset.deleteSelected": "Delete Selected",
@@ -178,6 +181,7 @@ const resources = {
       
       // Individual History
       "history.title": "Individual History",
+      "history.description": "Search for any individual to view their complete life history, including all reproduction events, infection status, and cumulative offspring over time.",
       "history.searchIndividual": "Search Individual",
       "history.summary": "Summary",
       "history.reproductionEvents": "Reproduction Events",
@@ -201,6 +205,7 @@ const resources = {
       
       // Dashboard
       "dashboard.title": "Dashboard",
+      "dashboard.description": "View comprehensive statistics and visualizations. Compare groups using various factors, run statistical tests, and analyze survival, reproduction, and infection patterns.",
       "dashboard.experimentInfo": "Experiment Information",
       "dashboard.startDate": "Start Date",
       "dashboard.infectionDate": "Infection Date",
@@ -243,6 +248,7 @@ const resources = {
       
       // Lab Notebook
       "notebook.title": "Lab Notebook",
+      "notebook.description": "Keep detailed notes about your experiment. Add observations, protocol changes, or any important information. All notes are timestamped and can be exported.",
       "notebook.addNote": "Add Note",
       "notebook.noteTitle": "Note Title (optional)",
       "notebook.noteContent": "Note Content",
@@ -253,6 +259,7 @@ const resources = {
       
       // Cleanup
       "cleanup.title": "Data Cleanup",
+      "cleanup.description": "Validate and fix data issues. Scan for duplicate entries, high offspring counts, infection status errors, death date mismatches, and mark lost individuals.",
       "cleanup.noExperiment": "No experiment selected",
       "cleanup.scanDuplicates": "Scan for Duplicate Reproduction Events",
       "cleanup.scanDuplicatesDesc": "This tool will scan for duplicate reproduction events (same individual, same date) and allow you to remove them while recalculating cumulative offspring counts.",
@@ -359,6 +366,7 @@ const resources = {
       
       // הגדרת ניסוי
       "setup.title": "הגדרת ניסוי",
+      "setup.description": "הגדר את הניסוי שלך על ידי הגדרת גורמים, קביעת מצב יצירת קוד ויצירת פרטים. לאחר יצירת הפרטים, תוכל להמשיך להזנת נתונים.",
       "setup.experimentName": "שם הניסוי",
       "setup.rename": "שינוי שם ניסוי",
       "setup.delete": "מחיקת ניסוי",
@@ -390,6 +398,7 @@ const resources = {
       
       // הזנת נתונים
       "dataEntry.title": "הזנת נתונים",
+      "dataEntry.description": "הזן מדידות לכל פרט. שנה את התאריך אם אתה מזין נתונים שנוצרו בעבר, והשתמש במסננים כדי להפחית בלבול על ידי הצגת רק הפרטים שאתה מחפש.",
       "dataEntry.currentDate": "תאריך נוכחי",
       "dataEntry.selectCategory": "בחר קטגוריה להזנת נתונים",
       "dataEntry.reproduction": "רבייה",
@@ -443,6 +452,7 @@ const resources = {
       
       // מערך נתונים
       "dataset.title": "מערך נתונים",
+      "dataset.description": "צפה וערוך את כל רשומות הפרטים. סנן לפי סטטוס, חפש פרטים ספציפיים, ייצא נתונים ל-CSV, או בצע שינויים המוניים במערך הנתונים שלך.",
       "dataset.individuals": "פרטים",
       "dataset.addIndividual": "הוספת פרט",
       "dataset.deleteSelected": "מחיקת נבחרים",
@@ -462,6 +472,7 @@ const resources = {
       
       // היסטוריית פרט
       "history.title": "היסטוריית פרט",
+      "history.description": "חפש כל פרט כדי לצפות בהיסטוריית החיים המלאה שלו, כולל כל אירועי הרבייה, סטטוס הזיהום והצאצאים המצטברים לאורך זמן.",
       "history.searchIndividual": "חיפוש פרט",
       "history.summary": "סיכום",
       "history.reproductionEvents": "אירועי רבייה",
@@ -485,6 +496,7 @@ const resources = {
       
       // לוח בקרה
       "dashboard.title": "לוח בקרה",
+      "dashboard.description": "צפה בסטטיסטיקות ווויזואליזציות מקיפות. השווה קבוצות באמצעות גורמים שונים, הפעל מבחנים סטטיסטיים ונתח דפוסי הישרדות, רבייה וזיהום.",
       "dashboard.experimentInfo": "מידע על הניסוי",
       "dashboard.startDate": "תאריך התחלה",
       "dashboard.infectionDate": "תאריך זיהום",
@@ -527,6 +539,7 @@ const resources = {
       
       // מחברת מעבדה
       "notebook.title": "מחברת מעבדה",
+      "notebook.description": "שמור הערות מפורטות על הניסוי שלך. הוסף תצפיות, שינויי פרוטוקול או כל מידע חשוב. כל ההערות מסומנות בזמן וניתן לייצא אותן.",
       "notebook.addNote": "הוספת הערה",
       "notebook.noteTitle": "כותרת הערה (אופציונלי)",
       "notebook.noteContent": "תוכן הערה",
@@ -537,6 +550,7 @@ const resources = {
       
       // ניקוי נתונים
       "cleanup.title": "ניקוי נתונים",
+      "cleanup.description": "אמת ותקן בעיות נתונים. סרוק עבור רשומות כפולות, מספרי צאצאים גבוהים, שגיאות סטטוס זיהום, אי התאמות בתאריכי מוות וסמן פרטים אבודים.",
       "cleanup.noExperiment": "לא נבחר ניסוי",
       "cleanup.scanDuplicates": "סריקה לאירועי רבייה כפולים",
       "cleanup.scanDuplicatesDesc": "כלי זה יסרוק אירועי רבייה כפולים (אותו פרט, אותו תאריך) ויאפשר להסיר אותם תוך חישוב מחדש של ספירת צאצאים מצטברת.",
@@ -643,6 +657,7 @@ const resources = {
       
       // إعداد التجربة
       "setup.title": "إعداد التجربة",
+      "setup.description": "قم بتكوين تجربتك من خلال تحديد العوامل وتعيين وضع إنشاء الرمز وإنشاء الأفراد. بمجرد إنشاء الأفراد، يمكنك المتابعة إلى إدخال البيانات.",
       "setup.experimentName": "اسم التجربة",
       "setup.rename": "إعادة تسمية التجربة",
       "setup.delete": "حذف التجربة",
@@ -674,6 +689,7 @@ const resources = {
       
       // إدخال البيانات
       "dataEntry.title": "إدخال البيانات",
+      "dataEntry.description": "أدخل القياسات لكل فرد. غيّر التاريخ إذا كنت تدخل بيانات تم إنشاؤها مسبقًا، واستخدم المرشحات لتقليل الارتباك عن طريق إظهار الأفراد الذين تبحث عنهم فقط.",
       "dataEntry.currentDate": "التاريخ الحالي",
       "dataEntry.selectCategory": "اختر فئة لإدخال البيانات",
       "dataEntry.reproduction": "التكاثر",
@@ -727,6 +743,7 @@ const resources = {
       
       // مجموعة البيانات
       "dataset.title": "مجموعة البيانات",
+      "dataset.description": "عرض وتحرير جميع سجلات الأفراد. قم بالتصفية حسب الحالة، أو البحث عن أفراد محددين، أو تصدير البيانات إلى CSV، أو إجراء تغييرات جماعية على مجموعة البيانات الخاصة بك.",
       "dataset.individuals": "الأفراد",
       "dataset.addIndividual": "إضافة فرد",
       "dataset.deleteSelected": "حذف المحدد",
@@ -746,6 +763,7 @@ const resources = {
       
       // تاريخ الفرد
       "history.title": "تاريخ الفرد",
+      "history.description": "ابحث عن أي فرد لعرض تاريخ حياته الكامل، بما في ذلك جميع أحداث التكاثر وحالة العدوى والنسل التراكمي بمرور الوقت.",
       "history.searchIndividual": "البحث عن فرد",
       "history.summary": "ملخص",
       "history.reproductionEvents": "أحداث التكاثر",
@@ -769,6 +787,7 @@ const resources = {
       
       // لوحة التحكم
       "dashboard.title": "لوحة التحكم",
+      "dashboard.description": "عرض الإحصائيات والتصورات الشاملة. قارن المجموعات باستخدام عوامل مختلفة، وقم بإجراء الاختبارات الإحصائية، وتحليل أنماط البقاء والتكاثر والعدوى.",
       "dashboard.experimentInfo": "معلومات التجربة",
       "dashboard.startDate": "تاريخ البدء",
       "dashboard.infectionDate": "تاريخ العدوى",
@@ -811,6 +830,7 @@ const resources = {
       
       // دفتر المختبر
       "notebook.title": "دفتر المختبر",
+      "notebook.description": "احتفظ بملاحظات تفصيلية حول تجربتك. أضف ملاحظات أو تغييرات في البروتوكول أو أي معلومات مهمة. جميع الملاحظات مؤرخة ويمكن تصديرها.",
       "notebook.addNote": "إضافة ملاحظة",
       "notebook.noteTitle": "عنوان الملاحظة (اختياري)",
       "notebook.noteContent": "محتوى الملاحظة",
@@ -821,6 +841,7 @@ const resources = {
       
       // تنظيف البيانات
       "cleanup.title": "تنظيف البيانات",
+      "cleanup.description": "التحقق من صحة مشكلات البيانات وإصلاحها. قم بفحص الإدخالات المكررة وأعداد النسل المرتفعة وأخطاء حالة العدوى وعدم تطابق تواريخ الوفاة وتحديد الأفراد المفقودين.",
       "cleanup.noExperiment": "لم يتم اختيار تجربة",
       "cleanup.scanDuplicates": "مسح أحداث التكاثر المكررة",
       "cleanup.scanDuplicatesDesc": "ستقوم هذه الأداة بمسح أحداث التكاثر المكررة (نفس الفرد، نفس التاريخ) وتسمح لك بإزالتها مع إعادة حساب أعداد النسل التراكمية.",

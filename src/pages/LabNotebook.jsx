@@ -131,8 +131,12 @@ export default function LabNotebook() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">{t('notebook.title')}</h1>
+        <p className="text-gray-600 mb-4">{t('notebook.description')}</p>
+      </div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">{t('notebook.title')}</h1>
+        <div></div>
         <div className="flex gap-2">
           <Button onClick={exportToCSV} variant="outline" disabled={notes.length === 0}>
             <Download className="w-4 h-4 mr-2" />
