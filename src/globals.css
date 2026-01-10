@@ -60,15 +60,47 @@
 
 /* Font Size Accessibility */
 html.text-small {
-  font-size: 14px;
+  font-size: 13px !important;
+}
+
+html.text-small body {
+  font-size: 13px !important;
 }
 
 html.text-medium {
-  font-size: 16px;
+  font-size: 16px !important;
+}
+
+html.text-medium body {
+  font-size: 16px !important;
 }
 
 html.text-large {
-  font-size: 18px;
+  font-size: 20px !important;
+}
+
+html.text-large body {
+  font-size: 20px !important;
+}
+
+html.text-large h1 {
+  font-size: 2.5rem !important;
+}
+
+html.text-large h2 {
+  font-size: 2rem !important;
+}
+
+html.text-large .text-3xl {
+  font-size: 2.5rem !important;
+}
+
+html.text-large .text-2xl {
+  font-size: 2rem !important;
+}
+
+html.text-large .text-xl {
+  font-size: 1.5rem !important;
 }
 
 /* High Contrast Mode */
@@ -77,39 +109,101 @@ html.high-contrast {
   --foreground: 0 0% 0%;
   --card: 0 0% 100%;
   --card-foreground: 0 0% 0%;
-  --border: 0 0% 0%;
+  --border: 0 0% 20%;
   --input: 0 0% 0%;
 }
 
-html.high-contrast * {
-  border-color: #000 !important;
+html.high-contrast body {
+  background: #ffffff !important;
+  color: #000000 !important;
 }
 
 html.high-contrast .text-gray-600,
-html.high-contrast .text-gray-500 {
-  color: #000 !important;
+html.high-contrast .text-gray-500,
+html.high-contrast .text-gray-700 {
+  color: #000000 !important;
 }
 
-/* Colorblind Filters */
-html[data-color-mode="protanopia"] {
-  filter: url('#protanopia-filter');
+html.high-contrast button,
+html.high-contrast input,
+html.high-contrast select,
+html.high-contrast .border {
+  border: 2px solid #000000 !important;
 }
 
-html[data-color-mode="deuteranopia"] {
-  filter: url('#deuteranopia-filter');
+html.high-contrast .bg-white,
+html.high-contrast .bg-gray-50 {
+  background: #ffffff !important;
 }
 
-html[data-color-mode="tritanopia"] {
-  filter: url('#tritanopia-filter');
+html.high-contrast .bg-blue-600,
+html.high-contrast .bg-blue-500 {
+  background: #0000ff !important;
+  color: #ffffff !important;
 }
 
-/* SVG filters for colorblind simulation */
-html[data-color-mode="protanopia"]::before,
-html[data-color-mode="deuteranopia"]::before,
-html[data-color-mode="tritanopia"]::before {
-  content: '';
-  position: fixed;
-  pointer-events: none;
-  width: 0;
-  height: 0;
+/* Colorblind Safe Color Palettes */
+/* Protanopia (Red-Blind) - Use blue and yellow instead of red and green */
+html[data-color-mode="protanopia"] .text-red-600,
+html[data-color-mode="protanopia"] .text-red-500,
+html[data-color-mode="protanopia"] .bg-red-600,
+html[data-color-mode="protanopia"] .bg-red-500,
+html[data-color-mode="protanopia"] .bg-red-50 {
+  color: #0066cc !important;
+  background-color: #e6f2ff !important;
+}
+
+html[data-color-mode="protanopia"] .text-green-600,
+html[data-color-mode="protanopia"] .text-green-500,
+html[data-color-mode="protanopia"] .bg-green-600,
+html[data-color-mode="protanopia"] .bg-green-500 {
+  color: #cc9900 !important;
+  background-color: #fff4d9 !important;
+}
+
+html[data-color-mode="protanopia"] .border-red-200,
+html[data-color-mode="protanopia"] .border-red-300 {
+  border-color: #99ccff !important;
+}
+
+/* Deuteranopia (Green-Blind) - Similar to protanopia */
+html[data-color-mode="deuteranopia"] .text-red-600,
+html[data-color-mode="deuteranopia"] .text-red-500,
+html[data-color-mode="deuteranopia"] .bg-red-600,
+html[data-color-mode="deuteranopia"] .bg-red-500,
+html[data-color-mode="deuteranopia"] .bg-red-50 {
+  color: #cc6600 !important;
+  background-color: #ffe6cc !important;
+}
+
+html[data-color-mode="deuteranopia"] .text-green-600,
+html[data-color-mode="deuteranopia"] .text-green-500,
+html[data-color-mode="deuteranopia"] .bg-green-600,
+html[data-color-mode="deuteranopia"] .bg-green-500 {
+  color: #0066cc !important;
+  background-color: #e6f2ff !important;
+}
+
+html[data-color-mode="deuteranopia"] .border-green-200 {
+  border-color: #99ccff !important;
+}
+
+/* Tritanopia (Blue-Blind) - Use red and cyan */
+html[data-color-mode="tritanopia"] .text-blue-600,
+html[data-color-mode="tritanopia"] .text-blue-500,
+html[data-color-mode="tritanopia"] .bg-blue-600,
+html[data-color-mode="tritanopia"] .bg-blue-500,
+html[data-color-mode="tritanopia"] .bg-blue-50 {
+  color: #cc0066 !important;
+  background-color: #ffe6f2 !important;
+}
+
+html[data-color-mode="tritanopia"] .text-green-600,
+html[data-color-mode="tritanopia"] .bg-green-600 {
+  color: #00cc99 !important;
+  background-color: #e6fff5 !important;
+}
+
+html[data-color-mode="tritanopia"] .border-blue-200 {
+  border-color: #ff99cc !important;
 }
