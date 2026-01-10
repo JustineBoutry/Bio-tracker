@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useExperiment, ExperimentProvider } from "./components/ExperimentContext";
+import { AccessibilityProvider } from "./components/AccessibilityContext";
+import AccessibilitySettings from "./components/AccessibilitySettings";
 import { Button } from "@/components/ui/button";
-import { LogOut, Download, Menu, X, Settings, Database, History, BarChart3, BookOpen, Trash2, PenLine, Languages } from "lucide-react";
+import { LogOut, Download, Menu, X, Settings, Database, History, BarChart3, BookOpen, Trash2, PenLine, Languages, Eye } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useTranslation } from 'react-i18next';
@@ -13,6 +15,7 @@ function LayoutContent({ children, currentPageName }) {
   const navigate = useNavigate();
   const { activeExperimentId, exitExperiment } = useExperiment();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showAccessibilitySettings, setShowAccessibilitySettings] = useState(false);
   const { t, i18n } = useTranslation();
   const currentLanguage = i18n.language;
   const isRTL = currentLanguage === 'he' || currentLanguage === 'ar';
@@ -184,8 +187,15 @@ function LayoutContent({ children, currentPageName }) {
           </div>
         </header>
 
-        {/* Language switcher */}
-        <div className={`fixed top-4 ${isRTL ? 'left-4' : 'right-4'} z-50`}>
+        {/* Language and Accessibility switcher */}
+        <div className={`fixed top-4 ${isRTL ? 'left-4' : 'right-4'} z-50 flex items-center gap-2`}>
+          <button
+            onClick={() => setShowAccessibilitySettings(true)}
+            className="flex items-center gap-2 bg-white rounded-lg shadow-md p-2 border hover:bg-gray-50 transition-colors"
+            title="Accessibility Settings"
+          >
+            <Eye className="w-4 h-4 text-gray-600" />
+          </button>
           <div className="flex items-center gap-2 bg-white rounded-lg shadow-md p-2 border">
             <Languages className="w-4 h-4 text-gray-600" />
             <select
@@ -200,6 +210,10 @@ function LayoutContent({ children, currentPageName }) {
           </div>
         </div>
 
+        {showAccessibilitySettings && (
+          <AccessibilitySettings onClose={() => setShowAccessibilitySettings(false)} />
+        )}
+
         {/* Page content */}
         <main className="flex-1 overflow-auto">
           <div className="max-w-7xl mx-auto">
@@ -213,8 +227,10 @@ function LayoutContent({ children, currentPageName }) {
 
 export default function Layout({ children, currentPageName }) {
   return (
-    <ExperimentProvider>
-      <LayoutContent children={children} currentPageName={currentPageName} />
-    </ExperimentProvider>
+    <AccessibilityProvider>
+      <ExperimentProvider>
+        <LayoutContent children={children} currentPageName={currentPageName} />
+      </ExperimentProvider>
+    </AccessibilityProvider>
   );
 }
