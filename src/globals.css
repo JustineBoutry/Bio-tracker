@@ -59,48 +59,80 @@
 }
 
 /* Font Size Accessibility */
-html.text-small {
-  font-size: 13px !important;
+html.text-small * {
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
 }
 
-html.text-small body {
-  font-size: 13px !important;
+html.text-small h1,
+html.text-small .text-3xl {
+  font-size: 1.5rem !important;
 }
 
-html.text-medium {
-  font-size: 16px !important;
+html.text-small h2,
+html.text-small .text-2xl {
+  font-size: 1.25rem !important;
 }
 
-html.text-medium body {
-  font-size: 16px !important;
+html.text-small .text-xl {
+  font-size: 1.125rem !important;
 }
 
-html.text-large {
-  font-size: 20px !important;
+html.text-small .text-sm {
+  font-size: 0.75rem !important;
 }
 
-html.text-large body {
-  font-size: 20px !important;
+html.text-medium * {
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
 }
 
-html.text-large h1 {
-  font-size: 2.5rem !important;
+html.text-medium h1,
+html.text-medium .text-3xl {
+  font-size: 1.875rem !important;
 }
 
-html.text-large h2 {
-  font-size: 2rem !important;
+html.text-medium h2,
+html.text-medium .text-2xl {
+  font-size: 1.5rem !important;
 }
 
+html.text-medium .text-xl {
+  font-size: 1.25rem !important;
+}
+
+html.text-medium .text-sm {
+  font-size: 0.875rem !important;
+}
+
+html.text-large * {
+  font-size: 1.25rem !important;
+  line-height: 1.6 !important;
+}
+
+html.text-large h1,
 html.text-large .text-3xl {
   font-size: 2.5rem !important;
 }
 
+html.text-large h2,
 html.text-large .text-2xl {
   font-size: 2rem !important;
 }
 
 html.text-large .text-xl {
-  font-size: 1.5rem !important;
+  font-size: 1.75rem !important;
+}
+
+html.text-large .text-sm {
+  font-size: 1rem !important;
+}
+
+html.text-large button,
+html.text-large input,
+html.text-large select {
+  font-size: 1.125rem !important;
+  padding: 0.75rem 1rem !important;
 }
 
 /* High Contrast Mode */
@@ -109,8 +141,13 @@ html.high-contrast {
   --foreground: 0 0% 0%;
   --card: 0 0% 100%;
   --card-foreground: 0 0% 0%;
-  --border: 0 0% 20%;
+  --border: 0 0% 0%;
   --input: 0 0% 0%;
+  filter: contrast(1.5) !important;
+}
+
+html.high-contrast * {
+  border-width: 2px !important;
 }
 
 html.high-contrast body {
@@ -120,90 +157,149 @@ html.high-contrast body {
 
 html.high-contrast .text-gray-600,
 html.high-contrast .text-gray-500,
-html.high-contrast .text-gray-700 {
+html.high-contrast .text-gray-700,
+html.high-contrast .text-gray-400 {
   color: #000000 !important;
 }
 
-html.high-contrast button,
+html.high-contrast button {
+  border: 3px solid #000000 !important;
+  font-weight: 700 !important;
+}
+
 html.high-contrast input,
 html.high-contrast select,
-html.high-contrast .border {
+html.high-contrast textarea {
   border: 2px solid #000000 !important;
+  background: #ffffff !important;
+  color: #000000 !important;
 }
 
 html.high-contrast .bg-white,
-html.high-contrast .bg-gray-50 {
+html.high-contrast .bg-gray-50,
+html.high-contrast .bg-gray-100 {
   background: #ffffff !important;
+  color: #000000 !important;
 }
 
 html.high-contrast .bg-blue-600,
-html.high-contrast .bg-blue-500 {
+html.high-contrast .bg-blue-500,
+html.high-contrast .bg-indigo-600 {
   background: #0000ff !important;
+  color: #ffffff !important;
+}
+
+html.high-contrast .bg-green-600,
+html.high-contrast .bg-green-500 {
+  background: #008000 !important;
+  color: #ffffff !important;
+}
+
+html.high-contrast .bg-red-600,
+html.high-contrast .bg-red-500 {
+  background: #ff0000 !important;
   color: #ffffff !important;
 }
 
 /* Colorblind Safe Color Palettes */
 /* Protanopia (Red-Blind) - Use blue and yellow instead of red and green */
+html[data-color-mode="protanopia"] {
+  filter: saturate(0.6) hue-rotate(20deg) !important;
+}
+
 html[data-color-mode="protanopia"] .text-red-600,
-html[data-color-mode="protanopia"] .text-red-500,
+html[data-color-mode="protanopia"] .text-red-500 {
+  color: #0066cc !important;
+}
+
 html[data-color-mode="protanopia"] .bg-red-600,
 html[data-color-mode="protanopia"] .bg-red-500,
-html[data-color-mode="protanopia"] .bg-red-50 {
-  color: #0066cc !important;
-  background-color: #e6f2ff !important;
+html[data-color-mode="protanopia"] .bg-red-50,
+html[data-color-mode="protanopia"] .bg-red-100 {
+  background-color: #0066cc !important;
+  color: #ffffff !important;
 }
 
 html[data-color-mode="protanopia"] .text-green-600,
-html[data-color-mode="protanopia"] .text-green-500,
-html[data-color-mode="protanopia"] .bg-green-600,
-html[data-color-mode="protanopia"] .bg-green-500 {
+html[data-color-mode="protanopia"] .text-green-500 {
   color: #cc9900 !important;
-  background-color: #fff4d9 !important;
+}
+
+html[data-color-mode="protanopia"] .bg-green-600,
+html[data-color-mode="protanopia"] .bg-green-500,
+html[data-color-mode="protanopia"] .bg-green-50 {
+  background-color: #cc9900 !important;
+  color: #000000 !important;
 }
 
 html[data-color-mode="protanopia"] .border-red-200,
 html[data-color-mode="protanopia"] .border-red-300 {
-  border-color: #99ccff !important;
+  border-color: #0066cc !important;
 }
 
 /* Deuteranopia (Green-Blind) - Similar to protanopia */
+html[data-color-mode="deuteranopia"] {
+  filter: saturate(0.7) hue-rotate(-10deg) !important;
+}
+
 html[data-color-mode="deuteranopia"] .text-red-600,
-html[data-color-mode="deuteranopia"] .text-red-500,
+html[data-color-mode="deuteranopia"] .text-red-500 {
+  color: #cc6600 !important;
+}
+
 html[data-color-mode="deuteranopia"] .bg-red-600,
 html[data-color-mode="deuteranopia"] .bg-red-500,
-html[data-color-mode="deuteranopia"] .bg-red-50 {
-  color: #cc6600 !important;
-  background-color: #ffe6cc !important;
+html[data-color-mode="deuteranopia"] .bg-red-50,
+html[data-color-mode="deuteranopia"] .bg-red-100 {
+  background-color: #cc6600 !important;
+  color: #ffffff !important;
 }
 
 html[data-color-mode="deuteranopia"] .text-green-600,
-html[data-color-mode="deuteranopia"] .text-green-500,
-html[data-color-mode="deuteranopia"] .bg-green-600,
-html[data-color-mode="deuteranopia"] .bg-green-500 {
+html[data-color-mode="deuteranopia"] .text-green-500 {
   color: #0066cc !important;
-  background-color: #e6f2ff !important;
+}
+
+html[data-color-mode="deuteranopia"] .bg-green-600,
+html[data-color-mode="deuteranopia"] .bg-green-500,
+html[data-color-mode="deuteranopia"] .bg-green-50 {
+  background-color: #0066cc !important;
+  color: #ffffff !important;
 }
 
 html[data-color-mode="deuteranopia"] .border-green-200 {
-  border-color: #99ccff !important;
+  border-color: #0066cc !important;
 }
 
 /* Tritanopia (Blue-Blind) - Use red and cyan */
+html[data-color-mode="tritanopia"] {
+  filter: saturate(0.8) hue-rotate(30deg) !important;
+}
+
 html[data-color-mode="tritanopia"] .text-blue-600,
-html[data-color-mode="tritanopia"] .text-blue-500,
+html[data-color-mode="tritanopia"] .text-blue-500 {
+  color: #cc0066 !important;
+}
+
 html[data-color-mode="tritanopia"] .bg-blue-600,
 html[data-color-mode="tritanopia"] .bg-blue-500,
-html[data-color-mode="tritanopia"] .bg-blue-50 {
-  color: #cc0066 !important;
-  background-color: #ffe6f2 !important;
+html[data-color-mode="tritanopia"] .bg-blue-50,
+html[data-color-mode="tritanopia"] .bg-blue-100 {
+  background-color: #cc0066 !important;
+  color: #ffffff !important;
 }
 
 html[data-color-mode="tritanopia"] .text-green-600,
-html[data-color-mode="tritanopia"] .bg-green-600 {
+html[data-color-mode="tritanopia"] .text-green-500 {
   color: #00cc99 !important;
-  background-color: #e6fff5 !important;
+}
+
+html[data-color-mode="tritanopia"] .bg-green-600,
+html[data-color-mode="tritanopia"] .bg-green-500 {
+  background-color: #00cc99 !important;
+  color: #000000 !important;
 }
 
 html[data-color-mode="tritanopia"] .border-blue-200 {
-  border-color: #ff99cc !important;
+  border-color: #cc0066 !important;
 }
