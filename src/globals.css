@@ -1,3 +1,4 @@
+css
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -58,82 +59,7 @@
   }
 }
 
-/* Font Size Accessibility */
-html.text-small * {
-  font-size: 0.875rem !important;
-  line-height: 1.5 !important;
-}
-
-html.text-small h1,
-html.text-small .text-3xl {
-  font-size: 1.5rem !important;
-}
-
-html.text-small h2,
-html.text-small .text-2xl {
-  font-size: 1.25rem !important;
-}
-
-html.text-small .text-xl {
-  font-size: 1.125rem !important;
-}
-
-html.text-small .text-sm {
-  font-size: 0.75rem !important;
-}
-
-html.text-medium * {
-  font-size: 1rem !important;
-  line-height: 1.5 !important;
-}
-
-html.text-medium h1,
-html.text-medium .text-3xl {
-  font-size: 1.875rem !important;
-}
-
-html.text-medium h2,
-html.text-medium .text-2xl {
-  font-size: 1.5rem !important;
-}
-
-html.text-medium .text-xl {
-  font-size: 1.25rem !important;
-}
-
-html.text-medium .text-sm {
-  font-size: 0.875rem !important;
-}
-
-html.text-large * {
-  font-size: 1.25rem !important;
-  line-height: 1.6 !important;
-}
-
-html.text-large h1,
-html.text-large .text-3xl {
-  font-size: 2.5rem !important;
-}
-
-html.text-large h2,
-html.text-large .text-2xl {
-  font-size: 2rem !important;
-}
-
-html.text-large .text-xl {
-  font-size: 1.75rem !important;
-}
-
-html.text-large .text-sm {
-  font-size: 1rem !important;
-}
-
-html.text-large button,
-html.text-large input,
-html.text-large select {
-  font-size: 1.125rem !important;
-  padding: 0.75rem 1rem !important;
-}
+/* Font size is controlled via inline styles on html element - no CSS needed */
 
 /* High Contrast Mode */
 html.high-contrast {

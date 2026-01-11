@@ -192,7 +192,7 @@ function LayoutContent({ children, currentPageName }) {
           <button
             onClick={() => setShowAccessibilitySettings(true)}
             className="flex items-center gap-2 bg-white rounded-lg shadow-md p-2 border hover:bg-gray-50 transition-colors"
-            title="Accessibility Settings"
+            title="Text Size"
           >
             <Eye className="w-4 h-4 text-gray-600" />
           </button>
