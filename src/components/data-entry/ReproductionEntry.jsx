@@ -148,15 +148,6 @@ export default function ReproductionEntry({ experimentId, onComplete }) {
                 </div>
               ))}
             </div>
-            
-            {selectedIndividuals.length > 0 && (
-              <Button
-                className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
-                onClick={() => {}}
-              >
-                Continue with {selectedIndividuals.length} individuals
-              </Button>
-            )}
           </CardContent>
         </Card>
       ) : (
