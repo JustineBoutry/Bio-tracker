@@ -42,10 +42,10 @@ export default function RednessEntry({ experimentId, onComplete }) {
     mutationFn: async () => {
       for (const id of selectedIndividuals) {
         const individual = individuals.find(i => i.individual_id === id);
-        const newCount = (individual.red_signals_count || 0) + 1;
+        const newCount = (individual.red_signal_count || 0) + 1;
         
         await base44.entities.Individual.update(individual.id, {
-          red_signals_count: newCount,
+          red_signal_count: newCount,
           red_confirmed: newCount >= 3
         });
       }
@@ -119,9 +119,9 @@ export default function RednessEntry({ experimentId, onComplete }) {
                     </Badge>
                   ))}
                 </div>
-                {ind.red_signals_count > 0 && (
+                {ind.red_signal_count > 0 && (
                   <Badge variant={ind.red_confirmed ? "default" : "outline"} className="ml-auto">
-                    {ind.red_signals_count} signals {ind.red_confirmed && '✓'}
+                    {ind.red_signal_count} signals {ind.red_confirmed && '✓'}
                   </Badge>
                 )}
               </div>

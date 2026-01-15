@@ -29,7 +29,7 @@ export default function InfectionEntry({ experimentId, onComplete }) {
         const individual = individuals.find(i => i.individual_id === individualId.trim());
         if (individual) {
           await base44.entities.Individual.update(individual.id, {
-            infected: false,
+            infected: "confirmed No",
             spores_count: null,
             spores_volume: null
           });
@@ -49,7 +49,7 @@ export default function InfectionEntry({ experimentId, onComplete }) {
         const individual = individuals.find(i => i.individual_id === id);
         if (individual) {
           await base44.entities.Individual.update(individual.id, {
-            infected: true,
+            infected: "confirmed Yes",
             spores_count: sporeData[id]?.count || null,
             spores_volume: sporeData[id]?.volume || null
           });
