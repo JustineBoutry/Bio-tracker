@@ -12,52 +12,29 @@ export const useAccessibility = () => {
 
 export const AccessibilityProvider = ({ children }) => {
   const [fontSize, setFontSize] = useState(() => {
-    return localStorage.getItem('accessibility_fontSize') || 'medium';
-  });
-
-  const [colorMode, setColorMode] = useState(() => {
-    return localStorage.getItem('accessibility_colorMode') || 'normal';
-  });
-
-  const [highContrast, setHighContrast] = useState(() => {
-    return localStorage.getItem('accessibility_highContrast') === 'true';
+    return localStorage.getItem('fontSize') || 'medium';
   });
 
   useEffect(() => {
-    localStorage.setItem('accessibility_fontSize', fontSize);
+    localStorage.setItem('fontSize', fontSize);
     
-    // Apply font size to root
-    document.documentElement.classList.remove('text-small', 'text-medium', 'text-large');
-    document.documentElement.classList.add(`text-${fontSize}`);
+    // Apply font size directly to html element
+    const root = document.documentElement;
+    
+    if (fontSize === 'small') {
+      root.style.fontSize = '14px';
+    } else if (fontSize === 'medium') {
+      root.style.fontSize = '16px';
+    } else if (fontSize === 'large') {
+      root.style.fontSize = '20px';
+    }
   }, [fontSize]);
 
-  useEffect(() => {
-    localStorage.setItem('accessibility_colorMode', colorMode);
-    
-    // Apply color filter
-    document.documentElement.setAttribute('data-color-mode', colorMode);
-  }, [colorMode]);
-
-  useEffect(() => {
-    localStorage.setItem('accessibility_highContrast', highContrast.toString());
-    
-    // Apply high contrast
-    if (highContrast) {
-      document.documentElement.classList.add('high-contrast');
-    } else {
-      document.documentElement.classList.remove('high-contrast');
-    }
-  }, [highContrast]);
-
   return (
-    <AccessibilityContext.Provider
-      value={{
-        fontSize,
-        setFontSize,
-        colorMode,
-        setColorMode,
-        highContrast,
-        setHighContrast,
+    <AccessibilityContext.Provider 
+      value={{ 
+        fontSize, 
+        setFontSize
       }}
     >
       {children}
