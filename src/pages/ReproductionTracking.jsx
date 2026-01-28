@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { useExperiment } from "../components/ExperimentContext";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area } from 'recharts';
+import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area } from 'recharts';
 import { format } from "date-fns";
 import { Download } from "lucide-react";
 import { useTranslation } from 'react-i18next';
@@ -337,7 +337,7 @@ export default function ReproductionTracking() {
                     <h3 className="text-lg font-semibold mb-3 text-gray-700">{facet.facetName}</h3>
                   )}
                   <ResponsiveContainer width="100%" height={400}>
-                    <LineChart data={facet.timeSeriesData}>
+                    <ComposedChart data={facet.timeSeriesData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis 
                         dataKey="date" 
@@ -352,15 +352,24 @@ export default function ReproductionTracking() {
                       <Tooltip />
                       <Legend />
                       {showConfidenceIntervals && facet.groupNames.map((groupName, idx) => (
-                        <Area
-                          key={`${groupName}-ci`}
-                          type="monotone"
-                          dataKey={`${groupName}_upper`}
-                          stroke="none"
-                          fill={colors[idx % colors.length]}
-                          fillOpacity={0.15}
-                          legendType="none"
-                        />
+                        <React.Fragment key={`${groupName}-ci`}>
+                          <Area
+                            type="monotone"
+                            dataKey={`${groupName}_lower`}
+                            stroke="none"
+                            fill={colors[idx % colors.length]}
+                            fillOpacity={0.2}
+                            legendType="none"
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey={`${groupName}_upper`}
+                            stroke="none"
+                            fill="white"
+                            fillOpacity={1}
+                            legendType="none"
+                          />
+                        </React.Fragment>
                       ))}
                       {facet.groupNames.map((groupName, idx) => (
                         <Line
@@ -373,7 +382,7 @@ export default function ReproductionTracking() {
                           name={groupName}
                         />
                       ))}
-                    </LineChart>
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               ))}
