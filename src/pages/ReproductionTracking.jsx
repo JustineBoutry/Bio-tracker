@@ -352,24 +352,29 @@ export default function ReproductionTracking() {
                       <Tooltip />
                       <Legend />
                       {showConfidenceIntervals && facet.groupNames.map((groupName, idx) => (
-                        <React.Fragment key={`${groupName}-ci`}>
-                          <Area
-                            type="monotone"
-                            dataKey={`${groupName}_lower`}
-                            stroke="none"
-                            fill={colors[idx % colors.length]}
-                            fillOpacity={0.2}
-                            legendType="none"
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey={`${groupName}_upper`}
-                            stroke="none"
-                            fill="white"
-                            fillOpacity={1}
-                            legendType="none"
-                          />
-                        </React.Fragment>
+                        <Area
+                          key={`${groupName}-ci`}
+                          type="monotone"
+                          dataKey={`${groupName}_lower`}
+                          stroke="none"
+                          fill={colors[idx % colors.length]}
+                          fillOpacity={0.2}
+                          legendType="none"
+                          activeDot={false}
+                          isAnimationActive={false}
+                        />
+                      ))}
+                      {showConfidenceIntervals && facet.groupNames.map((groupName, idx) => (
+                        <Area
+                          key={`${groupName}-ci-upper`}
+                          type="monotone"
+                          dataKey={`${groupName}_upper`}
+                          stroke="none"
+                          fill="rgba(255, 255, 255, 0.7)"
+                          legendType="none"
+                          activeDot={false}
+                          isAnimationActive={false}
+                        />
                       ))}
                       {facet.groupNames.map((groupName, idx) => (
                         <Line
