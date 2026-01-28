@@ -16,6 +16,8 @@ export default function ReproductionTracking() {
   const [selectedGroupFactors, setSelectedGroupFactors] = useState([]);
   const [groupByRedStatus, setGroupByRedStatus] = useState(false);
   const [excludeMales, setExcludeMales] = useState(false);
+  const [selectedFacetFactors, setSelectedFacetFactors] = useState([]);
+  const [showConfidenceIntervals, setShowConfidenceIntervals] = useState(true);
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', activeExperimentId],
@@ -72,72 +74,116 @@ export default function ReproductionTracking() {
     return { individuals, dates: allDates };
   }, [allIndividuals, allReproductionEvents, excludeMales]);
 
-  // Build the grouped line chart data
+  // Build the grouped line chart data with faceting and confidence intervals
   const chartData = useMemo(() => {
     if (!allIndividuals.length || selectedGroupFactors.length === 0) 
-      return [];
+      return { facets: [], groupNames: [] };
 
     let filteredInds = excludeMales 
       ? allIndividuals.filter(ind => ind.sex !== 'male')
       : allIndividuals;
 
-    // Group individuals
-    const groups = {};
-    filteredInds.forEach(ind => {
-      let groupKey = selectedGroupFactors
-        .map(factor => ind.factors?.[factor] || 'Unknown')
-        .join(' - ');
-      
-      if (groupByRedStatus) {
-        const redStatus = ind.red_confirmed ? 'Red+' : 'Red-';
-        groupKey = groupKey ? `${groupKey} | ${redStatus}` : redStatus;
-      }
-      
-      if (!groups[groupKey]) {
-        groups[groupKey] = [];
-      }
-      // Store individual_id (string ID) instead of database id
-      groups[groupKey].push(ind.individual_id);
-    });
+    // Build facets
+    const facets = {};
+    if (selectedFacetFactors.length > 0) {
+      filteredInds.forEach(ind => {
+        const facetKey = selectedFacetFactors
+          .map(factor => ind.factors?.[factor] || 'Unknown')
+          .join(' - ');
+        if (!facets[facetKey]) {
+          facets[facetKey] = [];
+        }
+        facets[facetKey].push(ind);
+      });
+    } else {
+      facets['All'] = filteredInds;
+    }
 
-    // Get all events for each group and build cumulative over time
-    const allDates = [...new Set(allReproductionEvents.map(e => e.event_date))].sort();
-    
-    const timeSeriesData = allDates.map(date => {
-      const dataPoint = { date };
-      
-      Object.entries(groups).forEach(([groupName, individualIds]) => {
-        // Get all events up to and including this date for this group
-        const eventsUpToDate = allReproductionEvents.filter(e => 
-          individualIds.includes(e.individual_id) && e.event_date <= date
-        );
+    // Process each facet
+    const facetResults = Object.entries(facets).map(([facetName, facetIndividuals]) => {
+      // Group individuals within this facet
+      const groups = {};
+      facetIndividuals.forEach(ind => {
+        let groupKey = selectedGroupFactors
+          .map(factor => ind.factors?.[factor] || 'Unknown')
+          .join(' - ');
         
-        // Calculate cumulative offspring per individual on average
-        const cumulativeByIndividual = {};
-        eventsUpToDate.forEach(e => {
-          if (!cumulativeByIndividual[e.individual_id]) {
-            cumulativeByIndividual[e.individual_id] = 0;
+        if (groupByRedStatus) {
+          const redStatus = ind.red_confirmed ? 'Red+' : 'Red-';
+          groupKey = groupKey ? `${groupKey} | ${redStatus}` : redStatus;
+        }
+        
+        if (!groups[groupKey]) {
+          groups[groupKey] = [];
+        }
+        groups[groupKey].push(ind.individual_id);
+      });
+
+      // Get all events for each group and build cumulative over time
+      const allDates = [...new Set(allReproductionEvents.map(e => e.event_date))].sort();
+      
+      const timeSeriesData = allDates.map(date => {
+        const dataPoint = { date };
+        
+        Object.entries(groups).forEach(([groupName, individualIds]) => {
+          // Get all events up to and including this date for this group
+          const eventsUpToDate = allReproductionEvents.filter(e => 
+            individualIds.includes(e.individual_id) && e.event_date <= date
+          );
+          
+          // Calculate cumulative offspring per individual
+          const cumulativeByIndividual = {};
+          individualIds.forEach(id => {
+            cumulativeByIndividual[id] = 0;
+          });
+          eventsUpToDate.forEach(e => {
+            if (cumulativeByIndividual.hasOwnProperty(e.individual_id)) {
+              cumulativeByIndividual[e.individual_id] += e.offspring_count;
+            }
+          });
+          
+          // Calculate mean and standard error
+          const individualValues = Object.values(cumulativeByIndividual);
+          const n = individualValues.length;
+          const mean = n > 0 ? individualValues.reduce((a, b) => a + b, 0) / n : 0;
+          
+          let se = 0;
+          if (n > 1) {
+            const variance = individualValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / (n - 1);
+            se = Math.sqrt(variance) / Math.sqrt(n);
           }
-          cumulativeByIndividual[e.individual_id] += e.offspring_count;
+          
+          dataPoint[groupName] = mean;
+          dataPoint[`${groupName}_lower`] = Math.max(0, mean - 1.96 * se); // 95% CI
+          dataPoint[`${groupName}_upper`] = mean + 1.96 * se;
         });
         
-        // Average cumulative offspring across all individuals in group
-        const individualValues = Object.values(cumulativeByIndividual);
-        const avgCumulative = individualValues.length > 0
-          ? individualValues.reduce((a, b) => a + b, 0) / individualIds.length
-          : 0;
-        
-        dataPoint[groupName] = avgCumulative;
+        return dataPoint;
       });
-      
-      return dataPoint;
+
+      return {
+        facetName,
+        timeSeriesData,
+        groupNames: Object.keys(groups)
+      };
     });
 
-    return { timeSeriesData, groupNames: Object.keys(groups) };
-  }, [allIndividuals, allReproductionEvents, selectedGroupFactors, groupByRedStatus, excludeMales]);
+    return { 
+      facets: facetResults,
+      groupNames: facetResults[0]?.groupNames || []
+    };
+  }, [allIndividuals, allReproductionEvents, selectedGroupFactors, groupByRedStatus, excludeMales, selectedFacetFactors]);
 
   const toggleGroupFactor = (factorName) => {
     setSelectedGroupFactors(prev => 
+      prev.includes(factorName) 
+        ? prev.filter(f => f !== factorName)
+        : [...prev, factorName]
+    );
+  };
+
+  const toggleFacetFactor = (factorName) => {
+    setSelectedFacetFactors(prev => 
       prev.includes(factorName) 
         ? prev.filter(f => f !== factorName)
         : [...prev, factorName]
@@ -243,37 +289,100 @@ export default function ReproductionTracking() {
                 Differentiate by red status (Red+ vs Red-)
               </label>
             </div>
+
+            <div>
+              <p className="text-sm font-medium mb-2">Facet by (separate charts):</p>
+              <div className="flex flex-wrap gap-4">
+                {experiment.factors?.filter(f => !selectedGroupFactors.includes(f.name)).map(factor => (
+                  <div key={factor.name} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`facet-${factor.name}`}
+                      checked={selectedFacetFactors.includes(factor.name)}
+                      onCheckedChange={() => toggleFacetFactor(factor.name)}
+                    />
+                    <label htmlFor={`facet-${factor.name}`} className="text-sm cursor-pointer">
+                      {factor.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="show-ci"
+                checked={showConfidenceIntervals}
+                onCheckedChange={setShowConfidenceIntervals}
+              />
+              <label htmlFor="show-ci" className="text-sm cursor-pointer">
+                Show 95% confidence intervals
+              </label>
+            </div>
           </div>
 
           {selectedGroupFactors.length > 0 ? (
-            <ResponsiveContainer width="100%" height={400}>
-              <LineChart data={chartData.timeSeriesData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date" 
-                  label={{ value: 'Date', position: 'insideBottom', offset: -5 }}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                />
-                <YAxis 
-                  label={{ value: 'Average Cumulative Offspring', angle: -90, position: 'insideLeft' }}
-                />
-                <Tooltip />
-                <Legend />
-                {chartData.groupNames.map((groupName, idx) => (
-                  <Line
-                    key={groupName}
-                    type="monotone"
-                    dataKey={groupName}
-                    stroke={colors[idx % colors.length]}
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                    name={groupName}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="space-y-6">
+              {chartData.facets.map((facet, facetIdx) => (
+                <div key={facetIdx}>
+                  {chartData.facets.length > 1 && (
+                    <h3 className="text-lg font-semibold mb-3 text-gray-700">{facet.facetName}</h3>
+                  )}
+                  <ResponsiveContainer width="100%" height={400}>
+                    <LineChart data={facet.timeSeriesData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="date" 
+                        label={{ value: 'Date', position: 'insideBottom', offset: -5 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                      />
+                      <YAxis 
+                        label={{ value: 'Average Cumulative Offspring (± 95% CI)', angle: -90, position: 'insideLeft' }}
+                      />
+                      <Tooltip />
+                      <Legend />
+                      {facet.groupNames.map((groupName, idx) => (
+                        <React.Fragment key={groupName}>
+                          {showConfidenceIntervals && (
+                            <>
+                              <Line
+                                type="monotone"
+                                dataKey={`${groupName}_lower`}
+                                stroke={colors[idx % colors.length]}
+                                strokeWidth={0}
+                                dot={false}
+                                fill={colors[idx % colors.length]}
+                                fillOpacity={0.2}
+                                legendType="none"
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey={`${groupName}_upper`}
+                                stroke={colors[idx % colors.length]}
+                                strokeWidth={0}
+                                dot={false}
+                                fill={colors[idx % colors.length]}
+                                fillOpacity={0.2}
+                                legendType="none"
+                              />
+                            </>
+                          )}
+                          <Line
+                            type="monotone"
+                            dataKey={groupName}
+                            stroke={colors[idx % colors.length]}
+                            strokeWidth={2}
+                            dot={{ r: 3 }}
+                            name={groupName}
+                          />
+                        </React.Fragment>
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="text-center py-12 text-gray-500">
               Select at least one factor to display the grouped chart
