@@ -351,29 +351,27 @@ export default function ReproductionTracking() {
                       />
                       <Tooltip />
                       <Legend />
+                      {showConfidenceIntervals && facet.groupNames.map((groupName, idx) => (
+                        <Area
+                          key={`${groupName}-ci`}
+                          type="monotone"
+                          dataKey={`${groupName}_upper`}
+                          stroke="none"
+                          fill={colors[idx % colors.length]}
+                          fillOpacity={0.15}
+                          legendType="none"
+                        />
+                      ))}
                       {facet.groupNames.map((groupName, idx) => (
-                        <React.Fragment key={groupName}>
-                          {showConfidenceIntervals && (
-                            <Area
-                              type="monotone"
-                              dataKey={`${groupName}_upper`}
-                              stroke="none"
-                              fill={colors[idx % colors.length]}
-                              fillOpacity={0.2}
-                              legendType="none"
-                              stackId={`ci-${idx}`}
-                              baseValue="dataMin"
-                            />
-                          )}
-                          <Line
-                            type="monotone"
-                            dataKey={groupName}
-                            stroke={colors[idx % colors.length]}
-                            strokeWidth={2}
-                            dot={{ r: 3 }}
-                            name={groupName}
-                          />
-                        </React.Fragment>
+                        <Line
+                          key={groupName}
+                          type="monotone"
+                          dataKey={groupName}
+                          stroke={colors[idx % colors.length]}
+                          strokeWidth={2}
+                          dot={{ r: 3 }}
+                          name={groupName}
+                        />
                       ))}
                     </LineChart>
                   </ResponsiveContainer>
