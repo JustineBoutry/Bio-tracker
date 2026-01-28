@@ -351,31 +351,49 @@ export default function ReproductionTracking() {
                       />
                       <Tooltip />
                       <Legend />
-                      {showConfidenceIntervals && facet.groupNames.map((groupName, idx) => (
-                        <Area
-                          key={`${groupName}-ci`}
-                          type="monotone"
-                          dataKey={`${groupName}_lower`}
-                          stroke="none"
-                          fill={colors[idx % colors.length]}
-                          fillOpacity={0.2}
-                          legendType="none"
-                          activeDot={false}
-                          isAnimationActive={false}
-                        />
-                      ))}
-                      {showConfidenceIntervals && facet.groupNames.map((groupName, idx) => (
-                        <Area
-                          key={`${groupName}-ci-upper`}
-                          type="monotone"
-                          dataKey={`${groupName}_upper`}
-                          stroke="none"
-                          fill="rgba(255, 255, 255, 0.7)"
-                          legendType="none"
-                          activeDot={false}
-                          isAnimationActive={false}
-                        />
-                      ))}
+                      {showConfidenceIntervals && facet.groupNames.map((groupName, idx) => {
+                        // Create custom shape for confidence interval band
+                        const CustomArea = (props) => {
+                          const { points } = props;
+                          if (!points || points.length === 0) return null;
+                          
+                          // Get data with lower bounds
+                          const lowerPoints = facet.timeSeriesData.map((d, i) => {
+                            const point = points[i];
+                            if (!point || d[`${groupName}_lower`] === undefined) return null;
+                            return { x: point.x, y: props.yAxis.scale(d[`${groupName}_lower`]) };
+                          }).filter(p => p !== null);
+                          
+                          if (lowerPoints.length === 0) return null;
+                          
+                          // Create path: upper line forward, then lower line backward
+                          const upperPath = points.map(p => `${p.x},${p.y}`).join(' L ');
+                          const lowerPath = lowerPoints.reverse().map(p => `${p.x},${p.y}`).join(' L ');
+                          const pathData = `M ${upperPath} L ${lowerPath} Z`;
+                          
+                          return (
+                            <path
+                              d={pathData}
+                              fill={colors[idx % colors.length]}
+                              fillOpacity={0.2}
+                              stroke="none"
+                            />
+                          );
+                        };
+                        
+                        return (
+                          <Area
+                            key={`${groupName}-ci`}
+                            type="monotone"
+                            dataKey={`${groupName}_upper`}
+                            stroke="none"
+                            fill="transparent"
+                            legendType="none"
+                            shape={<CustomArea />}
+                            isAnimationActive={false}
+                          />
+                        );
+                      })}
                       {facet.groupNames.map((groupName, idx) => (
                         <Line
                           key={groupName}
