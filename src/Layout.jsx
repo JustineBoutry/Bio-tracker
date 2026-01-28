@@ -5,7 +5,7 @@ import { useExperiment, ExperimentProvider } from "./components/ExperimentContex
 import { AccessibilityProvider } from "./components/AccessibilityContext";
 import AccessibilitySettings from "./components/AccessibilitySettings";
 import { Button } from "@/components/ui/button";
-import { LogOut, Download, Menu, X, Settings, Database, History, BarChart3, BookOpen, Trash2, PenLine, Languages, Eye } from "lucide-react";
+import { LogOut, Download, Menu, X, Settings, Database, History, BarChart3, BookOpen, Trash2, PenLine, Languages, Eye, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useTranslation } from 'react-i18next';
@@ -86,6 +86,7 @@ function LayoutContent({ children, currentPageName }) {
     { name: "DataEntry", label: t('nav.dataEntry'), icon: PenLine },
     { name: "Dataset", label: t('nav.dataset'), icon: Database },
     { name: "IndividualHistory", label: t('nav.history'), icon: History },
+    { name: "ReproductionTracking", label: "Reproduction", icon: TrendingUp },
     { name: "Dashboard", label: t('nav.dashboard'), icon: BarChart3 },
     { name: "LabNotebook", label: t('nav.notebook'), icon: BookOpen },
     { name: "CleanupData", label: t('nav.cleanup'), icon: Trash2 },
