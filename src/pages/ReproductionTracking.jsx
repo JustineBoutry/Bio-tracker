@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { useExperiment } from "../components/ExperimentContext";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area } from 'recharts';
 import { format } from "date-fns";
 import { Download } from "lucide-react";
 import { useTranslation } from 'react-i18next';
@@ -166,6 +166,15 @@ export default function ReproductionTracking() {
         timeSeriesData,
         groupNames: Object.keys(groups)
       };
+    });
+
+    // Sort facets: put "Unknown" facets last
+    facetResults.sort((a, b) => {
+      const aHasUnknown = a.facetName.includes('Unknown');
+      const bHasUnknown = b.facetName.includes('Unknown');
+      if (aHasUnknown && !bHasUnknown) return 1;
+      if (!aHasUnknown && bHasUnknown) return -1;
+      return 0;
     });
 
     return { 
@@ -345,28 +354,16 @@ export default function ReproductionTracking() {
                       {facet.groupNames.map((groupName, idx) => (
                         <React.Fragment key={groupName}>
                           {showConfidenceIntervals && (
-                            <>
-                              <Line
-                                type="monotone"
-                                dataKey={`${groupName}_lower`}
-                                stroke={colors[idx % colors.length]}
-                                strokeWidth={0}
-                                dot={false}
-                                fill={colors[idx % colors.length]}
-                                fillOpacity={0.2}
-                                legendType="none"
-                              />
-                              <Line
-                                type="monotone"
-                                dataKey={`${groupName}_upper`}
-                                stroke={colors[idx % colors.length]}
-                                strokeWidth={0}
-                                dot={false}
-                                fill={colors[idx % colors.length]}
-                                fillOpacity={0.2}
-                                legendType="none"
-                              />
-                            </>
+                            <Area
+                              type="monotone"
+                              dataKey={`${groupName}_upper`}
+                              stroke="none"
+                              fill={colors[idx % colors.length]}
+                              fillOpacity={0.2}
+                              legendType="none"
+                              stackId={`ci-${idx}`}
+                              baseValue="dataMin"
+                            />
                           )}
                           <Line
                             type="monotone"
