@@ -17,7 +17,7 @@ export default function ReproductionTracking() {
   const [groupByRedStatus, setGroupByRedStatus] = useState(false);
   const [excludeMales, setExcludeMales] = useState(false);
   const [selectedFacetFactors, setSelectedFacetFactors] = useState([]);
-  const [showConfidenceIntervals, setShowConfidenceIntervals] = useState(true);
+  const [selectedLines, setSelectedLines] = useState({});
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', activeExperimentId],
@@ -317,16 +317,6 @@ export default function ReproductionTracking() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="show-ci"
-                checked={showConfidenceIntervals}
-                onCheckedChange={setShowConfidenceIntervals}
-              />
-              <label htmlFor="show-ci" className="text-sm cursor-pointer">
-                Show 95% confidence intervals
-              </label>
-            </div>
           </div>
 
           {selectedGroupFactors.length > 0 ? (
@@ -336,6 +326,7 @@ export default function ReproductionTracking() {
                   {chartData.facets.length > 1 && (
                     <h3 className="text-lg font-semibold mb-3 text-gray-700">{facet.facetName}</h3>
                   )}
+                  <p className="text-xs text-gray-500 mb-2">Click on a line to show/hide its confidence interval</p>
                   <ResponsiveContainer width="100%" height={400}>
                     <ComposedChart data={facet.timeSeriesData}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -350,61 +341,62 @@ export default function ReproductionTracking() {
                         label={{ value: 'Average Cumulative Offspring (± 95% CI)', angle: -90, position: 'insideLeft' }}
                       />
                       <Tooltip />
-                      <Legend />
-                      {showConfidenceIntervals && facet.groupNames.map((groupName, idx) => {
-                        // Create custom shape for confidence interval band
-                        const CustomArea = (props) => {
-                          const { points } = props;
-                          if (!points || points.length === 0) return null;
-                          
-                          // Get data with lower bounds
-                          const lowerPoints = facet.timeSeriesData.map((d, i) => {
-                            const point = points[i];
-                            if (!point || d[`${groupName}_lower`] === undefined) return null;
-                            return { x: point.x, y: props.yAxis.scale(d[`${groupName}_lower`]) };
-                          }).filter(p => p !== null);
-                          
-                          if (lowerPoints.length === 0) return null;
-                          
-                          // Create path: upper line forward, then lower line backward
-                          const upperPath = points.map(p => `${p.x},${p.y}`).join(' L ');
-                          const lowerPath = lowerPoints.reverse().map(p => `${p.x},${p.y}`).join(' L ');
-                          const pathData = `M ${upperPath} L ${lowerPath} Z`;
-                          
-                          return (
-                            <path
-                              d={pathData}
-                              fill={colors[idx % colors.length]}
-                              fillOpacity={0.2}
-                              stroke="none"
-                            />
-                          );
-                        };
+                      <Legend 
+                        onClick={(e) => {
+                          const lineKey = `${facetIdx}-${e.value}`;
+                          setSelectedLines(prev => ({
+                            ...prev,
+                            [lineKey]: !prev[lineKey]
+                          }));
+                        }}
+                        wrapperStyle={{ cursor: 'pointer' }}
+                      />
+                      {facet.groupNames.map((groupName, idx) => {
+                        const lineKey = `${facetIdx}-${groupName}`;
+                        const isSelected = selectedLines[lineKey];
                         
                         return (
-                          <Area
-                            key={`${groupName}-ci`}
-                            type="monotone"
-                            dataKey={`${groupName}_upper`}
-                            stroke="none"
-                            fill="transparent"
-                            legendType="none"
-                            shape={<CustomArea />}
-                            isAnimationActive={false}
-                          />
+                          <React.Fragment key={groupName}>
+                            {isSelected && (
+                              <Area
+                                type="monotone"
+                                dataKey={`${groupName}_upper`}
+                                stroke="none"
+                                fill={colors[idx % colors.length]}
+                                fillOpacity={0.15}
+                                legendType="none"
+                                isAnimationActive={false}
+                              />
+                            )}
+                            {isSelected && (
+                              <Area
+                                type="monotone"
+                                dataKey={`${groupName}_lower`}
+                                stroke="none"
+                                fill="white"
+                                fillOpacity={1}
+                                legendType="none"
+                                isAnimationActive={false}
+                              />
+                            )}
+                            <Line
+                              type="monotone"
+                              dataKey={groupName}
+                              stroke={colors[idx % colors.length]}
+                              strokeWidth={isSelected ? 3 : 2}
+                              dot={{ r: isSelected ? 4 : 3 }}
+                              name={groupName}
+                              onClick={() => {
+                                setSelectedLines(prev => ({
+                                  ...prev,
+                                  [lineKey]: !prev[lineKey]
+                                }));
+                              }}
+                              style={{ cursor: 'pointer' }}
+                            />
+                          </React.Fragment>
                         );
                       })}
-                      {facet.groupNames.map((groupName, idx) => (
-                        <Line
-                          key={groupName}
-                          type="monotone"
-                          dataKey={groupName}
-                          stroke={colors[idx % colors.length]}
-                          strokeWidth={2}
-                          dot={{ r: 3 }}
-                          name={groupName}
-                        />
-                      ))}
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
