@@ -40,7 +40,7 @@ export default function ReproductionTracking() {
 
   // Build the dataset table
   const tableData = useMemo(() => {
-    if (!allIndividuals.length || !allReproductionEvents.length) return { individuals: [], dates: [] };
+    if (!allIndividuals.length) return { individuals: [], dates: [] };
 
     let filteredInds = excludeMales 
       ? allIndividuals.filter(ind => ind.sex !== 'male')
@@ -51,7 +51,8 @@ export default function ReproductionTracking() {
 
     // Build individual rows with reproduction by date
     const individuals = filteredInds.map(ind => {
-      const events = allReproductionEvents.filter(e => e.individual_id === ind.id);
+      // Match events by individual_id (the string ID, not database id)
+      const events = allReproductionEvents.filter(e => e.individual_id === ind.individual_id);
       const reproductionByDate = {};
       allDates.forEach(date => {
         const event = events.find(e => e.event_date === date);
@@ -73,7 +74,7 @@ export default function ReproductionTracking() {
 
   // Build the grouped line chart data
   const chartData = useMemo(() => {
-    if (!allIndividuals.length || !allReproductionEvents.length || selectedGroupFactors.length === 0) 
+    if (!allIndividuals.length || selectedGroupFactors.length === 0) 
       return [];
 
     let filteredInds = excludeMales 
@@ -95,7 +96,8 @@ export default function ReproductionTracking() {
       if (!groups[groupKey]) {
         groups[groupKey] = [];
       }
-      groups[groupKey].push(ind.id);
+      // Store individual_id (string ID) instead of database id
+      groups[groupKey].push(ind.individual_id);
     });
 
     // Get all events for each group and build cumulative over time
