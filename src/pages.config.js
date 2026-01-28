@@ -55,6 +55,7 @@ import ExperimentSetup from './pages/ExperimentSetup';
 import Home from './pages/Home';
 import IndividualHistory from './pages/IndividualHistory';
 import LabNotebook from './pages/LabNotebook';
+import ReproductionTracking from './pages/ReproductionTracking';
 import __Layout from './Layout.jsx';
 
 
@@ -67,6 +68,7 @@ export const PAGES = {
     "Home": Home,
     "IndividualHistory": IndividualHistory,
     "LabNotebook": LabNotebook,
+    "ReproductionTracking": ReproductionTracking,
 }
 
 export const pagesConfig = {
