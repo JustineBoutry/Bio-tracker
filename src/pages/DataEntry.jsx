@@ -183,6 +183,26 @@ export default function DataEntry() {
     mutationFn: async () => {
       const ids = nonInfectedIds.split(/[\s,]+/).filter((id) => id.trim());
       const notFound = [];
+      const alreadySet = [];
+      
+      // Check for existing infection status
+      for (const individualId of ids) {
+        const trimmedId = individualId.trim();
+        const inds = await base44.entities.Individual.filter({
+          experiment_id: selectedExp,
+          individual_id: trimmedId
+        });
+        if (inds.length > 0 && inds[0].infected !== "not_tested") {
+          alreadySet.push({ id: trimmedId, status: inds[0].infected });
+        }
+      }
+
+      if (alreadySet.length > 0) {
+        const message = `The following individuals already have infection status:\n${alreadySet.map(i => `${i.id}: ${i.status}`).join('\n')}\n\nDo you want to update them?`;
+        if (!window.confirm(message)) {
+          throw new Error('Update cancelled by user');
+        }
+      }
       
       const updates = await Promise.all(ids.map(async (individualId) => {
         const trimmedId = individualId.trim();
@@ -227,6 +247,9 @@ export default function DataEntry() {
       alert(message);
     },
     onError: (error) => {
+      if (error.message === 'Update cancelled by user') {
+        return;
+      }
       alert('Error: ' + error.message);
     }
   });
@@ -318,6 +341,26 @@ export default function DataEntry() {
 
   const saveInfectedMutation = useMutation({
     mutationFn: async () => {
+      const alreadySet = [];
+      
+      // Check for existing infection status
+      for (const individualId of Object.keys(sporeData)) {
+        const inds = await base44.entities.Individual.filter({
+          experiment_id: selectedExp,
+          individual_id: individualId
+        });
+        if (inds.length > 0 && inds[0].infected !== "not_tested") {
+          alreadySet.push({ id: individualId, status: inds[0].infected });
+        }
+      }
+
+      if (alreadySet.length > 0) {
+        const message = `The following individuals already have infection status:\n${alreadySet.map(i => `${i.id}: ${i.status}`).join('\n')}\n\nDo you want to update them?`;
+        if (!window.confirm(message)) {
+          throw new Error('Update cancelled by user');
+        }
+      }
+
       const updates = Object.entries(sporeData).map(async ([individualId, data]) => {
         const inds = await base44.entities.Individual.filter({
           experiment_id: selectedExp,
@@ -359,6 +402,12 @@ export default function DataEntry() {
       setSporeData({});
       setShowSporeEntry(false);
       alert('Infection data saved!');
+    },
+    onError: (error) => {
+      if (error.message === 'Update cancelled by user') {
+        return;
+      }
+      alert('Error: ' + error.message);
     }
   });
 

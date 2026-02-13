@@ -26,6 +26,22 @@ export default function InfectionEntry({ experimentId, onComplete, experiment })
   const markNonInfectedMutation = useMutation({
     mutationFn: async () => {
       const ids = nonInfectedIds.split(/[\n,\s]+/).filter(id => id.trim());
+      const alreadySet = [];
+      
+      // Check for existing infection status
+      for (const individualId of ids) {
+        const individual = individuals.find(i => i.individual_id === individualId.trim());
+        if (individual && individual.infected !== "not_tested") {
+          alreadySet.push({ id: individual.individual_id, status: individual.infected });
+        }
+      }
+
+      if (alreadySet.length > 0) {
+        const message = `The following individuals already have infection status:\n${alreadySet.map(i => `${i.id}: ${i.status}`).join('\n')}\n\nDo you want to update them?`;
+        if (!window.confirm(message)) {
+          throw new Error('Update cancelled by user');
+        }
+      }
       
       for (const individualId of ids) {
         const individual = individuals.find(i => i.individual_id === individualId.trim());
@@ -43,10 +59,33 @@ export default function InfectionEntry({ experimentId, onComplete, experiment })
       alert('Non-infected individuals updated');
       setNonInfectedIds('');
     },
+    onError: (error) => {
+      if (error.message === 'Update cancelled by user') {
+        return;
+      }
+      alert('Error: ' + error.message);
+    }
   });
 
   const saveInfectedMutation = useMutation({
     mutationFn: async () => {
+      const alreadySet = [];
+      
+      // Check for existing infection status
+      for (const id of parsedInfected) {
+        const individual = individuals.find(i => i.individual_id === id);
+        if (individual && individual.infected !== "not_tested") {
+          alreadySet.push({ id: individual.individual_id, status: individual.infected });
+        }
+      }
+
+      if (alreadySet.length > 0) {
+        const message = `The following individuals already have infection status:\n${alreadySet.map(i => `${i.id}: ${i.status}`).join('\n')}\n\nDo you want to update them?`;
+        if (!window.confirm(message)) {
+          throw new Error('Update cancelled by user');
+        }
+      }
+
       for (const id of parsedInfected) {
         const individual = individuals.find(i => i.individual_id === id);
         if (individual) {
@@ -73,6 +112,12 @@ export default function InfectionEntry({ experimentId, onComplete, experiment })
       setSporeData({});
       setCustomTraitValues({});
     },
+    onError: (error) => {
+      if (error.message === 'Update cancelled by user') {
+        return;
+      }
+      alert('Error: ' + error.message);
+    }
   });
 
   const parseInfectedIds = () => {
