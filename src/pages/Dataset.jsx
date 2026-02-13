@@ -288,8 +288,9 @@ export default function Dataset() {
                      'Cumulative Offspring', 'Infected', 'Spores Count', 'Spores Volume', 
                      'Red Signal Count', 'Red Confirmed'];
     
+    const customTraitHeaders = experiment?.custom_traits ? experiment.custom_traits.map(t => t.name) : [];
     const factorKeys = experiment?.factors ? experiment.factors.map(f => f.name) : [];
-    const allHeaders = [...factorKeys, ...headers];
+    const allHeaders = [...factorKeys, ...headers, ...customTraitHeaders];
     
     const rows = sortedIndividuals.map(ind => {
       const factorValues = factorKeys.map(k => ind.factors?.[k] || '');
@@ -307,7 +308,13 @@ export default function Dataset() {
         ind.red_signal_count || 0,
         ind.red_confirmed ? 'Yes' : 'No'
       ];
-      return [...factorValues, ...values];
+      const customTraitValues = customTraitHeaders.map(traitName => {
+        const trait = experiment.custom_traits.find(t => t.name === traitName);
+        const value = ind.custom_data?.[traitName];
+        if (trait?.type === 'boolean') return value ? 'Yes' : 'No';
+        return value || '';
+      });
+      return [...factorValues, ...values, ...customTraitValues];
     });
     
     const csv = [allHeaders, ...rows].map(row => row.join(',')).join('\n');
@@ -522,17 +529,20 @@ export default function Dataset() {
                     </th>
                     <th className="p-2 text-left">Spores Volume</th>
                     <th 
-                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('red_signal_count')}
+                     className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                     onClick={() => handleSort('red_signal_count')}
                     >
-                      Red Signals {sortColumn === 'red_signal_count' && (sortDirection === 'asc' ? '↑' : '↓')}
+                     Red Signals {sortColumn === 'red_signal_count' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </th>
                     <th 
-                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('red_confirmed')}
+                     className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                     onClick={() => handleSort('red_confirmed')}
                     >
-                      Red Confirmed {sortColumn === 'red_confirmed' && (sortDirection === 'asc' ? '↑' : '↓')}
+                     Red Confirmed {sortColumn === 'red_confirmed' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </th>
+                    {experiment?.custom_traits?.map(trait => (
+                     <th key={trait.name} className="p-2 text-left">{trait.name}</th>
+                    ))}
                     <th className="p-2 text-left">Actions</th>
                   </tr>
                 </thead>
@@ -725,6 +735,13 @@ export default function Dataset() {
                           <td className="p-2">{ind.spores_volume || '-'}</td>
                           <td className="p-2">{ind.red_signal_count || 0}</td>
                           <td className="p-2">{ind.red_confirmed ? 'Yes' : 'No'}</td>
+                          {experiment?.custom_traits?.map(trait => (
+                            <td key={trait.name} className="p-2">
+                              {trait.type === 'boolean' 
+                                ? (ind.custom_data?.[trait.name] ? 'Yes' : 'No')
+                                : (ind.custom_data?.[trait.name] || '-')}
+                            </td>
+                          ))}
                           <td className="p-2"></td>
                         </>
                       )}
