@@ -8,13 +8,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CustomTraitsEntry from "./CustomTraitsEntry";
 
-export default function InfectionEntry({ experimentId, onComplete }) {
+export default function InfectionEntry({ experimentId, onComplete, experiment }) {
   const queryClient = useQueryClient();
   const [nonInfectedIds, setNonInfectedIds] = useState('');
   const [infectedData, setInfectedData] = useState('');
   const [parsedInfected, setParsedInfected] = useState([]);
   const [sporeData, setSporeData] = useState({});
+  const [customTraitValues, setCustomTraitValues] = useState({});
 
   const { data: individuals = [] } = useQuery({
     queryKey: ['individuals', experimentId],
@@ -48,11 +50,18 @@ export default function InfectionEntry({ experimentId, onComplete }) {
       for (const id of parsedInfected) {
         const individual = individuals.find(i => i.individual_id === id);
         if (individual) {
-          await base44.entities.Individual.update(individual.id, {
+          const updateData = {
             infected: true,
             spores_count: sporeData[id]?.count || null,
             spores_volume: sporeData[id]?.volume || null
-          });
+          };
+          
+          if (Object.keys(customTraitValues).length > 0) {
+            const currentCustomData = individual.custom_data || {};
+            updateData.custom_data = { ...currentCustomData, ...customTraitValues };
+          }
+          
+          await base44.entities.Individual.update(individual.id, updateData);
         }
       }
     },
@@ -62,6 +71,7 @@ export default function InfectionEntry({ experimentId, onComplete }) {
       setInfectedData('');
       setParsedInfected([]);
       setSporeData({});
+      setCustomTraitValues({});
     },
   });
 
@@ -176,19 +186,26 @@ export default function InfectionEntry({ experimentId, onComplete }) {
                             />
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                        </div>
+                        );
+                        })}
+                        </div>
 
-                <Button
-                  className="w-full bg-purple-600 hover:bg-purple-700"
-                  onClick={() => saveInfectedMutation.mutate()}
-                  disabled={saveInfectedMutation.isPending}
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {saveInfectedMutation.isPending ? 'Saving...' : `Save ${parsedInfected.length} Infected Individuals`}
-                </Button>
+                        <CustomTraitsEntry
+                        selectedIndividuals={parsedInfected}
+                        customTraits={experiment?.custom_traits || []}
+                        onUpdate={(values) => setCustomTraitValues(values)}
+                        context="infection"
+                        />
+
+                        <Button
+                        className="w-full bg-purple-600 hover:bg-purple-700"
+                        onClick={() => saveInfectedMutation.mutate()}
+                        disabled={saveInfectedMutation.isPending}
+                        >
+                        <Save className="w-4 h-4 mr-2" />
+                        {saveInfectedMutation.isPending ? 'Saving...' : `Save ${parsedInfected.length} Infected Individuals`}
+                        </Button>
               </CardContent>
             </Card>
           )}

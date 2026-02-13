@@ -7,7 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 export default function CustomTraitsEntry({ 
   selectedIndividuals, 
   customTraits, 
-  onUpdate 
+  onUpdate,
+  context = "standalone"
 }) {
   const [traitValues, setTraitValues] = useState({});
 
@@ -21,7 +22,11 @@ export default function CustomTraitsEntry({
     setTraitValues({});
   };
 
-  if (!customTraits || customTraits.length === 0) {
+  const filteredTraits = customTraits?.filter(trait => 
+    trait.show_with === context || (context === "standalone" && (!trait.show_with || trait.show_with === "standalone"))
+  ) || [];
+
+  if (filteredTraits.length === 0 && context === "standalone") {
     return (
       <Card>
         <CardContent className="py-8">
@@ -33,16 +38,22 @@ export default function CustomTraitsEntry({
     );
   }
 
+  if (filteredTraits.length === 0) {
+    return null;
+  }
+
   return (
     <div className="space-y-4">
       <Card>
         <CardContent className="pt-6">
-          <p className="text-sm text-gray-600 mb-4">
-            Selected {selectedIndividuals.length} individual(s)
-          </p>
+          {context === "standalone" && (
+            <p className="text-sm text-gray-600 mb-4">
+              Selected {selectedIndividuals.length} individual(s)
+            </p>
+          )}
 
           <div className="space-y-4">
-            {customTraits.map((trait, index) => (
+            {filteredTraits.map((trait, index) => (
               <div key={index}>
                 <label className="text-sm font-medium block mb-2">{trait.name}</label>
                 {trait.type === 'boolean' ? (
@@ -78,9 +89,11 @@ export default function CustomTraitsEntry({
             ))}
           </div>
 
-          <Button onClick={handleSave} className="mt-6">
-            Save Custom Traits
-          </Button>
+          {context === "standalone" && (
+            <Button onClick={handleSave} className="mt-6">
+              Save Custom Traits
+            </Button>
+          )}
         </CardContent>
       </Card>
     </div>
