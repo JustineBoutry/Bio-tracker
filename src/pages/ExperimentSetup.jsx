@@ -304,6 +304,58 @@ export default function ExperimentSetup() {
         </Button>
       </div>
 
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Custom Traits</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600 mb-4">
+            Define additional traits to track for individuals (e.g., Cauliflower presence). These won't affect existing data.
+          </p>
+          {customTraits.map((trait, index) => (
+            <div key={index} className="border p-4 rounded space-y-3">
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="text-sm font-medium">Trait Name</label>
+                  <Input
+                    value={trait.name}
+                    onChange={(e) => updateTraitName(index, e.target.value)}
+                    placeholder="e.g., Cauliflower"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-sm font-medium">Type</label>
+                  <select
+                    className="w-full border rounded p-2"
+                    value={trait.type}
+                    onChange={(e) => updateTraitType(index, e.target.value)}
+                  >
+                    <option value="boolean">Checkbox (Yes/No)</option>
+                    <option value="text">Text</option>
+                    <option value="number">Number</option>
+                  </select>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="mt-6"
+                  onClick={() => removeTrait(index)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={addCustomTrait}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Custom Trait
+            </Button>
+            <Button onClick={saveCustomTraits}>Save Custom Traits</Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {!experiment.individuals_generated ? (
         <>
           <Card className="mb-6">
@@ -346,58 +398,6 @@ export default function ExperimentSetup() {
               )}
 
               <Button onClick={saveCodeSettings}>{t('setup.saveCodeSettings')}</Button>
-            </CardContent>
-          </Card>
-
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Custom Traits</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-gray-600 mb-4">
-                Define additional traits to track for individuals (e.g., Cauliflower presence). These won't affect existing data.
-              </p>
-              {customTraits.map((trait, index) => (
-                <div key={index} className="border p-4 rounded space-y-3">
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <label className="text-sm font-medium">Trait Name</label>
-                      <Input
-                        value={trait.name}
-                        onChange={(e) => updateTraitName(index, e.target.value)}
-                        placeholder="e.g., Cauliflower"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="text-sm font-medium">Type</label>
-                      <select
-                        className="w-full border rounded p-2"
-                        value={trait.type}
-                        onChange={(e) => updateTraitType(index, e.target.value)}
-                      >
-                        <option value="boolean">Checkbox (Yes/No)</option>
-                        <option value="text">Text</option>
-                        <option value="number">Number</option>
-                      </select>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="mt-6"
-                      onClick={() => removeTrait(index)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={addCustomTrait}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Custom Trait
-                </Button>
-                <Button onClick={saveCustomTraits}>Save Custom Traits</Button>
-              </div>
             </CardContent>
           </Card>
 
