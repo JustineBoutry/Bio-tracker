@@ -123,7 +123,7 @@ export default function ExperimentSetup() {
   };
 
   const addCustomTrait = () => {
-    setCustomTraits([...customTraits, { name: "", type: "boolean" }]);
+    setCustomTraits([...customTraits, { name: "", type: "boolean", show_with: "standalone" }]);
   };
 
   const updateTraitName = (index, name) => {
@@ -135,6 +135,12 @@ export default function ExperimentSetup() {
   const updateTraitType = (index, type) => {
     const newTraits = [...customTraits];
     newTraits[index].type = type;
+    setCustomTraits(newTraits);
+  };
+
+  const updateTraitShowWith = (index, showWith) => {
+    const newTraits = [...customTraits];
+    newTraits[index].show_with = showWith;
     setCustomTraits(newTraits);
   };
 
@@ -333,6 +339,20 @@ export default function ExperimentSetup() {
                     <option value="boolean">Checkbox (Yes/No)</option>
                     <option value="text">Text</option>
                     <option value="number">Number</option>
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="text-sm font-medium">Show With</label>
+                  <select
+                    className="w-full border rounded p-2"
+                    value={trait.show_with || "standalone"}
+                    onChange={(e) => updateTraitShowWith(index, e.target.value)}
+                  >
+                    <option value="standalone">Standalone Tab</option>
+                    <option value="infection">Infection Entry</option>
+                    <option value="reproduction">Reproduction Entry</option>
+                    <option value="death">Death Entry</option>
+                    <option value="redness">Redness Entry</option>
                   </select>
                 </div>
                 <Button
