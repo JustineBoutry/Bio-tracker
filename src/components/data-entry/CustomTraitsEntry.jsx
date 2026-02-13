@@ -46,24 +46,31 @@ export default function CustomTraitsEntry({
 
   // Per-individual mode: render inline without card
   if (perIndividual) {
+    const individualId = selectedIndividuals[0] || 'unknown';
+    
     return (
-      <div className="space-y-2">
-        {filteredTraits.map((trait, index) => (
-          <div key={index} className="grid grid-cols-2 gap-3">
+      <div className="space-y-2 border-t pt-3 mt-3">
+        {filteredTraits.length > 0 && (
+          <div className="text-xs font-semibold text-gray-600 mb-2">Custom Traits:</div>
+        )}
+        {filteredTraits.map((trait) => (
+          <div key={`${individualId}-${trait.name}`} className="grid grid-cols-2 gap-3 items-center">
             <label className="text-xs font-medium">{trait.name}</label>
             {trait.type === 'boolean' ? (
               <div className="flex items-center gap-2">
                 <Checkbox
+                  id={`${individualId}-${trait.name}`}
                   checked={individualTraitValues[trait.name] || false}
                   onCheckedChange={(checked) => 
                     onUpdate({ ...individualTraitValues, [trait.name]: checked })
                   }
                 />
-                <span className="text-xs">Yes</span>
+                <span className="text-xs text-gray-600">{individualTraitValues[trait.name] ? 'Yes' : 'No'}</span>
               </div>
             ) : trait.type === 'number' ? (
               <Input
                 type="number"
+                id={`${individualId}-${trait.name}`}
                 value={individualTraitValues[trait.name] || ''}
                 onChange={(e) => 
                   onUpdate({ ...individualTraitValues, [trait.name]: parseFloat(e.target.value) || null })
@@ -74,6 +81,7 @@ export default function CustomTraitsEntry({
             ) : (
               <Input
                 type="text"
+                id={`${individualId}-${trait.name}`}
                 value={individualTraitValues[trait.name] || ''}
                 onChange={(e) => 
                   onUpdate({ ...individualTraitValues, [trait.name]: e.target.value })
