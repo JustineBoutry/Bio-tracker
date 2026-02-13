@@ -228,28 +228,29 @@ export default function InfectionEntry({ experimentId, onComplete, experiment })
                               placeholder="Count"
                             />
                           </div>
-                          </div>
-                          <CustomTraitsEntry
+                        </div>
+                        
+                        <CustomTraitsEntry
                           selectedIndividuals={[id]}
                           customTraits={experiment?.custom_traits || []}
                           onUpdate={(values) => updateSporeData(id, 'customTraits', values)}
                           context="infection"
                           perIndividual={true}
                           individualTraitValues={sporeData[id]?.customTraits || {}}
-                          />
-                          </div>
-                          );
-                          })}
-                          </div>
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
 
                           <Button
-                        className="w-full bg-purple-600 hover:bg-purple-700"
-                        onClick={() => saveInfectedMutation.mutate()}
-                        disabled={saveInfectedMutation.isPending}
-                        >
-                        <Save className="w-4 h-4 mr-2" />
-                        {saveInfectedMutation.isPending ? 'Saving...' : `Save ${parsedInfected.length} Infected Individuals`}
-                        </Button>
+                            className="w-full bg-purple-600 hover:bg-purple-700"
+                            onClick={() => saveInfectedMutation.mutate()}
+                            disabled={saveInfectedMutation.isPending}
+                          >
+                            <Save className="w-4 h-4 mr-2" />
+                            {saveInfectedMutation.isPending ? 'Saving...' : `Save ${parsedInfected.length} Infected Individuals`}
+                          </Button>
               </CardContent>
             </Card>
           )}
