@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useExperiment } from "../components/ExperimentContext";
 import { Calendar, Loader2 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
+import CustomTraitsEntry from "../components/data-entry/CustomTraitsEntry";
 
 export default function DataEntry() {
   const { t } = useTranslation();
@@ -280,6 +281,31 @@ export default function DataEntry() {
     }
   });
 
+  const customTraitsMutation = useMutation({
+    mutationFn: async (traitValues) => {
+      const updates = selectedIds.map(async (id) => {
+        const ind = individuals.find((i) => i.id === id);
+        const currentCustomData = ind.custom_data || {};
+        await base44.entities.Individual.update(id, {
+          custom_data: { ...currentCustomData, ...traitValues }
+        });
+        return ind.individual_id;
+      });
+      return await Promise.all(updates);
+    },
+    onSuccess: async (ids) => {
+      queryClient.invalidateQueries(['individuals']);
+      const idsText = ids.join(', ');
+      await base44.entities.LabNote.create({
+        experiment_id: selectedExp,
+        note: `Custom traits: updated ${ids.length} individuals (IDs: ${idsText})`,
+        timestamp: new Date().toISOString()
+      });
+      setSelectedIds([]);
+      alert('Custom traits recorded!');
+    }
+  });
+
   const parseInfectedIds = () => {
     const ids = infectedIds.split(/[\s,]+/).filter((id) => id.trim());
     const data = {};
@@ -428,12 +454,13 @@ export default function DataEntry() {
 
       {selectedExp &&
       <Tabs defaultValue="reproduction">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="reproduction" className="text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">{t('dataEntry.reproduction')}</TabsTrigger>
-            <TabsTrigger value="death" className="bg-slate-500 text-slate-50 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">{t('dataEntry.death')}</TabsTrigger>
-            <TabsTrigger value="redness" className="bg-[#f7c5c5] text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">{t('dataEntry.redness')}</TabsTrigger>
-            <TabsTrigger value="infection" className="text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">{t('dataEntry.infection')}</TabsTrigger>
-            <TabsTrigger value="sex" className="text-slate-900 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">{t('dataEntry.sex')}</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="reproduction">{t('dataEntry.reproduction')}</TabsTrigger>
+            <TabsTrigger value="death">{t('dataEntry.death')}</TabsTrigger>
+            <TabsTrigger value="redness">{t('dataEntry.redness')}</TabsTrigger>
+            <TabsTrigger value="infection">{t('dataEntry.infection')}</TabsTrigger>
+            <TabsTrigger value="sex">{t('dataEntry.sex')}</TabsTrigger>
+            <TabsTrigger value="custom">Custom Traits</TabsTrigger>
           </TabsList>
 
           <TabsContent value="reproduction">
@@ -714,6 +741,35 @@ export default function DataEntry() {
                     )}
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="custom">
+            <Card>
+              <CardHeader>
+                <CardTitle>Custom Traits Entry</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4 text-sm text-gray-600">
+                  Select individuals first:
+                </div>
+                <div className="space-y-2 max-h-60 overflow-auto mb-4">
+                  {individuals.map((ind) => (
+                    <div key={ind.id} className="flex items-center gap-3 p-2 border rounded">
+                      <Checkbox
+                        checked={selectedIds.includes(ind.id)}
+                        onCheckedChange={() => toggleSelection(ind.id)}
+                      />
+                      <span className="font-mono">{ind.individual_id}</span>
+                    </div>
+                  ))}
+                </div>
+                <CustomTraitsEntry
+                  selectedIndividuals={selectedIds}
+                  customTraits={experiment?.custom_traits || []}
+                  onUpdate={(values) => customTraitsMutation.mutate(values)}
+                />
               </CardContent>
             </Card>
           </TabsContent>
