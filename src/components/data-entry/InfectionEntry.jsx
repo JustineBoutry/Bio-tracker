@@ -94,9 +94,9 @@ export default function InfectionEntry({ experimentId, onComplete, experiment })
             spores_volume: sporeData[id]?.volume || null
           };
           
-          if (Object.keys(customTraitValues).length > 0) {
+          if (sporeData[id]?.customTraits && Object.keys(sporeData[id].customTraits).length > 0) {
             const currentCustomData = individual.custom_data || {};
-            updateData.custom_data = { ...currentCustomData, ...customTraitValues };
+            updateData.custom_data = { ...currentCustomData, ...sporeData[id].customTraits };
           }
           
           await base44.entities.Individual.update(individual.id, updateData);
