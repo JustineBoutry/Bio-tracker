@@ -324,11 +324,18 @@ export default function DataEntry() {
           individual_id: individualId
         });
         if (inds.length > 0) {
-          await base44.entities.Individual.update(inds[0].id, {
+          const updateData = {
             infected: "confirmed Yes",
             spores_volume: data.volume,
             spores_count: parseFloat(data.count) || 0
-          });
+          };
+
+          if (data.customTraits && Object.keys(data.customTraits).length > 0) {
+            const currentCustomData = inds[0].custom_data || {};
+            updateData.custom_data = { ...currentCustomData, ...data.customTraits };
+          }
+
+          await base44.entities.Individual.update(inds[0].id, updateData);
           return individualId;
         }
         return null;
@@ -703,11 +710,30 @@ export default function DataEntry() {
                         </Button>
                       </div>
                     </>
-                }
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    }
+
+                    {showSporeEntry && (
+                    <div className="border-t pt-6 mt-6">
+                    <h3 className="font-semibold mb-4">Additional Traits</h3>
+                    <CustomTraitsEntry
+                    selectedIndividuals={Object.keys(sporeData)}
+                    customTraits={experiment?.custom_traits || []}
+                    onUpdate={(values) => {
+                      Object.keys(sporeData).forEach((id) => {
+                        setSporeData((prev) => ({
+                          ...prev,
+                          [id]: { ...prev[id], customTraits: values }
+                        }));
+                      });
+                    }}
+                    context="infection"
+                    />
+                    </div>
+                    )}
+                    </div>
+                    </CardContent>
+                    </Card>
+                    </TabsContent>
 
           <TabsContent value="sex">
             <Card>
