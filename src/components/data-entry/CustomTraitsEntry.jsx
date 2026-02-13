@@ -8,7 +8,9 @@ export default function CustomTraitsEntry({
   selectedIndividuals, 
   customTraits, 
   onUpdate,
-  context = "standalone"
+  context = "standalone",
+  perIndividual = false,
+  individualTraitValues = {}
 }) {
   const [traitValues, setTraitValues] = useState({});
 
@@ -42,6 +44,50 @@ export default function CustomTraitsEntry({
     return null;
   }
 
+  // Per-individual mode: render inline without card
+  if (perIndividual) {
+    return (
+      <div className="space-y-2">
+        {filteredTraits.map((trait, index) => (
+          <div key={index} className="grid grid-cols-2 gap-3">
+            <label className="text-xs font-medium">{trait.name}</label>
+            {trait.type === 'boolean' ? (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={individualTraitValues[trait.name] || false}
+                  onCheckedChange={(checked) => 
+                    onUpdate({ ...individualTraitValues, [trait.name]: checked })
+                  }
+                />
+                <span className="text-xs">Yes</span>
+              </div>
+            ) : trait.type === 'number' ? (
+              <Input
+                type="number"
+                value={individualTraitValues[trait.name] || ''}
+                onChange={(e) => 
+                  onUpdate({ ...individualTraitValues, [trait.name]: parseFloat(e.target.value) || null })
+                }
+                placeholder={`Enter ${trait.name}`}
+                className="h-8"
+              />
+            ) : (
+              <Input
+                type="text"
+                value={individualTraitValues[trait.name] || ''}
+                onChange={(e) => 
+                  onUpdate({ ...individualTraitValues, [trait.name]: e.target.value })
+                }
+                placeholder={`Enter ${trait.name}`}
+                className="h-8"
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <Card>
@@ -71,7 +117,7 @@ export default function CustomTraitsEntry({
                     type="number"
                     value={traitValues[trait.name] || ''}
                     onChange={(e) => 
-                      setTraitValues({ ...traitValues, [trait.name]: parseFloat(e.target.value) || 0 })
+                      setTraitValues({ ...traitValues, [trait.name]: parseFloat(e.target.value) || null })
                     }
                     placeholder={`Enter ${trait.name}`}
                   />

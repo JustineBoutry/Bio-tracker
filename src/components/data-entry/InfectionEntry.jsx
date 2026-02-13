@@ -16,7 +16,6 @@ export default function InfectionEntry({ experimentId, onComplete, experiment })
   const [infectedData, setInfectedData] = useState('');
   const [parsedInfected, setParsedInfected] = useState([]);
   const [sporeData, setSporeData] = useState({});
-  const [customTraitValues, setCustomTraitValues] = useState({});
 
   const { data: individuals = [] } = useQuery({
     queryKey: ['individuals', experimentId],
@@ -110,7 +109,6 @@ export default function InfectionEntry({ experimentId, onComplete, experiment })
       setInfectedData('');
       setParsedInfected([]);
       setSporeData({});
-      setCustomTraitValues({});
     },
     onError: (error) => {
       if (error.message === 'Update cancelled by user') {
@@ -230,20 +228,21 @@ export default function InfectionEntry({ experimentId, onComplete, experiment })
                               placeholder="Count"
                             />
                           </div>
-                        </div>
-                        </div>
-                        );
-                        })}
-                        </div>
+                          </div>
+                          <CustomTraitsEntry
+                          selectedIndividuals={[id]}
+                          customTraits={experiment?.custom_traits || []}
+                          onUpdate={(values) => updateSporeData(id, 'customTraits', values)}
+                          context="infection"
+                          perIndividual={true}
+                          individualTraitValues={sporeData[id]?.customTraits || {}}
+                          />
+                          </div>
+                          );
+                          })}
+                          </div>
 
-                        <CustomTraitsEntry
-                        selectedIndividuals={parsedInfected}
-                        customTraits={experiment?.custom_traits || []}
-                        onUpdate={(values) => setCustomTraitValues(values)}
-                        context="infection"
-                        />
-
-                        <Button
+                          <Button
                         className="w-full bg-purple-600 hover:bg-purple-700"
                         onClick={() => saveInfectedMutation.mutate()}
                         disabled={saveInfectedMutation.isPending}

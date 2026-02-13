@@ -311,8 +311,9 @@ export default function Dataset() {
       const customTraitValues = customTraitHeaders.map(traitName => {
         const trait = experiment.custom_traits.find(t => t.name === traitName);
         const value = ind.custom_data?.[traitName];
+        if (value === undefined || value === null) return '';
         if (trait?.type === 'boolean') return value ? 'Yes' : 'No';
-        return value || '';
+        return value;
       });
       return [...factorValues, ...values, ...customTraitValues];
     });
@@ -737,9 +738,11 @@ export default function Dataset() {
                           <td className="p-2">{ind.red_confirmed ? 'Yes' : 'No'}</td>
                           {experiment?.custom_traits?.map(trait => (
                             <td key={trait.name} className="p-2">
-                              {trait.type === 'boolean' 
-                                ? (ind.custom_data?.[trait.name] ? 'Yes' : 'No')
-                                : (ind.custom_data?.[trait.name] || '-')}
+                              {ind.custom_data?.[trait.name] !== undefined && ind.custom_data?.[trait.name] !== null
+                                ? (trait.type === 'boolean' 
+                                    ? (ind.custom_data[trait.name] ? 'Yes' : 'No')
+                                    : ind.custom_data[trait.name])
+                                : '-'}
                             </td>
                           ))}
                           <td className="p-2"></td>

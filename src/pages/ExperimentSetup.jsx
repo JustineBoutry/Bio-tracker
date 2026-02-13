@@ -151,9 +151,43 @@ export default function ExperimentSetup() {
   };
 
   const saveCustomTraits = async () => {
-    await base44.entities.Experiment.update(experimentId, { custom_traits: customTraits });
+    const filteredTraits = customTraits.filter(t => t.name.trim());
+    await base44.entities.Experiment.update(experimentId, { custom_traits: filteredTraits });
+    queryClient.invalidateQueries(['experiment', experimentId]);
     alert('Custom traits saved!');
   };
+
+  const deleteCustomTraitMutation = useMutation({
+    mutationFn: async (traitName) => {
+      if (!window.confirm(`Are you sure you want to delete the custom trait "${traitName}"? This will remove the trait definition and all associated data from individuals.`)) {
+        throw new Error('Delete cancelled');
+      }
+
+      const updatedTraits = customTraits.filter(t => t.name !== traitName);
+      await base44.entities.Experiment.update(experimentId, { custom_traits: updatedTraits });
+
+      const individuals = await base44.entities.Individual.filter({ experiment_id: experimentId });
+      for (const ind of individuals) {
+        if (ind.custom_data && ind.custom_data[traitName] !== undefined) {
+          const newCustomData = { ...ind.custom_data };
+          delete newCustomData[traitName];
+          await base44.entities.Individual.update(ind.id, { custom_data: newCustomData });
+        }
+      }
+
+      return traitName;
+    },
+    onSuccess: (traitName) => {
+      queryClient.invalidateQueries(['experiment', experimentId]);
+      queryClient.invalidateQueries(['individuals']);
+      alert(`Custom trait "${traitName}" deleted successfully`);
+    },
+    onError: (error) => {
+      if (error.message !== 'Delete cancelled') {
+        alert('Error: ' + error.message);
+      }
+    }
+  });
 
   const renameExperimentMutation = useMutation({
     mutationFn: async (name) => {
@@ -355,14 +389,27 @@ export default function ExperimentSetup() {
                     <option value="redness">Redness Entry</option>
                   </select>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="mt-6"
-                  onClick={() => removeTrait(index)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                <div className="flex flex-col gap-1 mt-6">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeTrait(index)}
+                    title="Remove from form"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                  {experiment?.custom_traits?.find(t => t.name === trait.name) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => deleteCustomTraitMutation.mutate(trait.name)}
+                      disabled={deleteCustomTraitMutation.isPending}
+                      title="Delete trait and all data"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
