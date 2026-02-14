@@ -762,16 +762,27 @@ export default function DataEntry() {
                                           id={`${individualId}-${trait.name}`}
                                           checked={(sporeData[individualId]?.customTraits?.[trait.name] || 'no') === 'yes'}
                                           onCheckedChange={(checked) => {
-                                            const currentTraits = sporeData[individualId]?.customTraits || {};
-                                            setSporeData({
-                                              ...sporeData,
-                                              [individualId]: {
-                                                ...sporeData[individualId],
-                                                customTraits: {
-                                                  ...currentTraits,
-                                                  [trait.name]: checked ? 'yes' : 'no'
-                                                }
+                                            setSporeData(prev => {
+                                              const newData = { ...prev };
+                                              const currentIndividual = newData[individualId];
+                                              const newCustomTraits = {};
+
+                                              // Copy all existing traits for this individual
+                                              if (currentIndividual?.customTraits) {
+                                                Object.keys(currentIndividual.customTraits).forEach(key => {
+                                                  newCustomTraits[key] = currentIndividual.customTraits[key];
+                                                });
                                               }
+
+                                              // Update the specific trait
+                                              newCustomTraits[trait.name] = checked ? 'yes' : 'no';
+
+                                              newData[individualId] = {
+                                                ...currentIndividual,
+                                                customTraits: newCustomTraits
+                                              };
+
+                                              return newData;
                                             });
                                           }}
                                         />
