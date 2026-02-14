@@ -367,7 +367,7 @@ export default function DataEntry() {
       const alreadySet = [];
       
       // Check for existing infection status
-      for (const individualId of Object.keys(sporeData)) {
+      for (const individualId of Object.keys(dataToSave)) {
         const inds = await base44.entities.Individual.filter({
           experiment_id: selectedExp,
           individual_id: individualId
