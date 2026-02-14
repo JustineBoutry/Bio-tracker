@@ -793,10 +793,17 @@ export default function DataEntry() {
                                      <Select
                                        value={sporeData[individualId]?.customTraits?.[trait.name] || 'no'}
                                        onValueChange={(value) => {
-                                         const updated = { ...sporeData };
-                                         updated[individualId].customTraits[trait.name] = value;
-                                         console.log(`CHANGED ${individualId}.${trait.name} = "${value}"`);
-                                         setSporeData(updated);
+                                         const currentTraits = sporeData[individualId]?.customTraits || {};
+                                         setSporeData({
+                                           ...sporeData,
+                                           [individualId]: {
+                                             ...sporeData[individualId],
+                                             customTraits: {
+                                               ...currentTraits,
+                                               [trait.name]: value
+                                             }
+                                           }
+                                         });
                                        }}
                                      >
                                        <SelectTrigger>
