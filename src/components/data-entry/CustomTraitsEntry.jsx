@@ -53,21 +53,23 @@ export default function CustomTraitsEntry({
         {filteredTraits.length > 0 && (
           <div className="text-xs font-semibold text-gray-600 mb-2">Custom Traits:</div>
         )}
-        {filteredTraits.map((trait) => (
-          <div key={`${individualId}-${trait.name}`} className="grid grid-cols-2 gap-3 items-center">
-            <label className="text-xs font-medium">{trait.name}</label>
-            {trait.type === 'boolean' ? (
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id={`${individualId}-${trait.name}`}
-                  checked={individualTraitValues[trait.name] === 'yes'}
-                  onCheckedChange={(checked) => 
-                    onUpdate({ ...individualTraitValues, [trait.name]: checked ? 'yes' : 'no' })
-                  }
-                />
-                <span className="text-xs text-gray-600">{individualTraitValues[trait.name] === 'yes' ? 'Yes' : 'No'}</span>
-              </div>
-            ) : trait.type === 'number' ? (
+        {filteredTraits.map((trait) => {
+          const checkboxId = `checkbox-${individualId}-${trait.name}`.replace(/[^a-zA-Z0-9-]/g, '_');
+          return (
+            <div key={checkboxId} className="grid grid-cols-2 gap-3 items-center">
+              <label htmlFor={checkboxId} className="text-xs font-medium">{trait.name}</label>
+              {trait.type === 'boolean' ? (
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id={checkboxId}
+                    checked={individualTraitValues[trait.name] === 'yes'}
+                    onCheckedChange={(checked) => 
+                      onUpdate({ ...individualTraitValues, [trait.name]: checked ? 'yes' : 'no' })
+                    }
+                  />
+                  <span className="text-xs text-gray-600">{individualTraitValues[trait.name] === 'yes' ? 'Yes' : 'No'}</span>
+                </div>
+              ) : trait.type === 'number' ? (
               <Input
                 type="number"
                 id={`${individualId}-${trait.name}`}
@@ -90,8 +92,9 @@ export default function CustomTraitsEntry({
                 className="h-8"
               />
             )}
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
     );
   }
