@@ -763,24 +763,14 @@ export default function DataEntry() {
                                           checked={(sporeData[individualId]?.customTraits?.[trait.name] || 'no') === 'yes'}
                                           onCheckedChange={(checked) => {
                                             setSporeData(prev => {
-                                              const newData = { ...prev };
-                                              const currentIndividual = newData[individualId];
-                                              const newCustomTraits = {};
+                                              // Deep clone to avoid any reference issues
+                                              const newData = JSON.parse(JSON.stringify(prev));
 
-                                              // Copy all existing traits for this individual
-                                              if (currentIndividual?.customTraits) {
-                                                Object.keys(currentIndividual.customTraits).forEach(key => {
-                                                  newCustomTraits[key] = currentIndividual.customTraits[key];
-                                                });
+                                              if (!newData[individualId].customTraits) {
+                                                newData[individualId].customTraits = {};
                                               }
 
-                                              // Update the specific trait
-                                              newCustomTraits[trait.name] = checked ? 'yes' : 'no';
-
-                                              newData[individualId] = {
-                                                ...currentIndividual,
-                                                customTraits: newCustomTraits
-                                              };
+                                              newData[individualId].customTraits[trait.name] = checked ? 'yes' : 'no';
 
                                               return newData;
                                             });
