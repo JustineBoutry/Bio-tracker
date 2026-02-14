@@ -361,8 +361,8 @@ export default function DataEntry() {
   };
 
   const saveInfectedMutation = useMutation({
-    mutationFn: async () => {
-      console.log('Starting save with sporeData:', JSON.stringify(sporeData, null, 2));
+    mutationFn: async (dataToSave) => {
+      console.log('Starting save with dataToSave:', JSON.stringify(dataToSave, null, 2));
       
       const alreadySet = [];
       
