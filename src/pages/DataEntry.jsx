@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useExperiment } from "../components/ExperimentContext";
 import { Calendar, Loader2 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
-import CustomTraitsEntry from "../components/data-entry/CustomTraitsEntry";
 
 export default function DataEntry() {
   const { t } = useTranslation();
@@ -761,24 +760,7 @@ export default function DataEntry() {
                     </>
                     }
 
-                    {showSporeEntry && (
-                    <div className="border-t pt-6 mt-6">
-                    <h3 className="font-semibold mb-4">Additional Traits</h3>
-                    <CustomTraitsEntry
-                    selectedIndividuals={Object.keys(sporeData)}
-                    customTraits={experiment?.custom_traits || []}
-                    onUpdate={(values) => {
-                      Object.keys(sporeData).forEach((id) => {
-                        setSporeData((prev) => ({
-                          ...prev,
-                          [id]: { ...prev[id], customTraits: values }
-                        }));
-                      });
-                    }}
-                    context="infection"
-                    />
-                    </div>
-                    )}
+
                     </div>
                     </CardContent>
                     </Card>
@@ -823,28 +805,16 @@ export default function DataEntry() {
           <TabsContent value="custom">
             <Card>
               <CardHeader>
-                <CardTitle>Custom Traits Entry</CardTitle>
+                <CardTitle>Standalone Custom Traits Entry</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="mb-4 text-sm text-gray-600">
-                  Select individuals first:
+                <p className="text-sm text-gray-600 mb-4">
+                  Traits configured to show on specific tabs (like infection) will appear inline with those forms.
+                  This tab is for traits marked as "Standalone".
+                </p>
+                <div className="text-sm text-gray-500">
+                  No standalone traits configured yet. Add them in Experiment Setup.
                 </div>
-                <div className="space-y-2 max-h-60 overflow-auto mb-4">
-                  {individuals.map((ind) => (
-                    <div key={ind.id} className="flex items-center gap-3 p-2 border rounded">
-                      <Checkbox
-                        checked={selectedIds.includes(ind.id)}
-                        onCheckedChange={() => toggleSelection(ind.id)}
-                      />
-                      <span className="font-mono">{ind.individual_id}</span>
-                    </div>
-                  ))}
-                </div>
-                <CustomTraitsEntry
-                  selectedIndividuals={selectedIds}
-                  customTraits={experiment?.custom_traits || []}
-                  onUpdate={(values) => customTraitsMutation.mutate(values)}
-                />
               </CardContent>
             </Card>
           </TabsContent>
