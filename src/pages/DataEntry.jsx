@@ -790,36 +790,27 @@ export default function DataEntry() {
                                   <div key={`${individualId}-${trait.name}`}>
                                     <label className="text-sm">{trait.name}</label>
                                     {trait.type === 'boolean' ? (
-                                      <div className="flex items-center gap-2 h-9">
-                                        <Checkbox
-                                          id={`${individualId}-${trait.name}`}
-                                          checked={(sporeData[individualId]?.customTraits?.[trait.name] || 'no') === 'yes'}
-                                          onCheckedChange={(checked) => {
-                                            setSporeData(prev => {
-                                              // Deep clone to avoid any reference issues
-                                              const newData = JSON.parse(JSON.stringify(prev));
-
-                                              if (!newData[individualId].customTraits) {
-                                                newData[individualId].customTraits = {};
-                                              }
-
-                                              newData[individualId].customTraits[trait.name] = checked ? 'yes' : 'no';
-
-                                              console.log(`Checkbox changed for ${individualId} - ${trait.name}:`, {
-                                                checked,
-                                                newValue: checked ? 'yes' : 'no',
-                                                fullIndividualData: newData[individualId],
-                                                allSporeData: newData
-                                              });
-
-                                              return newData;
-                                            });
-                                          }}
-                                        />
-                                        <span className="text-xs text-gray-600">
-                                          {(sporeData[individualId]?.customTraits?.[trait.name] || 'no') === 'yes' ? 'Yes' : 'No'}
-                                        </span>
-                                      </div>
+                                      <Select
+                                        value={sporeData[individualId]?.customTraits?.[trait.name] || 'no'}
+                                        onValueChange={(value) => {
+                                          setSporeData(prev => {
+                                            const newData = { ...prev };
+                                            if (!newData[individualId].customTraits) {
+                                              newData[individualId].customTraits = {};
+                                            }
+                                            newData[individualId].customTraits[trait.name] = value;
+                                            return newData;
+                                          });
+                                        }}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="no">No</SelectItem>
+                                          <SelectItem value="yes">Yes</SelectItem>
+                                        </SelectContent>
+                                      </Select>
                                     ) : trait.type === 'number' ? (
                                       <Input
                                         type="number"
