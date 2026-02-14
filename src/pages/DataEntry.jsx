@@ -790,29 +790,30 @@ export default function DataEntry() {
                                   <div key={`${individualId}-${trait.name}`}>
                                     <label className="text-sm">{trait.name}</label>
                                     {trait.type === 'boolean' ? (
-                                      <Select
-                                        value={sporeData[individualId]?.customTraits?.[trait.name] || 'no'}
-                                        onValueChange={(value) => {
-                                          setSporeData(prev => {
-                                            // Deep clone to ensure independent objects
-                                            const newData = JSON.parse(JSON.stringify(prev));
-                                            if (!newData[individualId].customTraits) {
-                                              newData[individualId].customTraits = {};
-                                            }
-                                            newData[individualId].customTraits[trait.name] = value;
-                                            console.log(`Select changed for ${individualId} - ${trait.name}: ${value}`, newData[individualId]);
-                                            return newData;
-                                          });
-                                        }}
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="no">No</SelectItem>
-                                          <SelectItem value="yes">Yes</SelectItem>
-                                        </SelectContent>
-                                      </Select>
+                                     <Select
+                                       value={sporeData[individualId]?.customTraits?.[trait.name]}
+                                       onValueChange={(value) => {
+                                         console.log(`CHANGING ${individualId} - ${trait.name} to: "${value}"`);
+                                         setSporeData({
+                                           ...sporeData,
+                                           [individualId]: {
+                                             ...sporeData[individualId],
+                                             customTraits: {
+                                               ...sporeData[individualId].customTraits,
+                                               [trait.name]: value
+                                             }
+                                           }
+                                         });
+                                       }}
+                                     >
+                                       <SelectTrigger>
+                                         <SelectValue />
+                                       </SelectTrigger>
+                                       <SelectContent>
+                                         <SelectItem value="no">No</SelectItem>
+                                         <SelectItem value="yes">Yes</SelectItem>
+                                       </SelectContent>
+                                     </Select>
                                     ) : trait.type === 'number' ? (
                                       <Input
                                         type="number"
