@@ -343,7 +343,7 @@ export default function DataEntry() {
       data[trimmedId] = { 
         volume: '', 
         count: '',
-        customTraits: Object.keys(traitDefaults).length > 0 ? traitDefaults : {}
+        customTraits: { ...traitDefaults }
       };
     });
     setSporeData(data);
