@@ -123,7 +123,7 @@ export default function ExperimentSetup() {
   };
 
   const addCustomTrait = () => {
-    setCustomTraits([...customTraits, { name: "", type: "boolean", show_with: "standalone" }]);
+    setCustomTraits([...customTraits, { name: "", type: "boolean", tab: "standalone", modality: "all" }]);
   };
 
   const updateTraitName = (index, name) => {
@@ -138,9 +138,18 @@ export default function ExperimentSetup() {
     setCustomTraits(newTraits);
   };
 
-  const updateTraitShowWith = (index, showWith) => {
+  const updateTraitTab = (index, tab) => {
     const newTraits = [...customTraits];
-    newTraits[index].show_with = showWith;
+    newTraits[index].tab = tab;
+    if (tab !== 'infection') {
+      newTraits[index].modality = 'all';
+    }
+    setCustomTraits(newTraits);
+  };
+
+  const updateTraitModality = (index, modality) => {
+    const newTraits = [...customTraits];
+    newTraits[index].modality = modality;
     setCustomTraits(newTraits);
   };
 
@@ -376,11 +385,11 @@ export default function ExperimentSetup() {
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="text-sm font-medium">Show With</label>
+                  <label className="text-sm font-medium">Tab</label>
                   <select
                     className="w-full border rounded p-2"
-                    value={trait.show_with || "standalone"}
-                    onChange={(e) => updateTraitShowWith(index, e.target.value)}
+                    value={trait.tab || "standalone"}
+                    onChange={(e) => updateTraitTab(index, e.target.value)}
                   >
                     <option value="standalone">Standalone Tab</option>
                     <option value="infection">Infection Entry</option>
@@ -389,6 +398,20 @@ export default function ExperimentSetup() {
                     <option value="redness">Redness Entry</option>
                   </select>
                 </div>
+                {trait.tab === 'infection' && (
+                  <div className="flex-1">
+                    <label className="text-sm font-medium">Modality</label>
+                    <select
+                      className="w-full border rounded p-2"
+                      value={trait.modality || "all"}
+                      onChange={(e) => updateTraitModality(index, e.target.value)}
+                    >
+                      <option value="all">All Individuals</option>
+                      <option value="infected">Infected Only</option>
+                      <option value="non_infected">Non-Infected Only</option>
+                    </select>
+                  </div>
+                )}
                 <div className="flex flex-col gap-1 mt-6">
                   <Button
                     variant="ghost"
