@@ -331,8 +331,20 @@ export default function DataEntry() {
   const parseInfectedIds = () => {
     const ids = infectedIds.split(/[\s,]+/).filter((id) => id.trim());
     const data = {};
+    const infectionTraits = (experiment?.custom_traits || []).filter(t => t.tab === 'infection' && (t.modality === 'infected' || t.modality === 'all'));
     ids.forEach((id) => {
-      data[id.trim()] = { volume: '', count: '' };
+      const trimmedId = id.trim();
+      const traitDefaults = {};
+      infectionTraits.forEach(trait => {
+        if (trait.type === 'boolean') {
+          traitDefaults[trait.name] = 'no';
+        }
+      });
+      data[trimmedId] = { 
+        volume: '', 
+        count: '',
+        customTraits: Object.keys(traitDefaults).length > 0 ? traitDefaults : {}
+      };
     });
     setSporeData(data);
     setShowSporeEntry(true);
@@ -714,7 +726,7 @@ export default function DataEntry() {
                         {Object.keys(sporeData).map((individualId) =>
                     <div key={individualId} className="border p-3 rounded space-y-2">
                             <div className="font-mono font-semibold">{individualId}</div>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-3 gap-3">
                               <div>
                                 <label className="text-sm">{t('dataEntry.sporeVolume')}</label>
                                 <Input
@@ -738,6 +750,76 @@ export default function DataEntry() {
                             })} />
 
                               </div>
+                              {(experiment?.custom_traits || [])
+                                .filter(trait => trait.tab === 'infection' && (trait.modality === 'infected' || trait.modality === 'all'))
+                                .map((trait) => (
+                                  <div key={`${individualId}-${trait.name}`}>
+                                    <label className="text-sm">{trait.name}</label>
+                                    {trait.type === 'boolean' ? (
+                                      <div className="flex items-center gap-2 h-9">
+                                        <Checkbox
+                                          id={`${individualId}-${trait.name}`}
+                                          checked={(sporeData[individualId]?.customTraits?.[trait.name] || 'no') === 'yes'}
+                                          onCheckedChange={(checked) => {
+                                            const currentTraits = sporeData[individualId]?.customTraits || {};
+                                            setSporeData({
+                                              ...sporeData,
+                                              [individualId]: {
+                                                ...sporeData[individualId],
+                                                customTraits: {
+                                                  ...currentTraits,
+                                                  [trait.name]: checked ? 'yes' : 'no'
+                                                }
+                                              }
+                                            });
+                                          }}
+                                        />
+                                        <span className="text-xs text-gray-600">
+                                          {(sporeData[individualId]?.customTraits?.[trait.name] || 'no') === 'yes' ? 'Yes' : 'No'}
+                                        </span>
+                                      </div>
+                                    ) : trait.type === 'number' ? (
+                                      <Input
+                                        type="number"
+                                        value={sporeData[individualId]?.customTraits?.[trait.name] || ''}
+                                        onChange={(e) => {
+                                          const currentTraits = sporeData[individualId]?.customTraits || {};
+                                          setSporeData({
+                                            ...sporeData,
+                                            [individualId]: {
+                                              ...sporeData[individualId],
+                                              customTraits: {
+                                                ...currentTraits,
+                                                [trait.name]: parseFloat(e.target.value) || null
+                                              }
+                                            }
+                                          });
+                                        }}
+                                        placeholder={`Enter ${trait.name}`}
+                                      />
+                                    ) : (
+                                      <Input
+                                        type="text"
+                                        value={sporeData[individualId]?.customTraits?.[trait.name] || ''}
+                                        onChange={(e) => {
+                                          const currentTraits = sporeData[individualId]?.customTraits || {};
+                                          setSporeData({
+                                            ...sporeData,
+                                            [individualId]: {
+                                              ...sporeData[individualId],
+                                              customTraits: {
+                                                ...currentTraits,
+                                                [trait.name]: e.target.value
+                                              }
+                                            }
+                                          });
+                                        }}
+                                        placeholder={`Enter ${trait.name}`}
+                                      />
+                                    )}
+                                  </div>
+                                ))
+                              }
                             </div>
                           </div>
                     )}
