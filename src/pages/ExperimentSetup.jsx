@@ -123,7 +123,7 @@ export default function ExperimentSetup() {
   };
 
   const addCustomTrait = () => {
-    setCustomTraits([...customTraits, { name: "", type: "boolean", tab: "standalone", modality: "all" }]);
+    setCustomTraits([...customTraits, { name: "", type: "text", tab: "standalone", modality: "all" }]);
   };
 
   const updateTraitName = (index, name) => {
@@ -379,7 +379,6 @@ export default function ExperimentSetup() {
                     value={trait.type}
                     onChange={(e) => updateTraitType(index, e.target.value)}
                   >
-                    <option value="boolean">Checkbox (Yes/No)</option>
                     <option value="text">Text</option>
                     <option value="number">Number</option>
                   </select>
