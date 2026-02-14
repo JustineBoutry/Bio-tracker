@@ -384,7 +384,7 @@ export default function DataEntry() {
         }
       }
 
-      const updates = Object.entries(sporeData).map(async ([individualId, data]) => {
+      const updates = Object.entries(dataToSave).map(async ([individualId, data]) => {
         const inds = await base44.entities.Individual.filter({
           experiment_id: selectedExp,
           individual_id: individualId
