@@ -779,6 +779,13 @@ export default function DataEntry() {
 
                                               newData[individualId].customTraits[trait.name] = checked ? 'yes' : 'no';
 
+                                              console.log(`Checkbox changed for ${individualId} - ${trait.name}:`, {
+                                                checked,
+                                                newValue: checked ? 'yes' : 'no',
+                                                fullIndividualData: newData[individualId],
+                                                allSporeData: newData
+                                              });
+
                                               return newData;
                                             });
                                           }}
