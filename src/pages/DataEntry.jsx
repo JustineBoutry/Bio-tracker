@@ -860,7 +860,12 @@ export default function DataEntry() {
                     )}
                       </div>
                       <div className="flex gap-2">
-                        <Button onClick={() => saveInfectedMutation.mutate(sporeData)}>
+                        <Button onClick={() => {
+                          console.log('=== FINAL SPORE DATA BEFORE SAVE ===');
+                          console.log(JSON.stringify(sporeData, null, 2));
+                          console.log('=== END ===');
+                          saveInfectedMutation.mutate(JSON.parse(JSON.stringify(sporeData)));
+                        }}>
                           {t('dataEntry.saveInfectionData')}
                         </Button>
                         <Button
