@@ -385,10 +385,17 @@ export default function DataEntry() {
             spores_count: parseFloat(data.count) || 0
           };
 
+          // Only update custom_data if there are custom traits
           if (data.customTraits && Object.keys(data.customTraits).length > 0) {
             const currentCustomData = inds[0].custom_data || {};
+            // Merge: keep existing data, override with new trait values
             updateData.custom_data = { ...currentCustomData, ...data.customTraits };
           }
+
+          console.log(`Saving individual ${individualId}:`, {
+            customTraits: data.customTraits,
+            updateData: updateData
+          });
 
           await base44.entities.Individual.update(inds[0].id, updateData);
           return individualId;
