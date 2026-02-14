@@ -335,19 +335,26 @@ export default function DataEntry() {
     const data = {};
     ids.forEach((id) => {
       const trimmedId = id.trim();
+      // Create completely independent customTraits object for each individual
       const customTraits = {};
       infectionTraits.forEach(trait => {
         if (trait.type === 'boolean') {
-          customTraits[trait.name] = 'no';
+          customTraits[trait.name] = 'no';  // Default to 'no'
+        } else if (trait.type === 'number') {
+          customTraits[trait.name] = null;
+        } else {
+          customTraits[trait.name] = '';
         }
       });
+      
       data[trimmedId] = { 
         volume: '', 
         count: '',
-        customTraits: customTraits
+        customTraits: { ...customTraits }  // Ensure it's a new object
       };
     });
-    console.log('Initial sporeData after parsing:', data);
+    
+    console.log('Initial sporeData after parsing:', JSON.stringify(data, null, 2));
     setSporeData(data);
     setShowSporeEntry(true);
   };
