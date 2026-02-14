@@ -336,12 +336,9 @@ export default function DataEntry() {
     const data = {};
     ids.forEach((id) => {
       const trimmedId = id.trim();
-      // Create completely independent customTraits object for each individual
       const customTraits = {};
       infectionTraits.forEach(trait => {
-        if (trait.type === 'boolean') {
-          customTraits[trait.name] = 'no';  // Default to 'no'
-        } else if (trait.type === 'number') {
+        if (trait.type === 'number') {
           customTraits[trait.name] = null;
         } else {
           customTraits[trait.name] = '';
@@ -351,11 +348,10 @@ export default function DataEntry() {
       data[trimmedId] = { 
         volume: '', 
         count: '',
-        customTraits: { ...customTraits }  // Ensure it's a new object
+        customTraits: { ...customTraits }
       };
     });
     
-    console.log('Initial sporeData after parsing:', JSON.stringify(data, null, 2));
     setSporeData(data);
     setShowSporeEntry(true);
   };
@@ -789,32 +785,7 @@ export default function DataEntry() {
                                 .map((trait) => (
                                   <div key={`${individualId}-${trait.name}`}>
                                     <label className="text-sm">{trait.name}</label>
-                                    {trait.type === 'boolean' ? (
-                                     <Select
-                                       value={sporeData[individualId]?.customTraits?.[trait.name] || 'no'}
-                                       onValueChange={(value) => {
-                                         const currentTraits = sporeData[individualId]?.customTraits || {};
-                                         setSporeData({
-                                           ...sporeData,
-                                           [individualId]: {
-                                             ...sporeData[individualId],
-                                             customTraits: {
-                                               ...currentTraits,
-                                               [trait.name]: value
-                                             }
-                                           }
-                                         });
-                                       }}
-                                     >
-                                       <SelectTrigger>
-                                         <SelectValue />
-                                       </SelectTrigger>
-                                       <SelectContent>
-                                         <SelectItem value="no">No</SelectItem>
-                                         <SelectItem value="yes">Yes</SelectItem>
-                                       </SelectContent>
-                                     </Select>
-                                    ) : trait.type === 'number' ? (
+                                    {trait.type === 'number' ? (
                                       <Input
                                         type="number"
                                         value={sporeData[individualId]?.customTraits?.[trait.name] || ''}
