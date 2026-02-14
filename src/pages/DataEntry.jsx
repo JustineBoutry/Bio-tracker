@@ -794,11 +794,13 @@ export default function DataEntry() {
                                         value={sporeData[individualId]?.customTraits?.[trait.name] || 'no'}
                                         onValueChange={(value) => {
                                           setSporeData(prev => {
-                                            const newData = { ...prev };
+                                            // Deep clone to ensure independent objects
+                                            const newData = JSON.parse(JSON.stringify(prev));
                                             if (!newData[individualId].customTraits) {
                                               newData[individualId].customTraits = {};
                                             }
                                             newData[individualId].customTraits[trait.name] = value;
+                                            console.log(`Select changed for ${individualId} - ${trait.name}: ${value}`, newData[individualId]);
                                             return newData;
                                           });
                                         }}
