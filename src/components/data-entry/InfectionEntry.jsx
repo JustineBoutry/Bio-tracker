@@ -141,9 +141,11 @@ export default function InfectionEntry({ experimentId, onComplete, experiment })
           traitDefaults[trait.name] = 'no';
         }
       });
-      if (Object.keys(traitDefaults).length > 0) {
-        initialSporeData[trimmedId] = { customTraits: traitDefaults };
-      }
+      initialSporeData[trimmedId] = { 
+        volume: '', 
+        count: '',
+        customTraits: Object.keys(traitDefaults).length > 0 ? traitDefaults : {}
+      };
     });
     setSporeData(initialSporeData);
   };
