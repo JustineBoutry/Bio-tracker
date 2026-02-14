@@ -791,19 +791,12 @@ export default function DataEntry() {
                                     <label className="text-sm">{trait.name}</label>
                                     {trait.type === 'boolean' ? (
                                      <Select
-                                       value={sporeData[individualId]?.customTraits?.[trait.name]}
+                                       value={sporeData[individualId]?.customTraits?.[trait.name] || 'no'}
                                        onValueChange={(value) => {
-                                         console.log(`CHANGING ${individualId} - ${trait.name} to: "${value}"`);
-                                         setSporeData({
-                                           ...sporeData,
-                                           [individualId]: {
-                                             ...sporeData[individualId],
-                                             customTraits: {
-                                               ...sporeData[individualId].customTraits,
-                                               [trait.name]: value
-                                             }
-                                           }
-                                         });
+                                         const updated = { ...sporeData };
+                                         updated[individualId].customTraits[trait.name] = value;
+                                         console.log(`CHANGED ${individualId}.${trait.name} = "${value}"`);
+                                         setSporeData(updated);
                                        }}
                                      >
                                        <SelectTrigger>
