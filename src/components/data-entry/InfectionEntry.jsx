@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import CustomTraitsEntry from "./CustomTraitsEntry";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function InfectionEntry({ experimentId, onComplete, experiment }) {
   const queryClient = useQueryClient();
@@ -227,7 +227,7 @@ export default function InfectionEntry({ experimentId, onComplete, experiment })
                             </div>
                           )}
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-3 gap-3">
                           <div>
                             <label className="block text-xs font-medium mb-1">Spores Volume</label>
                             <Input
@@ -245,16 +245,61 @@ export default function InfectionEntry({ experimentId, onComplete, experiment })
                               placeholder="Count"
                             />
                           </div>
+                          {(experiment?.custom_traits || [])
+                            .filter(trait => trait.show_with === 'infection')
+                            .map((trait) => (
+                              <div key={`${id}-${trait.name}`}>
+                                <label className="block text-xs font-medium mb-1">{trait.name}</label>
+                                {trait.type === 'boolean' ? (
+                                  <div className="flex items-center gap-2 h-9">
+                                    <Checkbox
+                                      id={`${id}-${trait.name}`}
+                                      checked={(sporeData[id]?.customTraits?.[trait.name] || 'no') === 'yes'}
+                                      onCheckedChange={(checked) => {
+                                        const currentTraits = sporeData[id]?.customTraits || {};
+                                        updateSporeData(id, 'customTraits', {
+                                          ...currentTraits,
+                                          [trait.name]: checked ? 'yes' : 'no'
+                                        });
+                                      }}
+                                    />
+                                    <span className="text-xs text-gray-600">
+                                      {(sporeData[id]?.customTraits?.[trait.name] || 'no') === 'yes' ? 'Yes' : 'No'}
+                                    </span>
+                                  </div>
+                                ) : trait.type === 'number' ? (
+                                  <Input
+                                    type="number"
+                                    value={sporeData[id]?.customTraits?.[trait.name] || ''}
+                                    onChange={(e) => {
+                                      const currentTraits = sporeData[id]?.customTraits || {};
+                                      updateSporeData(id, 'customTraits', {
+                                        ...currentTraits,
+                                        [trait.name]: parseFloat(e.target.value) || null
+                                      });
+                                    }}
+                                    placeholder={`Enter ${trait.name}`}
+                                    className="h-9"
+                                  />
+                                ) : (
+                                  <Input
+                                    type="text"
+                                    value={sporeData[id]?.customTraits?.[trait.name] || ''}
+                                    onChange={(e) => {
+                                      const currentTraits = sporeData[id]?.customTraits || {};
+                                      updateSporeData(id, 'customTraits', {
+                                        ...currentTraits,
+                                        [trait.name]: e.target.value
+                                      });
+                                    }}
+                                    placeholder={`Enter ${trait.name}`}
+                                    className="h-9"
+                                  />
+                                )}
+                              </div>
+                            ))
+                          }
                         </div>
-                        
-                        <CustomTraitsEntry
-                          selectedIndividuals={[id]}
-                          customTraits={experiment?.custom_traits || []}
-                          onUpdate={(values) => updateSporeData(id, 'customTraits', values)}
-                          context="infection"
-                          perIndividual={true}
-                          individualTraitValues={sporeData[id]?.customTraits || {}}
-                        />
                       </div>
                     );
                   })}
