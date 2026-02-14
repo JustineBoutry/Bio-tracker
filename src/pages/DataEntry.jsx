@@ -860,7 +860,7 @@ export default function DataEntry() {
                     )}
                       </div>
                       <div className="flex gap-2">
-                        <Button onClick={() => saveInfectedMutation.mutate()}>
+                        <Button onClick={() => saveInfectedMutation.mutate(sporeData)}>
                           {t('dataEntry.saveInfectionData')}
                         </Button>
                         <Button
