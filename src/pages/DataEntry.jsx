@@ -347,6 +347,7 @@ export default function DataEntry() {
         customTraits: customTraits
       };
     });
+    console.log('Initial sporeData after parsing:', data);
     setSporeData(data);
     setShowSporeEntry(true);
   };
