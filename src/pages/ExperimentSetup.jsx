@@ -379,6 +379,7 @@ export default function ExperimentSetup() {
                     value={trait.type}
                     onChange={(e) => updateTraitType(index, e.target.value)}
                   >
+                    <option value="boolean">Yes/No</option>
                     <option value="text">Text</option>
                     <option value="number">Number</option>
                   </select>

@@ -338,7 +338,9 @@ export default function DataEntry() {
       const trimmedId = id.trim();
       const customTraits = {};
       infectionTraits.forEach(trait => {
-        if (trait.type === 'number') {
+        if (trait.type === 'boolean') {
+          customTraits[trait.name] = false;
+        } else if (trait.type === 'number') {
           customTraits[trait.name] = null;
         } else {
           customTraits[trait.name] = '';
@@ -785,7 +787,27 @@ export default function DataEntry() {
                                 .map((trait) => (
                                   <div key={`${individualId}-${trait.name}`}>
                                     <label className="text-sm">{trait.name}</label>
-                                    {trait.type === 'number' ? (
+                                    {trait.type === 'boolean' ? (
+                                      <div className="flex items-center gap-2 h-10">
+                                        <Checkbox
+                                          checked={sporeData[individualId]?.customTraits?.[trait.name] || false}
+                                          onCheckedChange={(checked) => {
+                                            const currentTraits = sporeData[individualId]?.customTraits || {};
+                                            setSporeData({
+                                              ...sporeData,
+                                              [individualId]: {
+                                                ...sporeData[individualId],
+                                                customTraits: {
+                                                  ...currentTraits,
+                                                  [trait.name]: checked
+                                                }
+                                              }
+                                            });
+                                          }}
+                                        />
+                                        <span className="text-sm">{sporeData[individualId]?.customTraits?.[trait.name] ? 'Yes' : 'No'}</span>
+                                      </div>
+                                    ) : trait.type === 'number' ? (
                                       <Input
                                         type="number"
                                         value={sporeData[individualId]?.customTraits?.[trait.name] || ''}
