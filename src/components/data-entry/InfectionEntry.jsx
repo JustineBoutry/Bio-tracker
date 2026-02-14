@@ -121,6 +121,23 @@ export default function InfectionEntry({ experimentId, onComplete, experiment })
   const parseInfectedIds = () => {
     const ids = infectedData.split(/[\n,\s]+/).filter(id => id.trim());
     setParsedInfected(ids.map(id => id.trim()));
+    
+    // Initialize custom traits with "no" for all infected individuals
+    const initialSporeData = {};
+    const infectionTraits = (experiment?.custom_traits || []).filter(t => t.show_with === 'infection');
+    ids.forEach(id => {
+      const trimmedId = id.trim();
+      const traitDefaults = {};
+      infectionTraits.forEach(trait => {
+        if (trait.type === 'boolean') {
+          traitDefaults[trait.name] = 'no';
+        }
+      });
+      if (Object.keys(traitDefaults).length > 0) {
+        initialSporeData[trimmedId] = { customTraits: traitDefaults };
+      }
+    });
+    setSporeData(initialSporeData);
   };
 
   const updateSporeData = (id, field, value) => {

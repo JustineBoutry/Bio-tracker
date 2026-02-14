@@ -60,12 +60,12 @@ export default function CustomTraitsEntry({
               <div className="flex items-center gap-2">
                 <Checkbox
                   id={`${individualId}-${trait.name}`}
-                  checked={individualTraitValues[trait.name] || false}
+                  checked={individualTraitValues[trait.name] === 'yes'}
                   onCheckedChange={(checked) => 
-                    onUpdate({ ...individualTraitValues, [trait.name]: checked })
+                    onUpdate({ ...individualTraitValues, [trait.name]: checked ? 'yes' : 'no' })
                   }
                 />
-                <span className="text-xs text-gray-600">{individualTraitValues[trait.name] ? 'Yes' : 'No'}</span>
+                <span className="text-xs text-gray-600">{individualTraitValues[trait.name] === 'yes' ? 'Yes' : 'No'}</span>
               </div>
             ) : trait.type === 'number' ? (
               <Input
