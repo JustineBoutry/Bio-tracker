@@ -330,20 +330,21 @@ export default function DataEntry() {
 
   const parseInfectedIds = () => {
     const ids = infectedIds.split(/[\s,]+/).filter((id) => id.trim());
-    const data = {};
     const infectionTraits = (experiment?.custom_traits || []).filter(t => t.tab === 'infection' && (t.modality === 'infected' || t.modality === 'all'));
+    
+    const data = {};
     ids.forEach((id) => {
       const trimmedId = id.trim();
-      const traitDefaults = {};
+      const customTraits = {};
       infectionTraits.forEach(trait => {
         if (trait.type === 'boolean') {
-          traitDefaults[trait.name] = 'no';
+          customTraits[trait.name] = 'no';
         }
       });
       data[trimmedId] = { 
         volume: '', 
         count: '',
-        customTraits: { ...traitDefaults }
+        customTraits: customTraits
       };
     });
     setSporeData(data);
