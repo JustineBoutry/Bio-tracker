@@ -361,6 +361,8 @@ export default function DataEntry() {
 
   const saveInfectedMutation = useMutation({
     mutationFn: async () => {
+      console.log('Starting save with sporeData:', JSON.stringify(sporeData, null, 2));
+      
       const alreadySet = [];
       
       // Check for existing infection status
@@ -387,22 +389,37 @@ export default function DataEntry() {
           individual_id: individualId
         });
         if (inds.length > 0) {
+          const currentCustomData = inds[0].custom_data || {};
+          
+          // Build the new custom_data object by taking ONLY the traits from sporeData
+          const newCustomData = {};
+          
+          // Keep any existing custom data that's NOT in the infection traits
+          const infectionTraitNames = Object.keys(data.customTraits || {});
+          Object.keys(currentCustomData).forEach(key => {
+            if (!infectionTraitNames.includes(key)) {
+              newCustomData[key] = currentCustomData[key];
+            }
+          });
+          
+          // Add the infection traits with their EXACT values from the form
+          if (data.customTraits) {
+            Object.entries(data.customTraits).forEach(([traitName, traitValue]) => {
+              newCustomData[traitName] = traitValue;
+            });
+          }
+          
           const updateData = {
             infected: "confirmed Yes",
             spores_volume: data.volume,
-            spores_count: parseFloat(data.count) || 0
+            spores_count: parseFloat(data.count) || 0,
+            custom_data: newCustomData
           };
 
-          // Only update custom_data if there are custom traits
-          if (data.customTraits && Object.keys(data.customTraits).length > 0) {
-            const currentCustomData = inds[0].custom_data || {};
-            // Merge: keep existing data, override with new trait values
-            updateData.custom_data = { ...currentCustomData, ...data.customTraits };
-          }
-
-          console.log(`Saving individual ${individualId}:`, {
-            customTraits: data.customTraits,
-            updateData: updateData
+          console.log(`Saving ${individualId}:`, {
+            formCustomTraits: data.customTraits,
+            oldCustomData: currentCustomData,
+            newCustomData: newCustomData
           });
 
           await base44.entities.Individual.update(inds[0].id, updateData);
