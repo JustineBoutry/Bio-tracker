@@ -919,20 +919,217 @@ export default function DataEntry() {
           </TabsContent>
 
           <TabsContent value="custom">
-            <Card>
-              <CardHeader>
-                <CardTitle>Standalone Custom Traits Entry</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
-                  Traits configured to show on specific tabs (like infection) will appear inline with those forms.
-                  This tab is for traits marked as "Standalone".
-                </p>
-                <div className="text-sm text-gray-500">
-                  No standalone traits configured yet. Add them in Experiment Setup.
+            {(() => {
+              const standaloneTraits = (experiment?.custom_traits || []).filter(t => t.tab === 'standalone');
+              
+              if (standaloneTraits.length === 0) {
+                return (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Standalone Custom Traits Entry</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Traits configured to show on specific tabs (like infection) will appear inline with those forms.
+                        This tab is for traits marked as "Standalone".
+                      </p>
+                      <div className="text-sm text-gray-500">
+                        No standalone traits configured yet. Add them in Experiment Setup.
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  {standaloneTraits.map((trait) => {
+                    const colorClasses = {
+                      gray: 'bg-gray-50',
+                      blue: 'bg-blue-50',
+                      green: 'bg-green-50',
+                      yellow: 'bg-yellow-50',
+                      purple: 'bg-purple-50',
+                      pink: 'bg-pink-50',
+                      orange: 'bg-orange-50'
+                    };
+
+                    const isCheckboxMode = trait.selection_mode === 'checkbox';
+                    const [traitData, setTraitData] = React.useState(isCheckboxMode ? [] : '');
+                    const [traitValues, setTraitValues] = React.useState({});
+
+                    return (
+                      <Card key={trait.name} className={colorClasses[trait.color || 'gray']}>
+                        <CardHeader>
+                          <CardTitle>{trait.name}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {isCheckboxMode ? (
+                            <>
+                              <div className="mb-4 text-sm text-gray-600">
+                                {individuals.length} {t('common.individuals')} | {traitData.length} {t('common.selected')}
+                              </div>
+                              <div className="space-y-2 max-h-96 overflow-auto mb-4">
+                                {individuals.map((ind) => (
+                                  <div key={ind.id} className="flex items-center gap-3 p-2 border rounded bg-white">
+                                    <Checkbox
+                                      checked={traitData.includes(ind.id)}
+                                      onCheckedChange={(checked) => {
+                                        if (checked) {
+                                          setTraitData([...traitData, ind.id]);
+                                        } else {
+                                          setTraitData(traitData.filter(id => id !== ind.id));
+                                        }
+                                      }}
+                                    />
+                                    <span className="font-mono">{ind.individual_id}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              {traitData.length > 0 && (
+                                <div className="border-t pt-4 space-y-3">
+                                  <h4 className="font-semibold">Enter {trait.name} value for selected individuals:</h4>
+                                  {trait.type === 'boolean' ? (
+                                    <div className="flex items-center gap-2">
+                                      <Checkbox
+                                        checked={traitValues[trait.name] || false}
+                                        onCheckedChange={(checked) => {
+                                          setTraitValues({ ...traitValues, [trait.name]: checked });
+                                        }}
+                                      />
+                                      <span className="text-sm">{traitValues[trait.name] ? 'Yes' : 'No'}</span>
+                                    </div>
+                                  ) : trait.type === 'number' ? (
+                                    <Input
+                                      type="number"
+                                      value={traitValues[trait.name] || ''}
+                                      onChange={(e) => {
+                                        setTraitValues({ ...traitValues, [trait.name]: parseFloat(e.target.value) || null });
+                                      }}
+                                      placeholder={`Enter ${trait.name}`}
+                                    />
+                                  ) : (
+                                    <Input
+                                      type="text"
+                                      value={traitValues[trait.name] || ''}
+                                      onChange={(e) => {
+                                        setTraitValues({ ...traitValues, [trait.name]: e.target.value });
+                                      }}
+                                      placeholder={`Enter ${trait.name}`}
+                                    />
+                                  )}
+                                  <Button
+                                    onClick={() => {
+                                      customTraitsMutation.mutate(traitValues);
+                                      setTraitData([]);
+                                      setTraitValues({});
+                                    }}
+                                  >
+                                    {t('common.submit')}
+                                  </Button>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <div>
+                                <label className="text-sm font-medium mb-2 block">Enter Individual IDs (comma or space separated):</label>
+                                <Textarea
+                                  placeholder="e.g., ID-001, ID-002, ID-003"
+                                  value={traitData}
+                                  onChange={(e) => setTraitData(e.target.value)}
+                                  rows={3}
+                                />
+                              </div>
+                              {traitData.trim() && (
+                                <div className="mt-4 space-y-3">
+                                  <h4 className="font-semibold">Enter {trait.name} value:</h4>
+                                  {trait.type === 'boolean' ? (
+                                    <div className="flex items-center gap-2">
+                                      <Checkbox
+                                        checked={traitValues[trait.name] || false}
+                                        onCheckedChange={(checked) => {
+                                          setTraitValues({ ...traitValues, [trait.name]: checked });
+                                        }}
+                                      />
+                                      <span className="text-sm">{traitValues[trait.name] ? 'Yes' : 'No'}</span>
+                                    </div>
+                                  ) : trait.type === 'number' ? (
+                                    <Input
+                                      type="number"
+                                      value={traitValues[trait.name] || ''}
+                                      onChange={(e) => {
+                                        setTraitValues({ ...traitValues, [trait.name]: parseFloat(e.target.value) || null });
+                                      }}
+                                      placeholder={`Enter ${trait.name}`}
+                                    />
+                                  ) : (
+                                    <Input
+                                      type="text"
+                                      value={traitValues[trait.name] || ''}
+                                      onChange={(e) => {
+                                        setTraitValues({ ...traitValues, [trait.name]: e.target.value });
+                                      }}
+                                      placeholder={`Enter ${trait.name}`}
+                                    />
+                                  )}
+                                  <Button
+                                    onClick={async () => {
+                                      const ids = traitData.split(/[\s,]+/).filter((id) => id.trim());
+                                      const notFound = [];
+                                      
+                                      const updates = await Promise.all(ids.map(async (individualId) => {
+                                        const trimmedId = individualId.trim();
+                                        const inds = await base44.entities.Individual.filter({
+                                          experiment_id: selectedExp,
+                                          individual_id: trimmedId
+                                        });
+                                        if (inds.length > 0) {
+                                          const currentCustomData = inds[0].custom_data || {};
+                                          await base44.entities.Individual.update(inds[0].id, {
+                                            custom_data: { ...currentCustomData, ...traitValues }
+                                          });
+                                          return trimmedId;
+                                        }
+                                        notFound.push(trimmedId);
+                                        return null;
+                                      }));
+
+                                      const successIds = updates.filter(id => id !== null);
+                                      
+                                      if (successIds.length > 0) {
+                                        queryClient.invalidateQueries(['individuals']);
+                                        const idsText = successIds.join(', ');
+                                        await base44.entities.LabNote.create({
+                                          experiment_id: selectedExp,
+                                          note: `${trait.name}: updated ${successIds.length} individuals (IDs: ${idsText})`,
+                                          timestamp: new Date().toISOString()
+                                        });
+                                      }
+                                      
+                                      setTraitData('');
+                                      setTraitValues({});
+                                      
+                                      let message = `${successIds.length} individual(s) updated!`;
+                                      if (notFound.length > 0) {
+                                        message += `\n\nNot found: ${notFound.join(', ')}`;
+                                      }
+                                      alert(message);
+                                    }}
+                                  >
+                                    {t('common.submit')}
+                                  </Button>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
-              </CardContent>
-            </Card>
+              );
+            })()}
           </TabsContent>
         </Tabs>
       }

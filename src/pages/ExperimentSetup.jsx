@@ -123,7 +123,7 @@ export default function ExperimentSetup() {
   };
 
   const addCustomTrait = () => {
-    setCustomTraits([...customTraits, { name: "", type: "text", tab: "standalone", modality: "all" }]);
+    setCustomTraits([...customTraits, { name: "", type: "text", tab: "standalone", modality: "all", selection_mode: "checkbox", color: "gray" }]);
   };
 
   const updateTraitName = (index, name) => {
@@ -150,6 +150,18 @@ export default function ExperimentSetup() {
   const updateTraitModality = (index, modality) => {
     const newTraits = [...customTraits];
     newTraits[index].modality = modality;
+    setCustomTraits(newTraits);
+  };
+
+  const updateTraitSelectionMode = (index, mode) => {
+    const newTraits = [...customTraits];
+    newTraits[index].selection_mode = mode;
+    setCustomTraits(newTraits);
+  };
+
+  const updateTraitColor = (index, color) => {
+    const newTraits = [...customTraits];
+    newTraits[index].color = color;
     setCustomTraits(newTraits);
   };
 
@@ -363,8 +375,8 @@ export default function ExperimentSetup() {
           </p>
           {customTraits.map((trait, index) => (
             <div key={index} className="border p-4 rounded space-y-3">
-              <div className="flex gap-3">
-                <div className="flex-1">
+              <div className="flex gap-3 flex-wrap">
+                <div className="flex-1 min-w-[200px]">
                   <label className="text-sm font-medium">Trait Name</label>
                   <Input
                     value={trait.name}
@@ -372,7 +384,7 @@ export default function ExperimentSetup() {
                     placeholder="e.g., Cauliflower"
                   />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-[150px]">
                   <label className="text-sm font-medium">Type</label>
                   <select
                     className="w-full border rounded p-2"
@@ -384,7 +396,7 @@ export default function ExperimentSetup() {
                     <option value="number">Number</option>
                   </select>
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-[150px]">
                   <label className="text-sm font-medium">Tab</label>
                   <select
                     className="w-full border rounded p-2"
@@ -399,7 +411,7 @@ export default function ExperimentSetup() {
                   </select>
                 </div>
                 {trait.tab === 'infection' && (
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-[150px]">
                     <label className="text-sm font-medium">Modality</label>
                     <select
                       className="w-full border rounded p-2"
@@ -411,6 +423,37 @@ export default function ExperimentSetup() {
                       <option value="non_infected">Non-Infected Only</option>
                     </select>
                   </div>
+                )}
+                {trait.tab === 'standalone' && (
+                  <>
+                    <div className="flex-1 min-w-[150px]">
+                      <label className="text-sm font-medium">Selection Mode</label>
+                      <select
+                        className="w-full border rounded p-2"
+                        value={trait.selection_mode || "checkbox"}
+                        onChange={(e) => updateTraitSelectionMode(index, e.target.value)}
+                      >
+                        <option value="checkbox">Checkbox List</option>
+                        <option value="id_list">Enter IDs</option>
+                      </select>
+                    </div>
+                    <div className="flex-1 min-w-[150px]">
+                      <label className="text-sm font-medium">Tab Color</label>
+                      <select
+                        className="w-full border rounded p-2"
+                        value={trait.color || "gray"}
+                        onChange={(e) => updateTraitColor(index, e.target.value)}
+                      >
+                        <option value="gray">Gray</option>
+                        <option value="blue">Blue</option>
+                        <option value="green">Green</option>
+                        <option value="yellow">Yellow</option>
+                        <option value="purple">Purple</option>
+                        <option value="pink">Pink</option>
+                        <option value="orange">Orange</option>
+                      </select>
+                    </div>
+                  </>
                 )}
                 <div className="flex flex-col gap-1 mt-6">
                   <Button
