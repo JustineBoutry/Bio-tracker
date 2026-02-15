@@ -958,6 +958,30 @@ export default function DataEntry() {
                     const [traitData, setTraitData] = React.useState(isCheckboxMode ? [] : '');
                     const [traitValues, setTraitValues] = React.useState({});
 
+                    const filters = trait.filters || {
+                      alive_status: "alive",
+                      infection_status: "all",
+                      red_status: "all",
+                      sex: "all"
+                    };
+
+                    const filteredIndividuals = individuals.filter(ind => {
+                      if (filters.alive_status === "alive" && !ind.alive) return false;
+                      if (filters.alive_status === "dead" && ind.alive) return false;
+                      
+                      if (filters.infection_status === "infected" && ind.infected !== "confirmed Yes") return false;
+                      if (filters.infection_status === "non_infected" && ind.infected !== "confirmed No") return false;
+                      if (filters.infection_status === "not_tested" && ind.infected !== "not_tested") return false;
+                      
+                      if (filters.red_status === "red_confirmed" && !ind.red_confirmed) return false;
+                      if (filters.red_status === "not_red" && ind.red_confirmed) return false;
+                      
+                      if (filters.sex === "male" && ind.sex !== "male") return false;
+                      if (filters.sex === "female" && ind.sex !== "female") return false;
+                      
+                      return true;
+                    });
+
                     return (
                       <Card key={trait.name} className={colorClasses[trait.color || 'gray']}>
                         <CardHeader>
@@ -967,10 +991,10 @@ export default function DataEntry() {
                           {isCheckboxMode ? (
                             <>
                               <div className="mb-4 text-sm text-gray-600">
-                                {individuals.length} {t('common.individuals')} | {traitData.length} {t('common.selected')}
+                                {filteredIndividuals.length} {t('common.individuals')} | {traitData.length} {t('common.selected')}
                               </div>
                               <div className="space-y-2 max-h-96 overflow-auto mb-4">
-                                {individuals.map((ind) => (
+                                {filteredIndividuals.map((ind) => (
                                   <div key={ind.id} className="flex items-center gap-3 p-2 border rounded bg-white">
                                     <Checkbox
                                       checked={traitData.includes(ind.id)}

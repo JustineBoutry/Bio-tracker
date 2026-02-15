@@ -123,7 +123,20 @@ export default function ExperimentSetup() {
   };
 
   const addCustomTrait = () => {
-    setCustomTraits([...customTraits, { name: "", type: "text", tab: "standalone", modality: "all", selection_mode: "checkbox", color: "gray" }]);
+    setCustomTraits([...customTraits, { 
+      name: "", 
+      type: "text", 
+      tab: "standalone", 
+      modality: "all", 
+      selection_mode: "checkbox", 
+      color: "gray",
+      filters: {
+        alive_status: "alive",
+        infection_status: "all",
+        red_status: "all",
+        sex: "all"
+      }
+    }]);
   };
 
   const updateTraitName = (index, name) => {
@@ -162,6 +175,20 @@ export default function ExperimentSetup() {
   const updateTraitColor = (index, color) => {
     const newTraits = [...customTraits];
     newTraits[index].color = color;
+    setCustomTraits(newTraits);
+  };
+
+  const updateTraitFilter = (index, filterKey, value) => {
+    const newTraits = [...customTraits];
+    if (!newTraits[index].filters) {
+      newTraits[index].filters = {
+        alive_status: "alive",
+        infection_status: "all",
+        red_status: "all",
+        sex: "all"
+      };
+    }
+    newTraits[index].filters[filterKey] = value;
     setCustomTraits(newTraits);
   };
 
@@ -455,6 +482,64 @@ export default function ExperimentSetup() {
                     </div>
                   </>
                 )}
+              </div>
+              {trait.tab === 'standalone' && trait.selection_mode === 'checkbox' && (
+                <div className="border-t pt-3 mt-3">
+                  <label className="text-sm font-semibold block mb-2">Filter Individuals:</label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-600">Alive Status</label>
+                      <select
+                        className="w-full border rounded p-1 text-sm"
+                        value={trait.filters?.alive_status || "alive"}
+                        onChange={(e) => updateTraitFilter(index, "alive_status", e.target.value)}
+                      >
+                        <option value="all">All</option>
+                        <option value="alive">Alive Only</option>
+                        <option value="dead">Dead Only</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600">Infection Status</label>
+                      <select
+                        className="w-full border rounded p-1 text-sm"
+                        value={trait.filters?.infection_status || "all"}
+                        onChange={(e) => updateTraitFilter(index, "infection_status", e.target.value)}
+                      >
+                        <option value="all">All</option>
+                        <option value="infected">Infected Only</option>
+                        <option value="non_infected">Non-Infected</option>
+                        <option value="not_tested">Not Tested</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600">Red Status</label>
+                      <select
+                        className="w-full border rounded p-1 text-sm"
+                        value={trait.filters?.red_status || "all"}
+                        onChange={(e) => updateTraitFilter(index, "red_status", e.target.value)}
+                      >
+                        <option value="all">All</option>
+                        <option value="red_confirmed">Red Confirmed</option>
+                        <option value="not_red">Not Red</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600">Sex</label>
+                      <select
+                        className="w-full border rounded p-1 text-sm"
+                        value={trait.filters?.sex || "all"}
+                        onChange={(e) => updateTraitFilter(index, "sex", e.target.value)}
+                      >
+                        <option value="all">All</option>
+                        <option value="male">Male Only</option>
+                        <option value="female">Female Only</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-2"
                 <div className="flex flex-col gap-1 mt-6">
                   <Button
                     variant="ghost"
