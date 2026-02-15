@@ -539,7 +539,7 @@ export default function ExperimentSetup() {
                   </div>
                 </div>
               )}
-              <div className="flex items-center gap-2"
+              <div className="flex items-center gap-2">
                 <div className="flex flex-col gap-1 mt-6">
                   <Button
                     variant="ghost"
