@@ -45,12 +45,11 @@ export default function DataEntry() {
     enabled: !!selectedExp
   });
 
-  const { data: individuals = [] } = useQuery({
+  const { data: allIndividuals = [] } = useQuery({
     queryKey: ['individuals', selectedExp, categoryFilters],
     queryFn: async () => {
       const results = await base44.entities.Individual.filter({ 
-        experiment_id: selectedExp, 
-        alive: true 
+        experiment_id: selectedExp
       });
       
       // Filter by selected categories (client-side for multiple selection support)
@@ -70,6 +69,9 @@ export default function DataEntry() {
     },
     enabled: !!selectedExp
   });
+
+  // Filter alive individuals for reproduction, death, and redness tabs
+  const individuals = allIndividuals.filter(ind => ind.alive);
 
   const reproductionMutation = useMutation({
     mutationFn: async () => {
@@ -965,7 +967,7 @@ export default function DataEntry() {
                       sex: "all"
                     };
 
-                    const filteredIndividuals = individuals.filter(ind => {
+                    const filteredIndividuals = allIndividuals.filter(ind => {
                       if (filters.alive_status === "alive" && !ind.alive) return false;
                       if (filters.alive_status === "dead" && ind.alive) return false;
                       
