@@ -959,17 +959,13 @@ export default function DataEntry() {
               return (
                 <div className="space-y-4">
                   {Object.entries(groupedTraits).map(([groupName, traits]) => (
-                    <div key={groupName}>
-                      {traits.map((trait) => (
-                        <StandaloneTraitEntry 
-                          key={trait.name}
-                          trait={trait}
-                          allIndividuals={allIndividuals}
-                          selectedExp={selectedExp}
-                          groupedTraits={traits}
-                        />
-                      ))}
-                    </div>
+                    <StandaloneTraitEntry 
+                      key={groupName}
+                      trait={traits[0]}
+                      allIndividuals={allIndividuals}
+                      selectedExp={selectedExp}
+                      groupedTraits={traits}
+                    />
                   ))}
                 </div>
               );
