@@ -269,6 +269,10 @@ export default function Dataset() {
       const factorName = sortColumn.replace('factor_', '');
       valA = a.factors?.[factorName] || '';
       valB = b.factors?.[factorName] || '';
+    } else if (sortColumn.startsWith('custom_')) {
+      const traitName = sortColumn.replace('custom_', '');
+      valA = a.custom_data?.[traitName] ?? '';
+      valB = b.custom_data?.[traitName] ?? '';
     } else {
       valA = a[sortColumn] ?? '';
       valB = b[sortColumn] ?? '';
@@ -542,7 +546,13 @@ export default function Dataset() {
                      Red Confirmed {sortColumn === 'red_confirmed' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </th>
                     {experiment?.custom_traits?.map(trait => (
-                     <th key={trait.name} className="p-2 text-left">{trait.name}</th>
+                    <th 
+                      key={trait.name} 
+                      className="p-2 text-left cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort(`custom_${trait.name}`)}
+                    >
+                      {trait.name} {sortColumn === `custom_${trait.name}` && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
                     ))}
                     <th className="p-2 text-left">Actions</th>
                   </tr>
