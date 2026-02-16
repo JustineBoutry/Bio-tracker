@@ -460,17 +460,19 @@ export default function ExperimentSetup() {
                 )}
                 {(trait.tab === 'standalone' || customTraits.some(t => t.name === trait.tab)) && (
                   <>
-                    <div className="flex-1 min-w-[150px]">
-                      <label className="text-sm font-medium">Selection Mode</label>
-                      <select
-                        className="w-full border rounded p-2"
-                        value={trait.selection_mode || "checkbox"}
-                        onChange={(e) => updateTraitSelectionMode(index, e.target.value)}
-                      >
-                        <option value="checkbox">Checkbox List</option>
-                        <option value="id_list">Enter IDs</option>
-                      </select>
-                    </div>
+                    {trait.tab === 'standalone' && (
+                      <div className="flex-1 min-w-[150px]">
+                        <label className="text-sm font-medium">Selection Mode</label>
+                        <select
+                          className="w-full border rounded p-2"
+                          value={trait.selection_mode || "checkbox"}
+                          onChange={(e) => updateTraitSelectionMode(index, e.target.value)}
+                        >
+                          <option value="checkbox">Checkbox List</option>
+                          <option value="id_list">Enter IDs</option>
+                        </select>
+                      </div>
+                    )}
                     <div className="flex-1 min-w-[150px]">
                       <label className="text-sm font-medium">Tab Color</label>
                       <select
