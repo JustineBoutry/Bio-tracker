@@ -214,8 +214,11 @@ export default function ExperimentSetup() {
       name: "",
       trait: "survival",
       chart_type: "bar",
+      x_axis: "factors",
       selected_factors: [],
       facet_factor: null,
+      is_interactive: false,
+      allow_faceting: false,
       filters: {
         exclude_males: false,
         exclude_not_tested: false,
@@ -289,6 +292,24 @@ export default function ExperimentSetup() {
   const updateGraphicShowStatistics = (index, value) => {
     const newGraphics = [...dashboardGraphics];
     newGraphics[index].show_statistics = value;
+    setDashboardGraphics(newGraphics);
+  };
+
+  const updateGraphicXAxis = (index, value) => {
+    const newGraphics = [...dashboardGraphics];
+    newGraphics[index].x_axis = value;
+    setDashboardGraphics(newGraphics);
+  };
+
+  const updateGraphicInteractive = (index, value) => {
+    const newGraphics = [...dashboardGraphics];
+    newGraphics[index].is_interactive = value;
+    setDashboardGraphics(newGraphics);
+  };
+
+  const updateGraphicAllowFaceting = (index, value) => {
+    const newGraphics = [...dashboardGraphics];
+    newGraphics[index].allow_faceting = value;
     setDashboardGraphics(newGraphics);
   };
 
@@ -544,6 +565,17 @@ export default function ExperimentSetup() {
                     <option value="line">Line/Curve Chart</option>
                   </select>
                 </div>
+                <div className="flex-1 min-w-[150px]">
+                  <label className="text-sm font-medium">X-Axis</label>
+                  <select
+                    className="w-full border rounded p-2"
+                    value={graphic.x_axis || "factors"}
+                    onChange={(e) => updateGraphicXAxis(index, e.target.value)}
+                  >
+                    <option value="factors">Grouping Factors</option>
+                    <option value="time">Time</option>
+                  </select>
+                </div>
               </div>
 
               <div className="border-t pt-3">
@@ -578,6 +610,32 @@ export default function ExperimentSetup() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="border-t pt-3">
+                <label className="text-sm font-semibold block mb-2">Interactive Graphic Options:</label>
+                <div className="space-y-2 mb-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={graphic.is_interactive || false}
+                      onChange={(e) => updateGraphicInteractive(index, e.target.checked)}
+                      className="rounded"
+                    />
+                    <span className="text-sm font-medium">Interactive Graphic (allow users to select grouping factors)</span>
+                  </label>
+                  {graphic.is_interactive && (
+                    <label className="flex items-center gap-2 cursor-pointer ml-6">
+                      <input
+                        type="checkbox"
+                        checked={graphic.allow_faceting || false}
+                        onChange={(e) => updateGraphicAllowFaceting(index, e.target.checked)}
+                        className="rounded"
+                      />
+                      <span className="text-sm">Allow faceting option</span>
+                    </label>
+                  )}
+                </div>
               </div>
 
               <div className="border-t pt-3">
