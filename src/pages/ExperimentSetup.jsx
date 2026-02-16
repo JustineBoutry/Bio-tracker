@@ -430,11 +430,18 @@ export default function ExperimentSetup() {
                     value={trait.tab || "standalone"}
                     onChange={(e) => updateTraitTab(index, e.target.value)}
                   >
-                    <option value="standalone">Standalone Tab</option>
+                    <option value="standalone">New Standalone Tab</option>
                     <option value="infection">Infection Entry</option>
                     <option value="reproduction">Reproduction Entry</option>
                     <option value="death">Death Entry</option>
                     <option value="redness">Redness Entry</option>
+                    {customTraits
+                      .filter((t, i) => t.tab === 'standalone' && t.name && i !== index)
+                      .map((t) => (
+                        <option key={t.name} value={t.name}>
+                          {t.name} (custom trait)
+                        </option>
+                      ))}
                   </select>
                 </div>
                 {trait.tab === 'infection' && (
@@ -451,7 +458,7 @@ export default function ExperimentSetup() {
                     </select>
                   </div>
                 )}
-                {trait.tab === 'standalone' && (
+                {(trait.tab === 'standalone' || customTraits.some(t => t.name === trait.tab)) && (
                   <>
                     <div className="flex-1 min-w-[150px]">
                       <label className="text-sm font-medium">Selection Mode</label>
@@ -483,7 +490,7 @@ export default function ExperimentSetup() {
                   </>
                 )}
               </div>
-              {trait.tab === 'standalone' && trait.selection_mode === 'checkbox' && (
+              {(trait.tab === 'standalone' || customTraits.some(t => t.name === trait.tab)) && trait.selection_mode === 'checkbox' && (
                 <div className="border-t pt-3 mt-3">
                   <label className="text-sm font-semibold block mb-2">Filter Individuals:</label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

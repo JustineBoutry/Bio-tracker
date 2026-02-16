@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from 'react-i18next';
 
-export default function StandaloneTraitEntry({ trait, allIndividuals, selectedExp }) {
+export default function StandaloneTraitEntry({ trait, allIndividuals, selectedExp, groupedTraits = [trait] }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const isCheckboxMode = trait.selection_mode === 'checkbox';
@@ -65,9 +65,10 @@ export default function StandaloneTraitEntry({ trait, allIndividuals, selectedEx
     
     queryClient.invalidateQueries(['individuals']);
     const idsText = ids.join(', ');
+    const traitNames = groupedTraits.map(t => t.name).join(', ');
     await base44.entities.LabNote.create({
       experiment_id: selectedExp,
-      note: `${trait.name}: updated ${ids.length} individuals (IDs: ${idsText})`,
+      note: `Custom traits (${traitNames}): updated ${ids.length} individuals (IDs: ${idsText})`,
       timestamp: new Date().toISOString()
     });
     
@@ -83,13 +84,17 @@ export default function StandaloneTraitEntry({ trait, allIndividuals, selectedEx
     const initialValues = {};
     ids.forEach(id => {
       const trimmedId = id.trim();
-      if (trait.type === 'boolean') {
-        initialValues[trimmedId] = false;
-      } else if (trait.type === 'number') {
-        initialValues[trimmedId] = null;
-      } else {
-        initialValues[trimmedId] = '';
-      }
+      const traitVals = {};
+      groupedTraits.forEach(groupTrait => {
+        if (groupTrait.type === 'boolean') {
+          traitVals[groupTrait.name] = false;
+        } else if (groupTrait.type === 'number') {
+          traitVals[groupTrait.name] = null;
+        } else {
+          traitVals[groupTrait.name] = '';
+        }
+      });
+      initialValues[trimmedId] = traitVals;
     });
     setTraitValues(initialValues);
     setShowValueEntry(true);
@@ -106,7 +111,7 @@ export default function StandaloneTraitEntry({ trait, allIndividuals, selectedEx
       if (inds.length > 0) {
         const currentCustomData = inds[0].custom_data || {};
         await base44.entities.Individual.update(inds[0].id, {
-          custom_data: { ...currentCustomData, [trait.name]: traitValues[individualId] }
+          custom_data: { ...currentCustomData, ...traitValues[individualId] }
         });
         return individualId;
       }
@@ -119,9 +124,10 @@ export default function StandaloneTraitEntry({ trait, allIndividuals, selectedEx
     if (successIds.length > 0) {
       queryClient.invalidateQueries(['individuals']);
       const idsText = successIds.join(', ');
+      const traitNames = groupedTraits.map(t => t.name).join(', ');
       await base44.entities.LabNote.create({
         experiment_id: selectedExp,
-        note: `${trait.name}: updated ${successIds.length} individuals (IDs: ${idsText})`,
+        note: `Custom traits (${traitNames}): updated ${successIds.length} individuals (IDs: ${idsText})`,
         timestamp: new Date().toISOString()
       });
     }
@@ -168,36 +174,41 @@ export default function StandaloneTraitEntry({ trait, allIndividuals, selectedEx
             </div>
             {traitData.length > 0 && (
               <div className="border-t pt-4 space-y-3">
-                <h4 className="font-semibold">Enter {trait.name} value for selected individuals:</h4>
-                {trait.type === 'boolean' ? (
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={traitValues[trait.name] || false}
-                      onCheckedChange={(checked) => {
-                        setTraitValues({ ...traitValues, [trait.name]: checked });
-                      }}
-                    />
-                    <span className="text-sm">{traitValues[trait.name] ? 'Yes' : 'No'}</span>
+                <h4 className="font-semibold">Enter values for selected individuals:</h4>
+                {groupedTraits.map((groupTrait) => (
+                  <div key={groupTrait.name}>
+                    <label className="text-sm font-medium block mb-2">{groupTrait.name}</label>
+                    {groupTrait.type === 'boolean' ? (
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={traitValues[groupTrait.name] || false}
+                          onCheckedChange={(checked) => {
+                            setTraitValues({ ...traitValues, [groupTrait.name]: checked });
+                          }}
+                        />
+                        <span className="text-sm">{traitValues[groupTrait.name] ? 'Yes' : 'No'}</span>
+                      </div>
+                    ) : groupTrait.type === 'number' ? (
+                      <Input
+                        type="number"
+                        value={traitValues[groupTrait.name] || ''}
+                        onChange={(e) => {
+                          setTraitValues({ ...traitValues, [groupTrait.name]: parseFloat(e.target.value) || null });
+                        }}
+                        placeholder={`Enter ${groupTrait.name}`}
+                      />
+                    ) : (
+                      <Input
+                        type="text"
+                        value={traitValues[groupTrait.name] || ''}
+                        onChange={(e) => {
+                          setTraitValues({ ...traitValues, [groupTrait.name]: e.target.value });
+                        }}
+                        placeholder={`Enter ${groupTrait.name}`}
+                      />
+                    )}
                   </div>
-                ) : trait.type === 'number' ? (
-                  <Input
-                    type="number"
-                    value={traitValues[trait.name] || ''}
-                    onChange={(e) => {
-                      setTraitValues({ ...traitValues, [trait.name]: parseFloat(e.target.value) || null });
-                    }}
-                    placeholder={`Enter ${trait.name}`}
-                  />
-                ) : (
-                  <Input
-                    type="text"
-                    value={traitValues[trait.name] || ''}
-                    onChange={(e) => {
-                      setTraitValues({ ...traitValues, [trait.name]: e.target.value });
-                    }}
-                    placeholder={`Enter ${trait.name}`}
-                  />
-                )}
+                ))}
                 <Button onClick={handleCheckboxSubmit}>
                   {t('common.submit')}
                 </Button>
@@ -231,38 +242,58 @@ export default function StandaloneTraitEntry({ trait, allIndividuals, selectedEx
                   {parsedIds.map((individualId) => (
                     <div key={individualId} className="border p-3 rounded space-y-2 bg-white">
                       <div className="font-mono font-semibold">{individualId}</div>
-                      <div>
-                        <label className="text-sm">{trait.name}</label>
-                        {trait.type === 'boolean' ? (
-                          <div className="flex items-center gap-2 h-10">
-                            <Checkbox
-                              checked={traitValues[individualId] || false}
-                              onCheckedChange={(checked) => {
-                                setTraitValues({ ...traitValues, [individualId]: checked });
+                      {groupedTraits.map((groupTrait) => (
+                        <div key={`${individualId}-${groupTrait.name}`}>
+                          <label className="text-sm">{groupTrait.name}</label>
+                          {groupTrait.type === 'boolean' ? (
+                            <div className="flex items-center gap-2 h-10">
+                              <Checkbox
+                                checked={traitValues[individualId]?.[groupTrait.name] || false}
+                                onCheckedChange={(checked) => {
+                                  setTraitValues({ 
+                                    ...traitValues, 
+                                    [individualId]: {
+                                      ...(traitValues[individualId] || {}),
+                                      [groupTrait.name]: checked
+                                    }
+                                  });
+                                }}
+                              />
+                              <span className="text-sm">{traitValues[individualId]?.[groupTrait.name] ? 'Yes' : 'No'}</span>
+                            </div>
+                          ) : groupTrait.type === 'number' ? (
+                            <Input
+                              type="number"
+                              value={traitValues[individualId]?.[groupTrait.name] || ''}
+                              onChange={(e) => {
+                                setTraitValues({ 
+                                  ...traitValues, 
+                                  [individualId]: {
+                                    ...(traitValues[individualId] || {}),
+                                    [groupTrait.name]: parseFloat(e.target.value) || null
+                                  }
+                                });
                               }}
+                              placeholder={`Enter ${groupTrait.name}`}
                             />
-                            <span className="text-sm">{traitValues[individualId] ? 'Yes' : 'No'}</span>
-                          </div>
-                        ) : trait.type === 'number' ? (
-                          <Input
-                            type="number"
-                            value={traitValues[individualId] || ''}
-                            onChange={(e) => {
-                              setTraitValues({ ...traitValues, [individualId]: parseFloat(e.target.value) || null });
-                            }}
-                            placeholder={`Enter ${trait.name}`}
-                          />
-                        ) : (
-                          <Input
-                            type="text"
-                            value={traitValues[individualId] || ''}
-                            onChange={(e) => {
-                              setTraitValues({ ...traitValues, [individualId]: e.target.value });
-                            }}
-                            placeholder={`Enter ${trait.name}`}
-                          />
-                        )}
-                      </div>
+                          ) : (
+                            <Input
+                              type="text"
+                              value={traitValues[individualId]?.[groupTrait.name] || ''}
+                              onChange={(e) => {
+                                setTraitValues({ 
+                                  ...traitValues, 
+                                  [individualId]: {
+                                    ...(traitValues[individualId] || {}),
+                                    [groupTrait.name]: e.target.value
+                                  }
+                                });
+                              }}
+                              placeholder={`Enter ${groupTrait.name}`}
+                            />
+                          )}
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>

@@ -923,7 +923,9 @@ export default function DataEntry() {
 
           <TabsContent value="custom">
             {(() => {
-              const standaloneTraits = (experiment?.custom_traits || []).filter(t => t.tab === 'standalone');
+              const standaloneTraits = (experiment?.custom_traits || []).filter(t => 
+                t.tab === 'standalone' || (experiment?.custom_traits || []).some(ct => ct.name === t.tab)
+              );
               
               if (standaloneTraits.length === 0) {
                 return (
@@ -944,15 +946,30 @@ export default function DataEntry() {
                 );
               }
 
+              // Group traits by their tab name
+              const groupedTraits = {};
+              standaloneTraits.forEach(trait => {
+                const tabName = trait.tab === 'standalone' ? trait.name : trait.tab;
+                if (!groupedTraits[tabName]) {
+                  groupedTraits[tabName] = [];
+                }
+                groupedTraits[tabName].push(trait);
+              });
+
               return (
                 <div className="space-y-4">
-                  {standaloneTraits.map((trait) => (
-                    <StandaloneTraitEntry 
-                      key={trait.name}
-                      trait={trait}
-                      allIndividuals={allIndividuals}
-                      selectedExp={selectedExp}
-                    />
+                  {Object.entries(groupedTraits).map(([groupName, traits]) => (
+                    <div key={groupName}>
+                      {traits.map((trait) => (
+                        <StandaloneTraitEntry 
+                          key={trait.name}
+                          trait={trait}
+                          allIndividuals={allIndividuals}
+                          selectedExp={selectedExp}
+                          groupedTraits={traits}
+                        />
+                      ))}
+                    </div>
                   ))}
                 </div>
               );
