@@ -64,11 +64,15 @@ export default function StandaloneTraitEntry({ trait, allIndividuals, selectedEx
     const ids = await Promise.all(updates);
     
     queryClient.invalidateQueries(['individuals']);
-    const idsText = ids.join(', ');
     const traitNames = groupedTraits.map(t => t.name).join(', ');
+    const valuesList = ids.map(id => {
+      const values = groupedTraits.map(t => `${t.name}=${traitValues[t.name] !== undefined ? traitValues[t.name] : '-'}`).join(', ');
+      return `  ${id}: ${values}`;
+    }).join('\n');
+    
     await base44.entities.LabNote.create({
       experiment_id: selectedExp,
-      note: `Custom traits (${traitNames}): updated ${ids.length} individuals (IDs: ${idsText})`,
+      note: `Custom traits (${traitNames}): updated ${ids.length} individuals\n${valuesList}`,
       timestamp: new Date().toISOString()
     });
     
@@ -123,11 +127,15 @@ export default function StandaloneTraitEntry({ trait, allIndividuals, selectedEx
     
     if (successIds.length > 0) {
       queryClient.invalidateQueries(['individuals']);
-      const idsText = successIds.join(', ');
       const traitNames = groupedTraits.map(t => t.name).join(', ');
+      const valuesList = successIds.map(id => {
+        const values = groupedTraits.map(t => `${t.name}=${traitValues[id]?.[t.name] !== undefined ? traitValues[id][t.name] : '-'}`).join(', ');
+        return `  ${id}: ${values}`;
+      }).join('\n');
+      
       await base44.entities.LabNote.create({
         experiment_id: selectedExp,
-        note: `Custom traits (${traitNames}): updated ${successIds.length} individuals (IDs: ${idsText})`,
+        note: `Custom traits (${traitNames}): updated ${successIds.length} individuals\n${valuesList}`,
         timestamp: new Date().toISOString()
       });
     }
