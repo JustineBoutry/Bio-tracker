@@ -12,7 +12,6 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import StatisticalTestPanel from "../components/dashboard/StatisticalTestPanel";
 import { oneWayAnova, tukeyHSD, logRankTest, multiWayAnova } from "../components/dashboard/statisticsUtils";
 import { useTranslation } from 'react-i18next';
-import CustomGraphic from "../components/dashboard/CustomGraphic";
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -1074,25 +1073,6 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
-
-      {experiment.dashboard_graphics && experiment.dashboard_graphics.length > 0 && (
-        <>
-          <h2 className="text-2xl font-bold mb-4 mt-8">Custom Visualizations</h2>
-          <div className="space-y-6">
-            {experiment.dashboard_graphics.map((graphic, index) => (
-              <CustomGraphic 
-                key={index} 
-                graphic={graphic} 
-                experiment={experiment}
-                allIndividuals={allIndividuals}
-              />
-            ))}
-          </div>
-          <div className="border-t my-8 pt-8">
-            <h2 className="text-2xl font-bold mb-4">Standard Visualizations</h2>
-          </div>
-        </>
-      )}
 
       {experiment && (
         <>

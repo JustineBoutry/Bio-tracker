@@ -88,6 +88,7 @@ function LayoutContent({ children, currentPageName }) {
     { name: "IndividualHistory", label: t('nav.history'), icon: History },
     { name: "ReproductionTracking", label: "Reproduction", icon: TrendingUp },
     { name: "Dashboard", label: t('nav.dashboard'), icon: BarChart3 },
+    { name: "Visualisation", label: "Visualisation", icon: BarChart3 },
     { name: "LabNotebook", label: t('nav.notebook'), icon: BookOpen },
     { name: "CleanupData", label: t('nav.cleanup'), icon: Trash2 },
   ];

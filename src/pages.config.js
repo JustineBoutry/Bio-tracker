@@ -56,6 +56,7 @@ import Home from './pages/Home';
 import IndividualHistory from './pages/IndividualHistory';
 import LabNotebook from './pages/LabNotebook';
 import ReproductionTracking from './pages/ReproductionTracking';
+import Visualisation from './pages/Visualisation';
 import __Layout from './Layout.jsx';
 
 
@@ -69,6 +70,7 @@ export const PAGES = {
     "IndividualHistory": IndividualHistory,
     "LabNotebook": LabNotebook,
     "ReproductionTracking": ReproductionTracking,
+    "Visualisation": Visualisation,
 }
 
 export const pagesConfig = {
