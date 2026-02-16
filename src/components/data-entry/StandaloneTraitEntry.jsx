@@ -14,6 +14,8 @@ export default function StandaloneTraitEntry({ trait, allIndividuals, selectedEx
   const isCheckboxMode = trait.selection_mode === 'checkbox';
   const [traitData, setTraitData] = useState(isCheckboxMode ? [] : '');
   const [traitValues, setTraitValues] = useState({});
+  const [showValueEntry, setShowValueEntry] = useState(false);
+  const [parsedIds, setParsedIds] = useState([]);
 
   const colorClasses = {
     gray: 'bg-gray-50',
@@ -74,24 +76,41 @@ export default function StandaloneTraitEntry({ trait, allIndividuals, selectedEx
     alert(`${ids.length} individual(s) updated!`);
   };
 
-  const handleIdListSubmit = async () => {
+  const parseIds = () => {
     const ids = traitData.split(/[\s,]+/).filter((id) => id.trim());
+    setParsedIds(ids.map(id => id.trim()));
+    
+    const initialValues = {};
+    ids.forEach(id => {
+      const trimmedId = id.trim();
+      if (trait.type === 'boolean') {
+        initialValues[trimmedId] = false;
+      } else if (trait.type === 'number') {
+        initialValues[trimmedId] = null;
+      } else {
+        initialValues[trimmedId] = '';
+      }
+    });
+    setTraitValues(initialValues);
+    setShowValueEntry(true);
+  };
+
+  const handleIdListSubmit = async () => {
     const notFound = [];
     
-    const updates = await Promise.all(ids.map(async (individualId) => {
-      const trimmedId = individualId.trim();
+    const updates = await Promise.all(parsedIds.map(async (individualId) => {
       const inds = await base44.entities.Individual.filter({
         experiment_id: selectedExp,
-        individual_id: trimmedId
+        individual_id: individualId
       });
       if (inds.length > 0) {
         const currentCustomData = inds[0].custom_data || {};
         await base44.entities.Individual.update(inds[0].id, {
-          custom_data: { ...currentCustomData, ...traitValues }
+          custom_data: { ...currentCustomData, [trait.name]: traitValues[individualId] }
         });
-        return trimmedId;
+        return individualId;
       }
-      notFound.push(trimmedId);
+      notFound.push(individualId);
       return null;
     }));
 
@@ -109,6 +128,8 @@ export default function StandaloneTraitEntry({ trait, allIndividuals, selectedEx
     
     setTraitData('');
     setTraitValues({});
+    setShowValueEntry(false);
+    setParsedIds([]);
     
     let message = `${successIds.length} individual(s) updated!`;
     if (notFound.length > 0) {
@@ -185,51 +206,82 @@ export default function StandaloneTraitEntry({ trait, allIndividuals, selectedEx
           </>
         ) : (
           <>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Enter Individual IDs (comma or space separated):</label>
-              <Textarea
-                placeholder="e.g., ID-001, ID-002, ID-003"
-                value={traitData}
-                onChange={(e) => setTraitData(e.target.value)}
-                rows={3}
-              />
-            </div>
-            {traitData.trim() && (
-              <div className="mt-4 space-y-3">
-                <h4 className="font-semibold">Enter {trait.name} value:</h4>
-                {trait.type === 'boolean' ? (
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={traitValues[trait.name] || false}
-                      onCheckedChange={(checked) => {
-                        setTraitValues({ ...traitValues, [trait.name]: checked });
-                      }}
-                    />
-                    <span className="text-sm">{traitValues[trait.name] ? 'Yes' : 'No'}</span>
-                  </div>
-                ) : trait.type === 'number' ? (
-                  <Input
-                    type="number"
-                    value={traitValues[trait.name] || ''}
-                    onChange={(e) => {
-                      setTraitValues({ ...traitValues, [trait.name]: parseFloat(e.target.value) || null });
-                    }}
-                    placeholder={`Enter ${trait.name}`}
+            {!showValueEntry ? (
+              <>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Enter Individual IDs (comma or space separated):</label>
+                  <Textarea
+                    placeholder="e.g., ID-001, ID-002, ID-003"
+                    value={traitData}
+                    onChange={(e) => setTraitData(e.target.value)}
+                    rows={3}
                   />
-                ) : (
-                  <Input
-                    type="text"
-                    value={traitValues[trait.name] || ''}
-                    onChange={(e) => {
-                      setTraitValues({ ...traitValues, [trait.name]: e.target.value });
-                    }}
-                    placeholder={`Enter ${trait.name}`}
-                  />
-                )}
-                <Button onClick={handleIdListSubmit}>
-                  {t('common.submit')}
+                </div>
+                <Button 
+                  className="mt-4"
+                  onClick={parseIds}
+                  disabled={!traitData.trim()}
+                >
+                  Continue to Enter Values
                 </Button>
-              </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-3 max-h-96 overflow-auto mb-4">
+                  {parsedIds.map((individualId) => (
+                    <div key={individualId} className="border p-3 rounded space-y-2 bg-white">
+                      <div className="font-mono font-semibold">{individualId}</div>
+                      <div>
+                        <label className="text-sm">{trait.name}</label>
+                        {trait.type === 'boolean' ? (
+                          <div className="flex items-center gap-2 h-10">
+                            <Checkbox
+                              checked={traitValues[individualId] || false}
+                              onCheckedChange={(checked) => {
+                                setTraitValues({ ...traitValues, [individualId]: checked });
+                              }}
+                            />
+                            <span className="text-sm">{traitValues[individualId] ? 'Yes' : 'No'}</span>
+                          </div>
+                        ) : trait.type === 'number' ? (
+                          <Input
+                            type="number"
+                            value={traitValues[individualId] || ''}
+                            onChange={(e) => {
+                              setTraitValues({ ...traitValues, [individualId]: parseFloat(e.target.value) || null });
+                            }}
+                            placeholder={`Enter ${trait.name}`}
+                          />
+                        ) : (
+                          <Input
+                            type="text"
+                            value={traitValues[individualId] || ''}
+                            onChange={(e) => {
+                              setTraitValues({ ...traitValues, [individualId]: e.target.value });
+                            }}
+                            placeholder={`Enter ${trait.name}`}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleIdListSubmit}>
+                    {t('common.submit')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowValueEntry(false);
+                      setTraitData('');
+                      setParsedIds([]);
+                    }}
+                  >
+                    {t('common.cancel')}
+                  </Button>
+                </div>
+              </>
             )}
           </>
         )}
