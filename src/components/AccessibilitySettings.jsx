@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { X, Eye } from 'lucide-react';
 
 export default function AccessibilitySettings({ onClose }) {
-  const { fontSize, setFontSize, colorMode, setColorMode, highContrast, setHighContrast } = useAccessibility();
+  const { highContrast, setHighContrast } = useAccessibility();
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -23,79 +23,28 @@ export default function AccessibilitySettings({ onClose }) {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Font Size */}
-          <div>
-            <label className="text-sm font-semibold mb-3 block">Font Size</label>
+          {/* High Contrast */}
+          <div className="space-y-3">
+            <label className="text-sm font-semibold block">High Contrast Mode</label>
+            <p className="text-sm text-gray-600">
+              Enhances text and interface contrast for better visibility
+            </p>
             <div className="flex gap-2">
               <Button
-                variant={fontSize === 'small' ? 'default' : 'outline'}
-                onClick={() => setFontSize('small')}
+                variant={!highContrast ? 'default' : 'outline'}
+                onClick={() => setHighContrast(false)}
                 className="flex-1"
               >
-                Small
+                Off
               </Button>
               <Button
-                variant={fontSize === 'medium' ? 'default' : 'outline'}
-                onClick={() => setFontSize('medium')}
+                variant={highContrast ? 'default' : 'outline'}
+                onClick={() => setHighContrast(true)}
                 className="flex-1"
               >
-                Medium
-              </Button>
-              <Button
-                variant={fontSize === 'large' ? 'default' : 'outline'}
-                onClick={() => setFontSize('large')}
-                className="flex-1"
-              >
-                Large
+                On
               </Button>
             </div>
-          </div>
-
-          {/* Color Mode for Colorblindness */}
-          <div>
-            <label className="text-sm font-semibold mb-3 block">Color Mode</label>
-            <div className="space-y-2">
-              <Button
-                variant={colorMode === 'normal' ? 'default' : 'outline'}
-                onClick={() => setColorMode('normal')}
-                className="w-full"
-              >
-                Normal
-              </Button>
-              <Button
-                variant={colorMode === 'protanopia' ? 'default' : 'outline'}
-                onClick={() => setColorMode('protanopia')}
-                className="w-full"
-              >
-                Protanopia (Red-Blind)
-              </Button>
-              <Button
-                variant={colorMode === 'deuteranopia' ? 'default' : 'outline'}
-                onClick={() => setColorMode('deuteranopia')}
-                className="w-full"
-              >
-                Deuteranopia (Green-Blind)
-              </Button>
-              <Button
-                variant={colorMode === 'tritanopia' ? 'default' : 'outline'}
-                onClick={() => setColorMode('tritanopia')}
-                className="w-full"
-              >
-                Tritanopia (Blue-Blind)
-              </Button>
-            </div>
-          </div>
-
-          {/* High Contrast */}
-          <div className="flex items-center gap-3 p-3 border rounded">
-            <Checkbox
-              id="high-contrast"
-              checked={highContrast}
-              onCheckedChange={setHighContrast}
-            />
-            <label htmlFor="high-contrast" className="text-sm font-medium cursor-pointer flex-1">
-              High Contrast Mode
-            </label>
           </div>
 
           <div className="pt-4 border-t">
