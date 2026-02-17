@@ -25,6 +25,17 @@ css
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
+
+    /* Custom accessibility variables - Normal Mode */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f9fafb;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+    --button-bg: #3b82f6;
+    --button-text: #ffffff;
+    --input-bg: #ffffff;
+    --input-text: #000000;
   }
 
   .dark {
@@ -61,9 +72,22 @@ css
 
 /* Font size is controlled via inline styles on html element - no CSS needed */
 
-/* High Contrast Mode - Strict Black/Yellow Palette */
+/* High Contrast Mode - Override CSS Variables */
+html.high-contrast {
+  /* Override all color variables */
+  --bg-primary: #000000;
+  --bg-secondary: #000000;
+  --text-primary: #FFFF00;
+  --text-secondary: #FFFF00;
+  --border-color: #FFFF00;
+  --button-bg: #FFFF00;
+  --button-text: #000000;
+  --input-bg: #FFFFFF;
+  --input-text: #000000;
+}
+
 html.high-contrast * {
-  /* Remove ALL visual effects first */
+  /* Remove ALL visual effects */
   box-shadow: none !important;
   text-shadow: none !important;
   filter: none !important;
@@ -82,70 +106,61 @@ html.high-contrast aside,
 html.high-contrast nav,
 html.high-contrast header,
 html.high-contrast footer {
-  background-color: #000000 !important;
-  color: #FFFF00 !important;
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
 }
 
-/* All text elements pure yellow */
 html.high-contrast *:not(input):not(textarea):not(select) {
-  color: #FFFF00 !important;
+  color: var(--text-primary) !important;
 }
 
-/* Input fields white background with black text */
 html.high-contrast input,
 html.high-contrast textarea,
-html.high-contrast select,
-html.high-contrast input::placeholder {
-  background-color: #FFFFFF !important;
-  color: #000000 !important;
-  border: 3px solid #FFFF00 !important;
+html.high-contrast select {
+  background-color: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  border: 3px solid var(--border-color) !important;
 }
 
-/* Buttons - yellow background with black text */
 html.high-contrast button {
-  background-color: #FFFF00 !important;
-  color: #000000 !important;
-  border: 3px solid #FFFF00 !important;
+  background-color: var(--button-bg) !important;
+  color: var(--button-text) !important;
+  border: 3px solid var(--border-color) !important;
   font-weight: 700 !important;
 }
 
-/* Links - yellow with thick border */
 html.high-contrast a {
-  color: #FFFF00 !important;
-  border: 2px solid #FFFF00 !important;
+  color: var(--text-primary) !important;
+  border: 2px solid var(--border-color) !important;
   padding: 2px 4px !important;
   text-decoration: underline !important;
 }
 
-/* Cards, panels, containers */
 html.high-contrast [class*="card"],
 html.high-contrast [class*="Card"],
 html.high-contrast [role="dialog"],
 html.high-contrast [class*="panel"] {
-  background-color: #000000 !important;
-  border: 3px solid #FFFF00 !important;
+  background-color: var(--bg-primary) !important;
+  border: 3px solid var(--border-color) !important;
 }
 
-/* Tables */
 html.high-contrast table,
 html.high-contrast th,
 html.high-contrast td {
-  background-color: #000000 !important;
-  color: #FFFF00 !important;
-  border: 2px solid #FFFF00 !important;
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  border: 2px solid var(--border-color) !important;
 }
 
-/* Borders everywhere thick and yellow */
 html.high-contrast [class*="border"] {
-  border-color: #FFFF00 !important;
+  border-color: var(--border-color) !important;
   border-width: 2px !important;
 }
 
-/* SVG icons yellow */
 html.high-contrast svg {
-  color: #FFFF00 !important;
-  fill: #FFFF00 !important;
-  stroke: #FFFF00 !important;
+  color: var(--text-primary) !important;
+  fill: var(--text-primary) !important;
+  stroke: var(--text-primary) !important;
 }
 
 /* Colorblind Safe Color Palettes */
