@@ -3,6 +3,38 @@ css
 @tailwind components;
 @tailwind utilities;
 
+/* HIGH CONTRAST - MUST BE AFTER TAILWIND */
+html.high-contrast,
+html.high-contrast *,
+html.high-contrast *::before,
+html.high-contrast *::after {
+  background-color: #000000 !important;
+  background: #000000 !important;
+  color: #FFFF00 !important;
+  border-color: #FFFF00 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  background-image: none !important;
+  fill: #FFFF00 !important;
+}
+
+html.high-contrast input,
+html.high-contrast textarea,
+html.high-contrast select {
+  background-color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  color: #000000 !important;
+  border: 3px solid #FFFF00 !important;
+}
+
+html.high-contrast button {
+  background-color: #FFFF00 !important;
+  background: #FFFF00 !important;
+  color: #000000 !important;
+  border: 3px solid #000000 !important;
+  font-weight: bold !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -71,49 +103,6 @@ css
 }
 
 /* Font size is controlled via inline styles on html element - no CSS needed */
-
-/* High Contrast Mode - NUCLEAR OPTION */
-html.high-contrast,
-html.high-contrast *,
-body.high-contrast,
-body.high-contrast * {
-  background-color: #000000 !important;
-  background: #000000 !important;
-  color: #FFFF00 !important;
-  border-color: #FFFF00 !important;
-  box-shadow: none !important;
-  text-shadow: none !important;
-  background-image: none !important;
-}
-
-html.high-contrast input,
-html.high-contrast textarea,
-html.high-contrast select,
-body.high-contrast input,
-body.high-contrast textarea,
-body.high-contrast select {
-  background-color: #FFFFFF !important;
-  background: #FFFFFF !important;
-  color: #000000 !important;
-  border: 3px solid #FFFF00 !important;
-}
-
-html.high-contrast button,
-body.high-contrast button {
-  background-color: #FFFF00 !important;
-  background: #FFFF00 !important;
-  color: #000000 !important;
-  border: 3px solid #000000 !important;
-  font-weight: bold !important;
-}
-
-html.high-contrast svg,
-html.high-contrast path,
-body.high-contrast svg,
-body.high-contrast path {
-  fill: currentColor !important;
-  stroke: currentColor !important;
-}
 
 /* Colorblind Safe Color Palettes */
 /* Protanopia (Red-Blind) - Use blue and yellow instead of red and green */
