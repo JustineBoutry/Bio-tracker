@@ -72,46 +72,6 @@ css
 
 /* Font size is controlled via inline styles on html element - no CSS needed */
 
-/* HIGH CONTRAST MODE - BRUTAL & UTILITARIAN */
-html.high-contrast,
-html.high-contrast *,
-html.high-contrast *::before,
-html.high-contrast *::after {
-  background-color: #000000 !important;
-  background: #000000 !important;
-  color: #FFFF00 !important;
-  border-color: #FFFF00 !important;
-  box-shadow: none !important;
-  text-shadow: none !important;
-  background-image: none !important;
-  border-radius: 0 !important;
-  fill: #FFFF00 !important;
-  stroke: #FFFF00 !important;
-}
-
-html.high-contrast input,
-html.high-contrast textarea,
-html.high-contrast select {
-  background-color: #FFFFFF !important;
-  background: #FFFFFF !important;
-  color: #000000 !important;
-  border: 4px solid #FFFF00 !important;
-}
-
-html.high-contrast button {
-  background-color: #FFFF00 !important;
-  background: #FFFF00 !important;
-  color: #000000 !important;
-  border: 4px solid #000000 !important;
-  font-weight: 900 !important;
-}
-
-html.high-contrast a {
-  color: #FFFF00 !important;
-  text-decoration: underline !important;
-  text-decoration-thickness: 2px !important;
-}
-
 /* Colorblind Safe Color Palettes */
 /* Protanopia (Red-Blind) - Use blue and yellow instead of red and green */
 html[data-color-mode="protanopia"] {
