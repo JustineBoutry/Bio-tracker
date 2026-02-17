@@ -72,95 +72,35 @@ css
 
 /* Font size is controlled via inline styles on html element - no CSS needed */
 
-/* High Contrast Mode - Override CSS Variables */
-html.high-contrast {
-  /* Override all color variables */
-  --bg-primary: #000000;
-  --bg-secondary: #000000;
-  --text-primary: #FFFF00;
-  --text-secondary: #FFFF00;
-  --border-color: #FFFF00;
-  --button-bg: #FFFF00;
-  --button-text: #000000;
-  --input-bg: #FFFFFF;
-  --input-text: #000000;
-}
-
-html.high-contrast * {
-  /* Remove ALL visual effects */
+/* High Contrast Mode - AGGRESSIVE SIMPLE RULES */
+.high-contrast,
+.high-contrast * {
+  background: #000000 !important;
+  color: #FFFF00 !important;
+  border-color: #FFFF00 !important;
   box-shadow: none !important;
   text-shadow: none !important;
-  filter: none !important;
-  backdrop-filter: none !important;
-  background-image: none !important;
-  border-radius: 0 !important;
 }
 
-html.high-contrast,
-html.high-contrast body,
-html.high-contrast main,
-html.high-contrast div,
-html.high-contrast section,
-html.high-contrast article,
-html.high-contrast aside,
-html.high-contrast nav,
-html.high-contrast header,
-html.high-contrast footer {
-  background-color: var(--bg-primary) !important;
-  color: var(--text-primary) !important;
+.high-contrast input,
+.high-contrast textarea,
+.high-contrast select {
+  background: #FFFFFF !important;
+  color: #000000 !important;
+  border: 3px solid #FFFF00 !important;
 }
 
-html.high-contrast *:not(input):not(textarea):not(select) {
-  color: var(--text-primary) !important;
+.high-contrast button {
+  background: #FFFF00 !important;
+  color: #000000 !important;
+  border: 3px solid #000000 !important;
+  font-weight: bold !important;
 }
 
-html.high-contrast input,
-html.high-contrast textarea,
-html.high-contrast select {
-  background-color: var(--input-bg) !important;
-  color: var(--input-text) !important;
-  border: 3px solid var(--border-color) !important;
-}
-
-html.high-contrast button {
-  background-color: var(--button-bg) !important;
-  color: var(--button-text) !important;
-  border: 3px solid var(--border-color) !important;
-  font-weight: 700 !important;
-}
-
-html.high-contrast a {
-  color: var(--text-primary) !important;
-  border: 2px solid var(--border-color) !important;
-  padding: 2px 4px !important;
-  text-decoration: underline !important;
-}
-
-html.high-contrast [class*="card"],
-html.high-contrast [class*="Card"],
-html.high-contrast [role="dialog"],
-html.high-contrast [class*="panel"] {
-  background-color: var(--bg-primary) !important;
-  border: 3px solid var(--border-color) !important;
-}
-
-html.high-contrast table,
-html.high-contrast th,
-html.high-contrast td {
-  background-color: var(--bg-primary) !important;
-  color: var(--text-primary) !important;
-  border: 2px solid var(--border-color) !important;
-}
-
-html.high-contrast [class*="border"] {
-  border-color: var(--border-color) !important;
-  border-width: 2px !important;
-}
-
-html.high-contrast svg {
-  color: var(--text-primary) !important;
-  fill: var(--text-primary) !important;
-  stroke: var(--text-primary) !important;
+.high-contrast svg,
+.high-contrast path {
+  fill: currentColor !important;
+  stroke: currentColor !important;
 }
 
 /* Colorblind Safe Color Palettes */

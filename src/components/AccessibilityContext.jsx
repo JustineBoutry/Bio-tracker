@@ -18,11 +18,13 @@ export const AccessibilityProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('accessibility_highContrast', highContrast.toString());
     
-    // Apply high contrast
+    // Apply high contrast to both html and body
     if (highContrast) {
       document.documentElement.classList.add('high-contrast');
+      document.body.classList.add('high-contrast');
     } else {
       document.documentElement.classList.remove('high-contrast');
+      document.body.classList.remove('high-contrast');
     }
   }, [highContrast]);
 
