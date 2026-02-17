@@ -61,109 +61,91 @@ css
 
 /* Font size is controlled via inline styles on html element - no CSS needed */
 
-/* High Contrast Mode - Strict Rules */
-html.high-contrast {
-  /* Remove all filters */
-  filter: none !important;
-}
-
-html.high-contrast body {
-  background: #000000 !important;
-  color: #FFFF00 !important;
-}
-
-/* All backgrounds become pure black or white */
-html.high-contrast *[class*="bg-"],
-html.high-contrast div,
-html.high-contrast section,
-html.high-contrast article,
-html.high-contrast aside,
-html.high-contrast main {
-  background: #000000 !important;
-}
-
-html.high-contrast .bg-white,
-html.high-contrast .bg-gray-50,
-html.high-contrast .bg-gray-100,
-html.high-contrast .bg-gray-200,
-html.high-contrast input,
-html.high-contrast textarea,
-html.high-contrast select {
-  background: #FFFFFF !important;
-  color: #000000 !important;
-}
-
-/* All text becomes neon yellow or white */
-html.high-contrast,
-html.high-contrast *,
-html.high-contrast p,
-html.high-contrast span,
-html.high-contrast div,
-html.high-contrast h1,
-html.high-contrast h2,
-html.high-contrast h3,
-html.high-contrast h4,
-html.high-contrast h5,
-html.high-contrast h6,
-html.high-contrast label,
-html.high-contrast td,
-html.high-contrast th {
-  color: #FFFF00 !important;
-}
-
-/* Inputs keep black text on white */
-html.high-contrast input,
-html.high-contrast textarea,
-html.high-contrast select {
-  color: #000000 !important;
-}
-
-/* Buttons with thick borders */
-html.high-contrast button,
-html.high-contrast a {
-  background: #000000 !important;
-  color: #FFFF00 !important;
-  border: 3px solid #FFFF00 !important;
-  font-weight: 700 !important;
-}
-
-html.high-contrast input,
-html.high-contrast select,
-html.high-contrast textarea {
-  border: 3px solid #000000 !important;
-}
-
-/* Cards and containers with thick borders */
-html.high-contrast [class*="card"],
-html.high-contrast [class*="rounded"] {
-  background: #000000 !important;
-  border: 3px solid #FFFF00 !important;
-}
-
-html.high-contrast .border,
-html.high-contrast [class*="border"] {
-  border: 3px solid #FFFF00 !important;
-}
-
-/* Remove ALL shadows, blurs, and gradients */
+/* High Contrast Mode - Strict Black/Yellow Palette */
 html.high-contrast * {
+  /* Remove ALL visual effects first */
   box-shadow: none !important;
   text-shadow: none !important;
   filter: none !important;
   backdrop-filter: none !important;
   background-image: none !important;
+  border-radius: 0 !important;
 }
 
-/* Active/Primary buttons */
-html.high-contrast .bg-blue-600,
-html.high-contrast .bg-blue-500,
-html.high-contrast .bg-blue-700,
-html.high-contrast .bg-indigo-600,
-html.high-contrast .bg-indigo-700,
-html.high-contrast button[class*="bg-"] {
-  background: #FFFF00 !important;
+html.high-contrast,
+html.high-contrast body,
+html.high-contrast main,
+html.high-contrast div,
+html.high-contrast section,
+html.high-contrast article,
+html.high-contrast aside,
+html.high-contrast nav,
+html.high-contrast header,
+html.high-contrast footer {
+  background-color: #000000 !important;
+  color: #FFFF00 !important;
+}
+
+/* All text elements pure yellow */
+html.high-contrast *:not(input):not(textarea):not(select) {
+  color: #FFFF00 !important;
+}
+
+/* Input fields white background with black text */
+html.high-contrast input,
+html.high-contrast textarea,
+html.high-contrast select,
+html.high-contrast input::placeholder {
+  background-color: #FFFFFF !important;
   color: #000000 !important;
-  border: 3px solid #000000 !important;
+  border: 3px solid #FFFF00 !important;
+}
+
+/* Buttons - yellow background with black text */
+html.high-contrast button {
+  background-color: #FFFF00 !important;
+  color: #000000 !important;
+  border: 3px solid #FFFF00 !important;
+  font-weight: 700 !important;
+}
+
+/* Links - yellow with thick border */
+html.high-contrast a {
+  color: #FFFF00 !important;
+  border: 2px solid #FFFF00 !important;
+  padding: 2px 4px !important;
+  text-decoration: underline !important;
+}
+
+/* Cards, panels, containers */
+html.high-contrast [class*="card"],
+html.high-contrast [class*="Card"],
+html.high-contrast [role="dialog"],
+html.high-contrast [class*="panel"] {
+  background-color: #000000 !important;
+  border: 3px solid #FFFF00 !important;
+}
+
+/* Tables */
+html.high-contrast table,
+html.high-contrast th,
+html.high-contrast td {
+  background-color: #000000 !important;
+  color: #FFFF00 !important;
+  border: 2px solid #FFFF00 !important;
+}
+
+/* Borders everywhere thick and yellow */
+html.high-contrast [class*="border"] {
+  border-color: #FFFF00 !important;
+  border-width: 2px !important;
+}
+
+/* SVG icons yellow */
+html.high-contrast svg {
+  color: #FFFF00 !important;
+  fill: #FFFF00 !important;
+  stroke: #FFFF00 !important;
 }
 
 /* Colorblind Safe Color Palettes */
