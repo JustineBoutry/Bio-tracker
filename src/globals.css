@@ -63,17 +63,7 @@ css
 
 /* High Contrast Mode */
 html.high-contrast {
-  --background: 0 0% 100%;
-  --foreground: 0 0% 0%;
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 0%;
-  --border: 0 0% 0%;
-  --input: 0 0% 0%;
-  filter: contrast(1.5) !important;
-}
-
-html.high-contrast * {
-  border-width: 2px !important;
+  filter: contrast(1.8) brightness(1.1) !important;
 }
 
 html.high-contrast body {
@@ -81,50 +71,79 @@ html.high-contrast body {
   color: #000000 !important;
 }
 
+html.high-contrast *,
+html.high-contrast *::before,
+html.high-contrast *::after {
+  border-color: #000000 !important;
+}
+
 html.high-contrast .text-gray-600,
 html.high-contrast .text-gray-500,
 html.high-contrast .text-gray-700,
-html.high-contrast .text-gray-400 {
+html.high-contrast .text-gray-400,
+html.high-contrast .text-gray-800,
+html.high-contrast .text-gray-900,
+html.high-contrast .text-muted-foreground {
   color: #000000 !important;
 }
 
-html.high-contrast button {
-  border: 3px solid #000000 !important;
+html.high-contrast button,
+html.high-contrast a {
+  border: 2px solid #000000 !important;
   font-weight: 700 !important;
 }
 
 html.high-contrast input,
 html.high-contrast select,
 html.high-contrast textarea {
-  border: 2px solid #000000 !important;
+  border: 3px solid #000000 !important;
   background: #ffffff !important;
   color: #000000 !important;
 }
 
 html.high-contrast .bg-white,
 html.high-contrast .bg-gray-50,
-html.high-contrast .bg-gray-100 {
+html.high-contrast .bg-gray-100,
+html.high-contrast .bg-gray-200 {
   background: #ffffff !important;
   color: #000000 !important;
 }
 
 html.high-contrast .bg-blue-600,
 html.high-contrast .bg-blue-500,
-html.high-contrast .bg-indigo-600 {
-  background: #0000ff !important;
+html.high-contrast .bg-blue-700,
+html.high-contrast .bg-indigo-600,
+html.high-contrast .bg-indigo-700 {
+  background: #0000cc !important;
   color: #ffffff !important;
+  border: 3px solid #000000 !important;
 }
 
 html.high-contrast .bg-green-600,
 html.high-contrast .bg-green-500 {
-  background: #008000 !important;
+  background: #007700 !important;
   color: #ffffff !important;
+  border: 3px solid #000000 !important;
 }
 
 html.high-contrast .bg-red-600,
 html.high-contrast .bg-red-500 {
-  background: #ff0000 !important;
+  background: #cc0000 !important;
   color: #ffffff !important;
+  border: 3px solid #000000 !important;
+}
+
+html.high-contrast .border,
+html.high-contrast [class*="border-"] {
+  border-width: 2px !important;
+  border-color: #000000 !important;
+}
+
+html.high-contrast .shadow,
+html.high-contrast .shadow-sm,
+html.high-contrast .shadow-md,
+html.high-contrast .shadow-lg {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5) !important;
 }
 
 /* Colorblind Safe Color Palettes */
