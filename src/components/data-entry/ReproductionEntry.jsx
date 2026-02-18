@@ -222,13 +222,25 @@ export default function ReproductionEntry({ experimentId, onComplete }) {
               })}
             </div>
 
+            <div className="mt-6">
+              <label className="block text-sm font-medium mb-2 text-slate-700">
+                Additional notes <span className="text-slate-400 font-normal">(optional — will appear in lab notebook)</span>
+              </label>
+              <Textarea
+                placeholder="e.g. offspring looked healthy, unusual clutch size, environmental conditions..."
+                value={sessionNote}
+                onChange={(e) => setSessionNote(e.target.value)}
+                rows={3}
+              />
+            </div>
+
             <Button
-              className="w-full mt-6 bg-green-600 hover:bg-green-700"
+              className="w-full mt-4 bg-green-600 hover:bg-green-700"
               onClick={() => saveMutation.mutate()}
               disabled={saveMutation.isPending}
             >
               <Save className="w-4 h-4 mr-2" />
-              {saveMutation.isPending ? 'Saving...' : 'Save Reproduction Events'}
+              {saveMutation.isPending ? 'Saving...' : 'Save & Log in Notebook'}
             </Button>
           </CardContent>
         </Card>
