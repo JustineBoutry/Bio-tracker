@@ -63,6 +63,19 @@ export default function ReproductionEntry({ experimentId, onComplete }) {
           cumulative_offspring: (individual.cumulative_offspring || 0) + count
         });
       }
+
+      const totalOffspring = selectedIndividuals.reduce((sum, id) => sum + (offspringCounts[id] || 0), 0);
+      const individualLines = selectedIndividuals.map(id => {
+        const count = offspringCounts[id] || 0;
+        return `  - ${id}: ${count} offspring`;
+      }).join('\n');
+
+      await base44.entities.LabNote.create({
+        experiment_id: experimentId,
+        title: `Reproduction recorded — ${eventDate}`,
+        note: `Reproduction event on ${eventDate}.\n${selectedIndividuals.length} individual(s) reproduced, total offspring: ${totalOffspring}.\n\nDetails:\n${individualLines}`,
+        timestamp: new Date().toISOString(),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['individuals'] });
