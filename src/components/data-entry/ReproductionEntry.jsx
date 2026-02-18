@@ -65,10 +65,34 @@ export default function ReproductionEntry({ experimentId, onComplete }) {
           cumulative_offspring: (individual.cumulative_offspring || 0) + count
         });
       }
+
+      // Auto-generate lab note with reproduction summary
+      const totalOffspring = selectedIndividuals.reduce((sum, id) => sum + (offspringCounts[id] || 0), 0);
+      const lines = selectedIndividuals.map(id => {
+        const ind = individuals.find(i => i.individual_id === id);
+        const factors = Object.entries(ind?.factors || {}).map(([k, v]) => `${k}:${v}`).join(', ');
+        return `  - ${id} (${factors}) → ${offspringCounts[id] || 0} offspring`;
+      });
+
+      const noteText = [
+        `📋 Reproduction event — ${eventDate}`,
+        `Individuals recorded: ${selectedIndividuals.length} | Total offspring: ${totalOffspring}`,
+        ``,
+        ...lines,
+        ...(sessionNote.trim() ? [``, `Notes: ${sessionNote.trim()}`] : [])
+      ].join('\n');
+
+      await base44.entities.LabNote.create({
+        experiment_id: experimentId,
+        title: `Reproduction — ${eventDate}`,
+        note: noteText,
+        timestamp: new Date().toISOString(),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['individuals'] });
-      alert('Reproduction events saved successfully!');
+      queryClient.invalidateQueries({ queryKey: ['lab-notes'] });
+      alert('Reproduction events saved and logged in lab notebook!');
       onComplete();
     },
   });
