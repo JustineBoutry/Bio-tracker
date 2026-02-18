@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Save } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import CategorySelector from "./CategorySelector";
@@ -17,7 +16,6 @@ export default function ReproductionEntry({ experimentId, onComplete }) {
   const [selectedIndividuals, setSelectedIndividuals] = useState([]);
   const [offspringCounts, setOffspringCounts] = useState({});
   const [eventDate, setEventDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [sessionNote, setSessionNote] = useState("");
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', experimentId],
@@ -65,34 +63,10 @@ export default function ReproductionEntry({ experimentId, onComplete }) {
           cumulative_offspring: (individual.cumulative_offspring || 0) + count
         });
       }
-
-      // Auto-generate lab note with reproduction summary
-      const totalOffspring = selectedIndividuals.reduce((sum, id) => sum + (offspringCounts[id] || 0), 0);
-      const lines = selectedIndividuals.map(id => {
-        const ind = individuals.find(i => i.individual_id === id);
-        const factors = Object.entries(ind?.factors || {}).map(([k, v]) => `${k}:${v}`).join(', ');
-        return `  - ${id} (${factors}) → ${offspringCounts[id] || 0} offspring`;
-      });
-
-      const noteText = [
-        `📋 Reproduction event — ${eventDate}`,
-        `Individuals recorded: ${selectedIndividuals.length} | Total offspring: ${totalOffspring}`,
-        ``,
-        ...lines,
-        ...(sessionNote.trim() ? [``, `Notes: ${sessionNote.trim()}`] : [])
-      ].join('\n');
-
-      await base44.entities.LabNote.create({
-        experiment_id: experimentId,
-        title: `Reproduction — ${eventDate}`,
-        note: noteText,
-        timestamp: new Date().toISOString(),
-      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['individuals'] });
-      queryClient.invalidateQueries({ queryKey: ['lab-notes'] });
-      alert('Reproduction events saved and logged in lab notebook!');
+      alert('Reproduction events saved successfully!');
       onComplete();
     },
   });
@@ -222,25 +196,13 @@ export default function ReproductionEntry({ experimentId, onComplete }) {
               })}
             </div>
 
-            <div className="mt-6">
-              <label className="block text-sm font-medium mb-2 text-slate-700">
-                Additional notes <span className="text-slate-400 font-normal">(optional — will appear in lab notebook)</span>
-              </label>
-              <Textarea
-                placeholder="e.g. offspring looked healthy, unusual clutch size, environmental conditions..."
-                value={sessionNote}
-                onChange={(e) => setSessionNote(e.target.value)}
-                rows={3}
-              />
-            </div>
-
             <Button
-              className="w-full mt-4 bg-green-600 hover:bg-green-700"
+              className="w-full mt-6 bg-green-600 hover:bg-green-700"
               onClick={() => saveMutation.mutate()}
               disabled={saveMutation.isPending}
             >
               <Save className="w-4 h-4 mr-2" />
-              {saveMutation.isPending ? 'Saving...' : 'Save & Log in Notebook'}
+              {saveMutation.isPending ? 'Saving...' : 'Save Reproduction Events'}
             </Button>
           </CardContent>
         </Card>
