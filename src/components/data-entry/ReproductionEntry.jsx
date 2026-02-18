@@ -16,6 +16,7 @@ export default function ReproductionEntry({ experimentId, onComplete }) {
   const [selectedIndividuals, setSelectedIndividuals] = useState([]);
   const [offspringCounts, setOffspringCounts] = useState({});
   const [eventDate, setEventDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [sessionNote, setSessionNote] = useState("");
 
   const { data: experiment } = useQuery({
     queryKey: ['experiment', experimentId],
