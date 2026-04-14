@@ -29,7 +29,8 @@ export default function CorrectDataForm({ experimentId, experiment, individuals 
         spores_count: found.spores_count || "",
         spores_volume: found.spores_volume || "",
         red_signal_count: found.red_signal_count || 0,
-        red_confirmed: found.red_confirmed ?? false
+        red_confirmed: found.red_confirmed ?? false,
+        custom_data: found.custom_data || {}
       });
     } else {
       alert("Individual not found");
@@ -42,7 +43,8 @@ export default function CorrectDataForm({ experimentId, experiment, individuals 
         ...formData,
         spores_count: formData.spores_count ? parseFloat(formData.spores_count) : null,
         cumulative_offspring: parseInt(formData.cumulative_offspring) || 0,
-        red_signal_count: parseInt(formData.red_signal_count) || 0
+        red_signal_count: parseInt(formData.red_signal_count) || 0,
+        custom_data: formData.custom_data || {}
       };
       await base44.entities.Individual.update(selectedIndividual.id, dataToSave);
       return formData.individual_id;
@@ -225,6 +227,48 @@ export default function CorrectDataForm({ experimentId, experiment, individuals 
                 </div>
               </div>
             </div>
+
+            {experiment?.custom_traits && experiment.custom_traits.length > 0 && (
+              <div className="pt-2">
+                <h4 className="text-sm font-semibold mb-3 text-gray-700 border-b pb-1">Custom Traits</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  {experiment.custom_traits.map(trait => (
+                    <div key={trait.name}>
+                      <label className="text-sm font-medium block mb-1">{trait.name}</label>
+                      {trait.type === 'boolean' ? (
+                        <div className="flex items-center h-10">
+                          <Checkbox
+                            checked={!!formData.custom_data[trait.name]}
+                            onCheckedChange={(checked) => setFormData({
+                              ...formData,
+                              custom_data: { ...formData.custom_data, [trait.name]: checked }
+                            })}
+                          />
+                          <span className="ml-2">{formData.custom_data[trait.name] ? 'Yes' : 'No'}</span>
+                        </div>
+                      ) : trait.type === 'number' ? (
+                        <Input
+                          type="number"
+                          value={formData.custom_data[trait.name] ?? ''}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            custom_data: { ...formData.custom_data, [trait.name]: parseFloat(e.target.value) || 0 }
+                          })}
+                        />
+                      ) : (
+                        <Input
+                          value={formData.custom_data[trait.name] || ''}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            custom_data: { ...formData.custom_data, [trait.name]: e.target.value }
+                          })}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end pt-4">
               <Button
