@@ -25,7 +25,7 @@ export default function CorrectDataForm({ experimentId, experiment, individuals 
         first_reproduction_date: found.first_reproduction_date || "",
         last_reproduction_date: found.last_reproduction_date || "",
         cumulative_offspring: found.cumulative_offspring || 0,
-        infected: found.infected ?? false,
+        infected: found.infected || "not_tested",
         spores_count: found.spores_count || "",
         spores_volume: found.spores_volume || "",
         red_signal_count: found.red_signal_count || 0,
@@ -181,13 +181,15 @@ export default function CorrectDataForm({ experimentId, experiment, individuals 
 
               <div>
                 <label className="text-sm font-medium block mb-1">Infected</label>
-                <div className="flex items-center h-10">
-                  <Checkbox
-                    checked={formData.infected}
-                    onCheckedChange={(checked) => setFormData({ ...formData, infected: checked })}
-                  />
-                  <span className="ml-2">{formData.infected ? 'Yes' : 'No'}</span>
-                </div>
+                <select
+                  className="w-full border rounded p-2"
+                  value={formData.infected}
+                  onChange={(e) => setFormData({ ...formData, infected: e.target.value })}
+                >
+                  <option value="not_tested">Not tested</option>
+                  <option value="confirmed Yes">Confirmed Yes</option>
+                  <option value="confirmed No">Confirmed No</option>
+                </select>
               </div>
 
               <div>
