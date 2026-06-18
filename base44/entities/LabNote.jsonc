@@ -1,0 +1,28 @@
+{
+  "name": "LabNote",
+  "type": "object",
+  "properties": {
+    "experiment_id": {
+      "type": "string",
+      "description": "Reference to experiment"
+    },
+    "title": {
+      "type": "string",
+      "description": "Optional note title"
+    },
+    "note": {
+      "type": "string",
+      "description": "Note content"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the note was created"
+    }
+  },
+  "required": [
+    "experiment_id",
+    "note",
+    "timestamp"
+  ]
+}

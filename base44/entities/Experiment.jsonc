@@ -1,0 +1,271 @@
+{
+  "name": "Experiment",
+  "type": "object",
+  "properties": {
+    "experiment_name": {
+      "type": "string",
+      "description": "Name of the experiment"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Experiment start date"
+    },
+    "infection_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of infection - used to compute days post infection"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional experiment description"
+    },
+    "factors": {
+      "type": "array",
+      "description": "List of experimental factors",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "levels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "custom_traits": {
+      "type": "array",
+      "description": "Custom traits defined by user",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "boolean",
+              "text",
+              "number"
+            ]
+          },
+          "tab": {
+            "type": "string",
+            "enum": [
+              "infection",
+              "reproduction",
+              "death",
+              "redness",
+              "standalone"
+            ],
+            "description": "Which tab to show this trait in"
+          },
+          "modality": {
+            "type": "string",
+            "enum": [
+              "infected",
+              "non_infected",
+              "all"
+            ],
+            "description": "For infection tab: show for infected, non-infected, or all"
+          },
+          "selection_mode": {
+            "type": "string",
+            "enum": [
+              "checkbox",
+              "id_list"
+            ],
+            "default": "checkbox",
+            "description": "How to select individuals for this trait"
+          },
+          "color": {
+            "type": "string",
+            "default": "gray",
+            "description": "Color for standalone tab"
+          },
+          "filters": {
+            "type": "object",
+            "description": "Filters for checkbox selection mode",
+            "properties": {
+              "alive_status": {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "alive",
+                  "dead"
+                ],
+                "default": "alive"
+              },
+              "infection_status": {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "infected",
+                  "non_infected",
+                  "not_tested"
+                ],
+                "default": "all"
+              },
+              "red_status": {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "red_confirmed",
+                  "not_red"
+                ],
+                "default": "all"
+              },
+              "sex": {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "male",
+                  "female"
+                ],
+                "default": "all"
+              }
+            }
+          }
+        }
+      },
+      "default": []
+    },
+    "dashboard_graphics": {
+      "type": "array",
+      "description": "Custom dashboard visualizations configured by user",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the visualization"
+          },
+          "trait": {
+            "type": "string",
+            "description": "Trait to visualize (e.g., survival, infection, offspring, custom trait)"
+          },
+          "chart_type": {
+            "type": "string",
+            "enum": [
+              "bar",
+              "line"
+            ],
+            "description": "Type of chart"
+          },
+          "x_axis": {
+            "type": "string",
+            "enum": [
+              "factors",
+              "time"
+            ],
+            "default": "factors",
+            "description": "What to show on X-axis: factors or time"
+          },
+          "selected_factors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Factors to group by"
+          },
+          "facet_factor": {
+            "type": "string",
+            "description": "Factor to facet by (optional)"
+          },
+          "is_interactive": {
+            "type": "boolean",
+            "default": false,
+            "description": "Allow users to interact with grouping factors and faceting"
+          },
+          "allow_faceting": {
+            "type": "boolean",
+            "default": false,
+            "description": "Allow faceting option in interactive mode"
+          },
+          "filters": {
+            "type": "object",
+            "description": "Data filters",
+            "properties": {
+              "exclude_males": {
+                "type": "boolean",
+                "default": false
+              },
+              "exclude_not_tested": {
+                "type": "boolean",
+                "default": false
+              },
+              "alive_only": {
+                "type": "boolean",
+                "default": false
+              },
+              "infected_only": {
+                "type": "boolean",
+                "default": false
+              },
+              "red_status": {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "red_only",
+                  "non_red_only"
+                ]
+              }
+            }
+          },
+          "y_axis_label": {
+            "type": "string",
+            "description": "Custom Y-axis label"
+          },
+          "x_axis_label": {
+            "type": "string",
+            "description": "Custom X-axis label"
+          },
+          "differentiate_by_red": {
+            "type": "boolean",
+            "default": false,
+            "description": "Group by red status"
+          },
+          "show_statistics": {
+            "type": "boolean",
+            "default": false,
+            "description": "Show statistical tests"
+          }
+        }
+      },
+      "default": []
+    },
+    "code_generation_mode": {
+      "type": "string",
+      "enum": [
+        "factor_based",
+        "numeric_id"
+      ],
+      "default": "factor_based",
+      "description": "Mode for generating individual codes"
+    },
+    "code_prefix": {
+      "type": "string",
+      "default": "ID-",
+      "description": "Prefix for numeric ID mode"
+    },
+    "code_starting_number": {
+      "type": "number",
+      "default": 1,
+      "description": "Starting number for numeric ID mode"
+    },
+    "individuals_generated": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "experiment_name",
+    "start_date"
+  ]
+}

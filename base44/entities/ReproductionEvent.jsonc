@@ -1,0 +1,29 @@
+{
+  "name": "ReproductionEvent",
+  "type": "object",
+  "properties": {
+    "experiment_id": {
+      "type": "string",
+      "description": "Reference to experiment"
+    },
+    "individual_id": {
+      "type": "string",
+      "description": "Reference to individual"
+    },
+    "event_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of reproduction event"
+    },
+    "offspring_count": {
+      "type": "number",
+      "description": "Number of offspring produced"
+    }
+  },
+  "required": [
+    "experiment_id",
+    "individual_id",
+    "event_date",
+    "offspring_count"
+  ]
+}

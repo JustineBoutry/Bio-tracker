@@ -1,0 +1,92 @@
+{
+  "name": "Individual",
+  "type": "object",
+  "properties": {
+    "individual_id": {
+      "type": "string",
+      "description": "Unique ID"
+    },
+    "experiment_id": {
+      "type": "string",
+      "description": "Reference to experiment"
+    },
+    "factors": {
+      "type": "object",
+      "description": "Factor values for this individual"
+    },
+    "custom_data": {
+      "type": "object",
+      "description": "Custom trait values",
+      "default": {}
+    },
+    "sex": {
+      "type": "string",
+      "enum": [
+        "male",
+        "female"
+      ],
+      "default": "female",
+      "description": "Sex of the individual"
+    },
+    "alive": {
+      "type": "boolean",
+      "default": true
+    },
+    "death_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of death"
+    },
+    "infected": {
+      "type": "string",
+      "enum": [
+        "not_tested",
+        "confirmed No",
+        "confirmed Yes"
+      ],
+      "default": "not_tested",
+      "description": "Infection status"
+    },
+    "spores_count": {
+      "type": "number",
+      "description": "Number of spores counted"
+    },
+    "spores_volume": {
+      "type": "string",
+      "description": "Volume in which spores were counted"
+    },
+    "red_signal_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of times individual appeared red"
+    },
+    "red_confirmed": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when red_signal_count >= 3"
+    },
+    "first_reproduction_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of first reproduction"
+    },
+    "last_reproduction_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of last reproduction"
+    },
+    "cumulative_offspring": {
+      "type": "number",
+      "default": 0,
+      "description": "Total offspring produced"
+    },
+    "special_category": {
+      "type": "string",
+      "description": "Special category name if this is a special category individual"
+    }
+  },
+  "required": [
+    "individual_id",
+    "experiment_id"
+  ]
+}

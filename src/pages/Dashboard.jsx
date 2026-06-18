@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Skull, Droplet, Syringe, X, Loader2 } from "lucide-react";
@@ -8,7 +8,11 @@ import { format, differenceInDays } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useExperiment } from "../components/ExperimentContext";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, LineChart, Line, ComposedChart, Scatter, ZAxis, ErrorBar } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, LineChart, Line, ComposedChart, ErrorBar } from 'recharts';
+import OffspringPerDayCard from "../components/dashboard/OffspringPerDayCard";
+import SporeLoadCard from "../components/dashboard/SporeLoadCard";
+import SexByGroupCard from "../components/dashboard/SexByGroupCard";
+import InfectionByGroupCard from "../components/dashboard/InfectionByGroupCard";
 import StatisticalTestPanel from "../components/dashboard/StatisticalTestPanel";
 import { oneWayAnova, tukeyHSD, logRankTest, multiWayAnova } from "../components/dashboard/statisticsUtils";
 import { useTranslation } from 'react-i18next';
@@ -70,7 +74,7 @@ export default function Dashboard() {
   const { data: allIndividuals = [] } = useQuery({
     queryKey: ['individuals', selectedExp],
     queryFn: () => base44.entities.Individual.filter({ experiment_id: selectedExp }),
-    enabled: !!selectedExp,
+    enabled: !!selectedExp, refetchInterval: 10000,
   });
 
   const filteredIndividuals = allIndividuals.filter(ind => {
@@ -99,77 +103,16 @@ export default function Dashboard() {
     setCategoryFilters({ ...categoryFilters, [factor]: value });
   };
 
-  const toggleGraphFactor = (factorName) => {
-    setSelectedGraphFactors(prev => 
-      prev.includes(factorName) 
-        ? prev.filter(f => f !== factorName)
-        : [...prev, factorName]
-    );
-  };
-
-  const toggleInfectionGraphFactor = (factorName) => {
-    setSelectedInfectionGraphFactors(prev => 
-      prev.includes(factorName) 
-        ? prev.filter(f => f !== factorName)
-        : [...prev, factorName]
-    );
-  };
-
-  const toggleReproductionGraphFactor = (factorName) => {
-    setSelectedReproductionGraphFactors(prev => 
-      prev.includes(factorName) 
-        ? prev.filter(f => f !== factorName)
-        : [...prev, factorName]
-    );
-  };
-
-  const toggleSurvivalCurveFactor = (factorName) => {
-    setSelectedSurvivalCurveFactors(prev => 
-      prev.includes(factorName) 
-        ? prev.filter(f => f !== factorName)
-        : [...prev, factorName]
-    );
-  };
-
-  const toggleRedSignalGraphFactor = (factorName) => {
-    setSelectedRedSignalGraphFactors(prev => 
-      prev.includes(factorName) 
-        ? prev.filter(f => f !== factorName)
-        : [...prev, factorName]
-    );
-  };
-
-  const toggleSexGraphFactor = (factorName) => {
-    setSelectedSexGraphFactors(prev => 
-      prev.includes(factorName) 
-        ? prev.filter(f => f !== factorName)
-        : [...prev, factorName]
-    );
-  };
-
-  const toggleOffspringGraphFactor = (factorName) => {
-    setSelectedOffspringGraphFactors(prev => 
-      prev.includes(factorName) 
-        ? prev.filter(f => f !== factorName)
-        : [...prev, factorName]
-    );
-  };
-
-  const toggleSporeLoadGraphFactor = (factorName) => {
-    setSelectedSporeLoadGraphFactors(prev => 
-      prev.includes(factorName) 
-        ? prev.filter(f => f !== factorName)
-        : [...prev, factorName]
-    );
-  };
-
-  const toggleOffspringPerDayGraphFactor = (factorName) => {
-    setSelectedOffspringPerDayGraphFactors(prev => 
-      prev.includes(factorName) 
-        ? prev.filter(f => f !== factorName)
-        : [...prev, factorName]
-    );
-  };
+  const mkToggle = (setter) => (n) => setter(prev => prev.includes(n) ? prev.filter(f => f !== n) : [...prev, n]);
+  const toggleGraphFactor = mkToggle(setSelectedGraphFactors);
+  const toggleInfectionGraphFactor = mkToggle(setSelectedInfectionGraphFactors);
+  const toggleReproductionGraphFactor = mkToggle(setSelectedReproductionGraphFactors);
+  const toggleSurvivalCurveFactor = mkToggle(setSelectedSurvivalCurveFactors);
+  const toggleRedSignalGraphFactor = mkToggle(setSelectedRedSignalGraphFactors);
+  const toggleSexGraphFactor = mkToggle(setSelectedSexGraphFactors);
+  const toggleOffspringGraphFactor = mkToggle(setSelectedOffspringGraphFactors);
+  const toggleSporeLoadGraphFactor = mkToggle(setSelectedSporeLoadGraphFactors);
+  const toggleOffspringPerDayGraphFactor = mkToggle(setSelectedOffspringPerDayGraphFactors);
 
   const getChartData = (filterByFacet = null) => {
     if (!experiment?.factors || selectedGraphFactors.length === 0) return [];
@@ -219,12 +162,7 @@ export default function Dashboard() {
     }).sort((a, b) => a.name.localeCompare(b.name));
   };
 
-  const getFacetLevels = () => {
-    if (!facetFactor) return null;
-    const factor = experiment?.factors?.find(f => f.name === facetFactor);
-    return factor?.levels || [];
-  };
-
+  const getFacetLevels = () => { if (!facetFactor) return null; return experiment?.factors?.find(f => f.name === facetFactor)?.levels || []; };
   const getInfectionChartData = (filterByFacet = null) => {
     if (!experiment?.factors || selectedInfectionGraphFactors.length === 0) return [];
 
@@ -276,12 +214,6 @@ export default function Dashboard() {
     }).sort((a, b) => a.name.localeCompare(b.name));
   };
 
-  const getInfectionFacetLevels = () => {
-    if (!facetInfectionFactor) return null;
-    const factor = experiment?.factors?.find(f => f.name === facetInfectionFactor);
-    return factor?.levels || [];
-  };
-
   const getReproductionChartData = (filterByFacet = null) => {
     if (!experiment?.factors || selectedReproductionGraphFactors.length === 0) return [];
 
@@ -330,12 +262,7 @@ export default function Dashboard() {
     }).sort((a, b) => a.name.localeCompare(b.name));
   };
 
-  const getReproductionFacetLevels = () => {
-    if (!facetReproductionFactor) return null;
-    const factor = experiment?.factors?.find(f => f.name === facetReproductionFactor);
-    return factor?.levels || [];
-  };
-
+  const getReproductionFacetLevels = () => { if (!facetReproductionFactor) return null; return experiment?.factors?.find(f => f.name === facetReproductionFactor)?.levels || []; };
   const getRedSignalChartData = (filterByFacet = null) => {
     if (!experiment?.factors || selectedRedSignalGraphFactors.length === 0) return [];
 
@@ -387,12 +314,7 @@ export default function Dashboard() {
     }).sort((a, b) => a.name.localeCompare(b.name));
   };
 
-  const getRedSignalFacetLevels = () => {
-    if (!facetRedSignalFactor) return null;
-    const factor = experiment?.factors?.find(f => f.name === facetRedSignalFactor);
-    return factor?.levels || [];
-  };
-
+  const getRedSignalFacetLevels = () => { if (!facetRedSignalFactor) return null; return experiment?.factors?.find(f => f.name === facetRedSignalFactor)?.levels || []; };
   const getSexChartData = (filterByFacet = null) => {
     if (!experiment?.factors || selectedSexGraphFactors.length === 0) return [];
 
@@ -428,12 +350,7 @@ export default function Dashboard() {
     }).sort((a, b) => a.name.localeCompare(b.name));
   };
 
-  const getSexFacetLevels = () => {
-    if (!facetSexFactor) return null;
-    const factor = experiment?.factors?.find(f => f.name === facetSexFactor);
-    return factor?.levels || [];
-  };
-
+  const getSexFacetLevels = () => { if (!facetSexFactor) return null; return experiment?.factors?.find(f => f.name === facetSexFactor)?.levels || []; };
   const getOffspringChartData = (filterByFacet = null) => {
     if (!experiment?.factors || selectedOffspringGraphFactors.length === 0) return { boxData: [], scatterData: [] };
 
@@ -510,12 +427,7 @@ export default function Dashboard() {
     return { boxData, scatterData, groupNames: sortedGroups.map(g => g.name) };
   };
 
-  const getOffspringFacetLevels = () => {
-    if (!facetOffspringFactor) return null;
-    const factor = experiment?.factors?.find(f => f.name === facetOffspringFactor);
-    return factor?.levels || [];
-  };
-
+  const getOffspringFacetLevels = () => { if (!facetOffspringFactor) return null; return experiment?.factors?.find(f => f.name === facetOffspringFactor)?.levels || []; };
   const parseVolume = (volumeStr) => {
     if (!volumeStr) return null;
     const match = volumeStr.match(/(\d+\.?\d*)/);
@@ -583,12 +495,7 @@ export default function Dashboard() {
     return { boxData };
   };
 
-  const getSporeLoadFacetLevels = () => {
-    if (!facetSporeLoadFactor) return null;
-    const factor = experiment?.factors?.find(f => f.name === facetSporeLoadFactor);
-    return factor?.levels || [];
-  };
-
+  const getSporeLoadFacetLevels = () => { if (!facetSporeLoadFactor) return null; return experiment?.factors?.find(f => f.name === facetSporeLoadFactor)?.levels || []; };
   const getOffspringPerDayChartData = (filterByFacet = null) => {
     if (!experiment?.factors || selectedOffspringPerDayGraphFactors.length === 0 || !experiment?.start_date) 
       return { boxData: [], scatterData: [] };
@@ -687,12 +594,7 @@ export default function Dashboard() {
     return { boxData, scatterData, groupNames: sortedGroups.map(g => g.name) };
   };
 
-  const getOffspringPerDayFacetLevels = () => {
-    if (!facetOffspringPerDayFactor) return null;
-    const factor = experiment?.factors?.find(f => f.name === facetOffspringPerDayFactor);
-    return factor?.levels || [];
-  };
-
+  const getOffspringPerDayFacetLevels = () => { if (!facetOffspringPerDayFactor) return null; return experiment?.factors?.find(f => f.name === facetOffspringPerDayFactor)?.levels || []; };
   const runAnovaTest = () => {
     if (anovaFactors.length === 0) return;
 
@@ -957,100 +859,33 @@ export default function Dashboard() {
 
   const handleInfectionBarClick = (data) => {
     if (!data) return;
-    const barName = data.name;
-    const existing = selectedInfectionBars.find(b => b.name === barName);
-    
-    if (existing) {
-      setSelectedInfectionBars(selectedInfectionBars.filter(b => b.name !== barName));
-    } else {
-      setSelectedInfectionBars([...selectedInfectionBars, {
-        name: barName,
-        data: {
-          confirmedYes: data.rawCounts.confirmedYes,
-          confirmedNo: data.rawCounts.confirmedNo,
-          notTested: data.rawCounts.notTested,
-          total: data.total
-        }
-      }]);
-    }
+    const existing = selectedInfectionBars.find(b => b.name === data.name);
+    if (existing) { setSelectedInfectionBars(selectedInfectionBars.filter(b => b.name !== data.name)); }
+    else { setSelectedInfectionBars([...selectedInfectionBars, { name: data.name, data: { confirmedYes: data.rawCounts.confirmedYes, confirmedNo: data.rawCounts.confirmedNo, notTested: data.rawCounts.notTested, total: data.total } }]); }
   };
-
   const handleSurvivalBarClick = (data) => {
     if (!data) return;
-    const barName = data.name;
-    const existing = selectedSurvivalBars.find(b => b.name === barName);
-    
-    if (existing) {
-      setSelectedSurvivalBars(selectedSurvivalBars.filter(b => b.name !== barName));
-    } else {
-      setSelectedSurvivalBars([...selectedSurvivalBars, {
-        name: barName,
-        data: {
-          alive: data.aliveCount || Math.round((data.alive / 100) * data.total),
-          dead: data.deadCount || Math.round((data.dead / 100) * data.total),
-          total: data.total
-        }
-      }]);
-    }
+    const existing = selectedSurvivalBars.find(b => b.name === data.name);
+    if (existing) { setSelectedSurvivalBars(selectedSurvivalBars.filter(b => b.name !== data.name)); }
+    else { setSelectedSurvivalBars([...selectedSurvivalBars, { name: data.name, data: { alive: data.aliveCount || Math.round((data.alive / 100) * data.total), dead: data.deadCount || Math.round((data.dead / 100) * data.total), total: data.total } }]); }
   };
-
   const handleReproductionBarClick = (data) => {
     if (!data) return;
-    const barName = data.name;
-    const existing = selectedReproductionBars.find(b => b.name === barName);
-    
-    if (existing) {
-      setSelectedReproductionBars(selectedReproductionBars.filter(b => b.name !== barName));
-    } else {
-      setSelectedReproductionBars([...selectedReproductionBars, {
-        name: barName,
-        data: {
-          reproduced: data.reproducedCount || data.rawCounts?.reproduced || 0,
-          notReproduced: data.notReproducedCount || data.rawCounts?.notReproduced || 0,
-          total: data.total
-        }
-      }]);
-    }
+    const existing = selectedReproductionBars.find(b => b.name === data.name);
+    if (existing) { setSelectedReproductionBars(selectedReproductionBars.filter(b => b.name !== data.name)); }
+    else { setSelectedReproductionBars([...selectedReproductionBars, { name: data.name, data: { reproduced: data.reproducedCount || data.rawCounts?.reproduced || 0, notReproduced: data.notReproducedCount || data.rawCounts?.notReproduced || 0, total: data.total } }]); }
   };
-
   const handleRedSignalBarClick = (data) => {
     if (!data) return;
-    const barName = data.name;
-    const existing = selectedRedSignalBars.find(b => b.name === barName);
-    
-    if (existing) {
-      setSelectedRedSignalBars(selectedRedSignalBars.filter(b => b.name !== barName));
-    } else {
-      setSelectedRedSignalBars([...selectedRedSignalBars, {
-        name: barName,
-        data: {
-          red3plus: data.red3plusCount || 0,
-          red2: data.red2Count || 0,
-          red1: data.red1Count || 0,
-          noRed: data.noRedCount || 0,
-          total: data.total
-        }
-      }]);
-    }
+    const existing = selectedRedSignalBars.find(b => b.name === data.name);
+    if (existing) { setSelectedRedSignalBars(selectedRedSignalBars.filter(b => b.name !== data.name)); }
+    else { setSelectedRedSignalBars([...selectedRedSignalBars, { name: data.name, data: { red3plus: data.red3plusCount || 0, red2: data.red2Count || 0, red1: data.red1Count || 0, noRed: data.noRedCount || 0, total: data.total } }]); }
   };
-
   const handleSexBarClick = (data) => {
     if (!data) return;
-    const barName = data.name;
-    const existing = selectedSexBars.find(b => b.name === barName);
-    
-    if (existing) {
-      setSelectedSexBars(selectedSexBars.filter(b => b.name !== barName));
-    } else {
-      setSelectedSexBars([...selectedSexBars, {
-        name: barName,
-        data: {
-          male: data.maleCount || 0,
-          female: data.femaleCount || 0,
-          total: data.total
-        }
-      }]);
-    }
+    const existing = selectedSexBars.find(b => b.name === data.name);
+    if (existing) { setSelectedSexBars(selectedSexBars.filter(b => b.name !== data.name)); }
+    else { setSelectedSexBars([...selectedSexBars, { name: data.name, data: { male: data.maleCount || 0, female: data.femaleCount || 0, total: data.total } }]); }
   };
 
   return (
@@ -1860,193 +1695,19 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Offspring Per Day Lived by Group</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-6 space-y-4">
-                <div>
-                  <p className="text-sm font-medium mb-2">{t('dashboard.selectFactors')}</p>
-                  <div className="flex flex-wrap gap-4">
-                    {experiment.factors?.map(factor => (
-                      <div key={factor.name} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`offspring-per-day-graph-${factor.name}`}
-                          checked={selectedOffspringPerDayGraphFactors.includes(factor.name)}
-                          onCheckedChange={() => toggleOffspringPerDayGraphFactor(factor.name)}
-                          disabled={facetOffspringPerDayFactor === factor.name}
-                        />
-                        <label htmlFor={`offspring-per-day-graph-${factor.name}`} className="text-sm cursor-pointer">
-                          {factor.name}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium mb-2">Facet by (optional):</p>
-                  <select
-                    className="border rounded p-2 text-sm"
-                    value={facetOffspringPerDayFactor || ''}
-                    onChange={(e) => {
-                      const value = e.target.value || null;
-                      setFacetOffspringPerDayFactor(value);
-                      if (value && selectedOffspringPerDayGraphFactors.includes(value)) {
-                        setSelectedOffspringPerDayGraphFactors(selectedOffspringPerDayGraphFactors.filter(f => f !== value));
-                      }
-                    }}
-                  >
-                    <option value="">None</option>
-                    {experiment.factors?.map(factor => (
-                      <option key={factor.name} value={factor.name}>
-                        {factor.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="offspring-per-day-by-red"
-                    checked={offspringPerDayByRedStatus}
-                    onCheckedChange={setOffspringPerDayByRedStatus}
-                  />
-                  <label htmlFor="offspring-per-day-by-red" className="text-sm cursor-pointer">
-                    {t('dashboard.differentiateByRed')}
-                  </label>
-                </div>
-              </div>
-
-              {selectedOffspringPerDayGraphFactors.length > 0 ? (
-                !facetOffspringPerDayFactor ? (
-                  <div>
-                    <ResponsiveContainer width="100%" height={400}>
-                      <ComposedChart 
-                        data={offspringPerDayChartResult.boxData}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          dataKey="name"
-                          angle={-45} 
-                          textAnchor="end" 
-                          height={100}
-                          interval={0}
-                        />
-                        <YAxis label={{ value: 'Mean Offspring/Day ± 95% CI', angle: -90, position: 'insideLeft' }} />
-                        <Tooltip 
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              const data = payload[0].payload;
-                              return (
-                                <div className="bg-white border rounded p-2 shadow text-sm">
-                                  <p className="font-semibold">{data.name}</p>
-                                  <p>n = {data.n}</p>
-                                  <p>Mean: {data.mean?.toFixed(3)}</p>
-                                  <p>SD: {data.std?.toFixed(3)}</p>
-                                  <p>SE: {data.se?.toFixed(3)}</p>
-                                  <p>95% CI: [{(data.mean - data.ci95)?.toFixed(3)}, {(data.mean + data.ci95)?.toFixed(3)}]</p>
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <Bar dataKey="mean" fill="#0ea5e9" name="Mean Offspring/Day">
-                          <ErrorBar dataKey="ci95" width={4} strokeWidth={2} stroke="#0369a1" />
-                        </Bar>
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                    {/* Group statistics table */}
-                    <div className="mt-4 overflow-x-auto">
-                      <table className="w-full text-sm border">
-                        <thead>
-                          <tr className="bg-gray-50 border-b">
-                            <th className="p-2 text-left">Group</th>
-                            <th className="p-2 text-right">n</th>
-                            <th className="p-2 text-right">Mean</th>
-                            <th className="p-2 text-right">SD</th>
-                            <th className="p-2 text-right">SE</th>
-                            <th className="p-2 text-right">95% CI</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {offspringPerDayChartResult.boxData.map((box) => (
-                            <tr key={box.name} className="border-b">
-                              <td className="p-2 font-medium">{box.name}</td>
-                              <td className="p-2 text-right">{box.n}</td>
-                              <td className="p-2 text-right">{box.mean?.toFixed(3)}</td>
-                              <td className="p-2 text-right">{box.std?.toFixed(3)}</td>
-                              <td className="p-2 text-right">{box.se?.toFixed(3)}</td>
-                              <td className="p-2 text-right">[{(box.mean - box.ci95)?.toFixed(3)}, {(box.mean + box.ci95)?.toFixed(3)}]</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {offspringPerDayFacetLevels.map(level => {
-                      const facetResult = getOffspringPerDayChartData(level);
-                      return (
-                        <div key={level} className="border rounded-lg p-4">
-                          <h3 className="text-center font-semibold mb-3">{facetOffspringPerDayFactor}: {level}</h3>
-                          <ResponsiveContainer width="100%" height={300}>
-                            <ComposedChart 
-                              data={facetResult.boxData}
-                              margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
-                            >
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis 
-                                dataKey="name"
-                                angle={-45} 
-                                textAnchor="end" 
-                                height={80}
-                                fontSize={12}
-                                interval={0}
-                              />
-                              <YAxis fontSize={12} label={{ value: 'Mean ± 95% CI', angle: -90, position: 'insideLeft' }} />
-                              <Tooltip 
-                                content={({ active, payload }) => {
-                                  if (active && payload && payload.length) {
-                                    const data = payload[0].payload;
-                                    return (
-                                      <div className="bg-white border rounded p-2 shadow text-xs">
-                                        <p className="font-semibold">{data.name}</p>
-                                        <p>n={data.n}, Mean={data.mean?.toFixed(3)} ± {data.ci95?.toFixed(3)}</p>
-                                      </div>
-                                    );
-                                  }
-                                  return null;
-                                }}
-                              />
-                              <Bar dataKey="mean" fill="#0ea5e9" name="Mean">
-                                <ErrorBar dataKey="ci95" width={4} strokeWidth={2} stroke="#0369a1" />
-                              </Bar>
-                            </ComposedChart>
-                          </ResponsiveContainer>
-                          <div className="flex justify-around text-xs mt-2">
-                            {facetResult.boxData.map((box) => (
-                              <div key={box.name} className="text-center">
-                                <div className="text-gray-500">n={box.n}, μ={box.mean?.toFixed(3)} ± {box.ci95?.toFixed(3)}</div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  Select at least one factor to display the chart
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <OffspringPerDayCard
+            experiment={experiment}
+            selectedOffspringPerDayGraphFactors={selectedOffspringPerDayGraphFactors}
+            toggleOffspringPerDayGraphFactor={toggleOffspringPerDayGraphFactor}
+            facetOffspringPerDayFactor={facetOffspringPerDayFactor}
+            setFacetOffspringPerDayFactor={setFacetOffspringPerDayFactor}
+            setSelectedOffspringPerDayGraphFactors={setSelectedOffspringPerDayGraphFactors}
+            offspringPerDayByRedStatus={offspringPerDayByRedStatus}
+            setOffspringPerDayByRedStatus={setOffspringPerDayByRedStatus}
+            offspringPerDayChartResult={offspringPerDayChartResult}
+            offspringPerDayFacetLevels={offspringPerDayFacetLevels}
+            getOffspringPerDayChartData={getOffspringPerDayChartData}
+          />
 
           <Card className="mt-6">
             <CardHeader>
@@ -2785,522 +2446,51 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>{t('dashboard.sexByGroup')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-6 space-y-4">
-                <div>
-                  <p className="text-sm font-medium mb-2">Select factors to group by:</p>
-                  <div className="flex flex-wrap gap-4">
-                    {experiment.factors?.map(factor => (
-                      <div key={factor.name} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`sex-graph-${factor.name}`}
-                          checked={selectedSexGraphFactors.includes(factor.name)}
-                          onCheckedChange={() => toggleSexGraphFactor(factor.name)}
-                          disabled={facetSexFactor === factor.name}
-                        />
-                        <label htmlFor={`sex-graph-${factor.name}`} className="text-sm cursor-pointer">
-                          {factor.name}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+          <SexByGroupCard
+            experiment={experiment}
+            selectedSexGraphFactors={selectedSexGraphFactors}
+            toggleSexGraphFactor={toggleSexGraphFactor}
+            facetSexFactor={facetSexFactor}
+            setFacetSexFactor={setFacetSexFactor}
+            setSelectedSexGraphFactors={setSelectedSexGraphFactors}
+            sexChartData={sexChartData}
+            sexFacetLevels={sexFacetLevels}
+            getSexChartData={getSexChartData}
+            selectedSexBars={selectedSexBars}
+            handleSexBarClick={handleSexBarClick}
+            setSelectedSexBars={setSelectedSexBars}
+          />
 
-                <div>
-                  <p className="text-sm font-medium mb-2">Facet by (optional):</p>
-                  <select
-                    className="border rounded p-2 text-sm"
-                    value={facetSexFactor || ''}
-                    onChange={(e) => {
-                      const value = e.target.value || null;
-                      setFacetSexFactor(value);
-                      if (value && selectedSexGraphFactors.includes(value)) {
-                        setSelectedSexGraphFactors(selectedSexGraphFactors.filter(f => f !== value));
-                      }
-                    }}
-                  >
-                    <option value="">None</option>
-                    {experiment.factors?.map(factor => (
-                      <option key={factor.name} value={factor.name}>
-                        {factor.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+          <InfectionByGroupCard
+            experiment={experiment}
+            selectedInfectionGraphFactors={selectedInfectionGraphFactors}
+            toggleInfectionGraphFactor={toggleInfectionGraphFactor}
+            facetInfectionFactor={facetInfectionFactor}
+            setFacetInfectionFactor={setFacetInfectionFactor}
+            setSelectedInfectionGraphFactors={setSelectedInfectionGraphFactors}
+            excludeNotTested={excludeNotTested}
+            setExcludeNotTested={setExcludeNotTested}
+            infectionChartData={infectionChartData}
+            infectionFacetLevels={infectionFacetLevels}
+            getInfectionChartData={getInfectionChartData}
+            selectedInfectionBars={selectedInfectionBars}
+            handleInfectionBarClick={handleInfectionBarClick}
+            setSelectedInfectionBars={setSelectedInfectionBars}
+          />
 
-              {selectedSexGraphFactors.length > 0 ? (
-                !facetSexFactor ? (
-                  <>
-                    <ResponsiveContainer width="100%" height={400}>
-                      <BarChart data={sexChartData} onClick={(e) => e?.activePayload?.[0] && handleSexBarClick(e.activePayload[0].payload)}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                        <YAxis label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
-                        <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
-                        <Legend />
-                        <Bar dataKey="male" stackId="a" name="Male" cursor="pointer">
-                          {sexChartData.map((entry, index) => (
-                            <Cell 
-                              key={`cell-${index}`} 
-                              fill={selectedSexBars.find(b => b.name === entry.name) ? "#ea580c" : "#f97316"}
-                              opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
-                            />
-                          ))}
-                        </Bar>
-                        <Bar dataKey="female" stackId="a" name="Female" cursor="pointer">
-                          {sexChartData.map((entry, index) => (
-                            <Cell 
-                              key={`cell-${index}`} 
-                              fill={selectedSexBars.find(b => b.name === entry.name) ? "#78350f" : "#92400e"}
-                              opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                    <div className="mt-4 text-sm text-gray-600 text-center">
-                      Click on bars to select groups for statistical testing
-                    </div>
-                    {selectedSexBars.length > 0 && (
-                      <div className="mt-4">
-                        <StatisticalTestPanel
-                          selectedBars={selectedSexBars}
-                          onClear={() => setSelectedSexBars([])}
-                          chartType="sex"
-                        />
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {sexFacetLevels.map(level => {
-                        const facetData = getSexChartData(level);
-                        return (
-                          <div key={level} className="border rounded-lg p-4">
-                            <h3 className="text-center font-semibold mb-3">{facetSexFactor}: {level}</h3>
-                            <ResponsiveContainer width="100%" height={300}>
-                              <BarChart data={facetData} onClick={(e) => e?.activePayload?.[0] && handleSexBarClick(e.activePayload[0].payload)}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} fontSize={12} />
-                                <YAxis fontSize={12} label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
-                                <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
-                                <Legend />
-                                <Bar dataKey="male" stackId="a" name="Male" cursor="pointer">
-                                  {facetData.map((entry, index) => (
-                                    <Cell 
-                                      key={`cell-${index}`} 
-                                      fill={selectedSexBars.find(b => b.name === entry.name) ? "#ea580c" : "#f97316"}
-                                      opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
-                                    />
-                                  ))}
-                                </Bar>
-                                <Bar dataKey="female" stackId="a" name="Female" cursor="pointer">
-                                  {facetData.map((entry, index) => (
-                                    <Cell 
-                                      key={`cell-${index}`} 
-                                      fill={selectedSexBars.find(b => b.name === entry.name) ? "#78350f" : "#92400e"}
-                                      opacity={selectedSexBars.length > 0 && !selectedSexBars.find(b => b.name === entry.name) ? 0.3 : 1}
-                                    />
-                                  ))}
-                                </Bar>
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="mt-4 text-sm text-gray-600 text-center">
-                      Click on bars to select groups for statistical testing
-                    </div>
-                    {selectedSexBars.length > 0 && (
-                      <div className="mt-4">
-                        <StatisticalTestPanel
-                          selectedBars={selectedSexBars}
-                          onClear={() => setSelectedSexBars([])}
-                          chartType="sex"
-                        />
-                      </div>
-                    )}
-                  </>
-                )
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  Select at least one factor to display the chart
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>{t('dashboard.infectionByGroup')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-6 space-y-4">
-                <div>
-                  <p className="text-sm font-medium mb-2">Select factors to group by:</p>
-                  <div className="flex flex-wrap gap-4">
-                    {experiment.factors?.map(factor => (
-                      <div key={factor.name} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`infection-graph-${factor.name}`}
-                          checked={selectedInfectionGraphFactors.includes(factor.name)}
-                          onCheckedChange={() => toggleInfectionGraphFactor(factor.name)}
-                          disabled={facetInfectionFactor === factor.name}
-                        />
-                        <label htmlFor={`infection-graph-${factor.name}`} className="text-sm cursor-pointer">
-                          {factor.name}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium mb-2">Facet by (optional):</p>
-                  <select
-                    className="border rounded p-2 text-sm"
-                    value={facetInfectionFactor || ''}
-                    onChange={(e) => {
-                      const value = e.target.value || null;
-                      setFacetInfectionFactor(value);
-                      if (value && selectedInfectionGraphFactors.includes(value)) {
-                        setSelectedInfectionGraphFactors(selectedInfectionGraphFactors.filter(f => f !== value));
-                      }
-                    }}
-                  >
-                    <option value="">None</option>
-                    {experiment.factors?.map(factor => (
-                      <option key={factor.name} value={factor.name}>
-                        {factor.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="exclude-not-tested"
-                    checked={excludeNotTested}
-                    onCheckedChange={setExcludeNotTested}
-                  />
-                  <label htmlFor="exclude-not-tested" className="text-sm cursor-pointer">
-                    {t('dashboard.excludeNotTested')}
-                  </label>
-                </div>
-              </div>
-
-              {selectedInfectionGraphFactors.length > 0 ? (
-                !facetInfectionFactor ? (
-                  <>
-                    <ResponsiveContainer width="100%" height={400}>
-                      <BarChart data={infectionChartData} onClick={(e) => e?.activePayload?.[0] && handleInfectionBarClick(e.activePayload[0].payload)}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                        <YAxis label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
-                        <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
-                        <Legend />
-                        <Bar dataKey="confirmedYes" stackId="a" name="Confirmed Yes" cursor="pointer">
-                          {infectionChartData.map((entry, index) => (
-                            <Cell 
-                              key={`cell-${index}`} 
-                              fill={selectedInfectionBars.find(b => b.name === entry.name) ? "#dc2626" : "#ef4444"}
-                              opacity={selectedInfectionBars.length > 0 && !selectedInfectionBars.find(b => b.name === entry.name) ? 0.3 : 1}
-                            />
-                          ))}
-                        </Bar>
-                        <Bar dataKey="confirmedNo" stackId="a" name="Confirmed No" cursor="pointer">
-                          {infectionChartData.map((entry, index) => (
-                            <Cell 
-                              key={`cell-${index}`} 
-                              fill={selectedInfectionBars.find(b => b.name === entry.name) ? "#16a34a" : "#22c55e"}
-                              opacity={selectedInfectionBars.length > 0 && !selectedInfectionBars.find(b => b.name === entry.name) ? 0.3 : 1}
-                            />
-                          ))}
-                        </Bar>
-                        {!excludeNotTested && (
-                          <Bar dataKey="notTested" stackId="a" name="Not Tested" cursor="pointer">
-                            {infectionChartData.map((entry, index) => (
-                              <Cell 
-                                key={`cell-${index}`} 
-                                fill={selectedInfectionBars.find(b => b.name === entry.name) ? "#6b7280" : "#9ca3af"}
-                                opacity={selectedInfectionBars.length > 0 && !selectedInfectionBars.find(b => b.name === entry.name) ? 0.3 : 1}
-                              />
-                            ))}
-                          </Bar>
-                        )}
-                      </BarChart>
-                    </ResponsiveContainer>
-                    <div className="mt-4 text-sm text-gray-600 text-center">
-                      Click on bars to select groups for statistical testing
-                    </div>
-                    {selectedInfectionBars.length > 0 && (
-                      <div className="mt-4">
-                        <StatisticalTestPanel
-                          selectedBars={selectedInfectionBars}
-                          onClear={() => setSelectedInfectionBars([])}
-                          chartType="infection"
-                        />
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {infectionFacetLevels.map(level => {
-                        const facetData = getInfectionChartData(level);
-                        return (
-                          <div key={level} className="border rounded-lg p-4">
-                            <h3 className="text-center font-semibold mb-3">{facetInfectionFactor}: {level}</h3>
-                            <ResponsiveContainer width="100%" height={300}>
-                              <BarChart data={facetData} onClick={(e) => e?.activePayload?.[0] && handleInfectionBarClick(e.activePayload[0].payload)}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} fontSize={12} />
-                                <YAxis fontSize={12} label={{ value: 'Proportion (%)', angle: -90, position: 'insideLeft' }} />
-                                <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name]} />
-                                <Legend />
-                                <Bar dataKey="confirmedYes" stackId="a" name="Confirmed Yes" cursor="pointer">
-                                  {facetData.map((entry, index) => (
-                                    <Cell 
-                                      key={`cell-${index}`} 
-                                      fill={selectedInfectionBars.find(b => b.name === entry.name) ? "#dc2626" : "#ef4444"}
-                                      opacity={selectedInfectionBars.length > 0 && !selectedInfectionBars.find(b => b.name === entry.name) ? 0.3 : 1}
-                                    />
-                                  ))}
-                                </Bar>
-                                <Bar dataKey="confirmedNo" stackId="a" name="Confirmed No" cursor="pointer">
-                                  {facetData.map((entry, index) => (
-                                    <Cell 
-                                      key={`cell-${index}`} 
-                                      fill={selectedInfectionBars.find(b => b.name === entry.name) ? "#16a34a" : "#22c55e"}
-                                      opacity={selectedInfectionBars.length > 0 && !selectedInfectionBars.find(b => b.name === entry.name) ? 0.3 : 1}
-                                    />
-                                  ))}
-                                </Bar>
-                                {!excludeNotTested && (
-                                  <Bar dataKey="notTested" stackId="a" name="Not Tested" cursor="pointer">
-                                    {facetData.map((entry, index) => (
-                                      <Cell 
-                                        key={`cell-${index}`} 
-                                        fill={selectedInfectionBars.find(b => b.name === entry.name) ? "#6b7280" : "#9ca3af"}
-                                        opacity={selectedInfectionBars.length > 0 && !selectedInfectionBars.find(b => b.name === entry.name) ? 0.3 : 1}
-                                      />
-                                    ))}
-                                  </Bar>
-                                )}
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="mt-4 text-sm text-gray-600 text-center">
-                      Click on bars to select groups for statistical testing
-                    </div>
-                    {selectedInfectionBars.length > 0 && (
-                      <div className="mt-4">
-                        <StatisticalTestPanel
-                          selectedBars={selectedInfectionBars}
-                          onClear={() => setSelectedInfectionBars([])}
-                          chartType="infection"
-                        />
-                      </div>
-                    )}
-                  </>
-                )
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  Select at least one factor to display the chart
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>{t('dashboard.sporeLoadByCategory')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-6 space-y-4">
-                <div>
-                  <p className="text-sm font-medium mb-2">Select factors to group by:</p>
-                  <div className="flex flex-wrap gap-4">
-                    {experiment.factors?.map(factor => (
-                      <div key={factor.name} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`spore-load-graph-${factor.name}`}
-                          checked={selectedSporeLoadGraphFactors.includes(factor.name)}
-                          onCheckedChange={() => toggleSporeLoadGraphFactor(factor.name)}
-                          disabled={facetSporeLoadFactor === factor.name}
-                        />
-                        <label htmlFor={`spore-load-graph-${factor.name}`} className="text-sm cursor-pointer">
-                          {factor.name}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium mb-2">Facet by (optional):</p>
-                  <select
-                    className="border rounded p-2 text-sm"
-                    value={facetSporeLoadFactor || ''}
-                    onChange={(e) => {
-                      const value = e.target.value || null;
-                      setFacetSporeLoadFactor(value);
-                      if (value && selectedSporeLoadGraphFactors.includes(value)) {
-                        setSelectedSporeLoadGraphFactors(selectedSporeLoadGraphFactors.filter(f => f !== value));
-                      }
-                    }}
-                  >
-                    <option value="">None</option>
-                    {experiment.factors?.map(factor => (
-                      <option key={factor.name} value={factor.name}>
-                        {factor.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="exclude-zero-spore-load"
-                    checked={excludeZeroSporeLoad}
-                    onCheckedChange={setExcludeZeroSporeLoad}
-                  />
-                  <label htmlFor="exclude-zero-spore-load" className="text-sm cursor-pointer">
-                    {t('dashboard.excludeZeroSpores')}
-                  </label>
-                </div>
-              </div>
-
-              {selectedSporeLoadGraphFactors.length > 0 ? (
-                !facetSporeLoadFactor ? (
-                  <div>
-                    <ResponsiveContainer width="100%" height={400}>
-                      <ComposedChart 
-                        data={sporeLoadChartResult.boxData}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          dataKey="name"
-                          angle={-45} 
-                          textAnchor="end" 
-                          height={100}
-                          interval={0}
-                        />
-                        <YAxis label={{ value: 'Mean Spore Load ± 95% CI', angle: -90, position: 'insideLeft' }} />
-                        <Tooltip 
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              const data = payload[0].payload;
-                              return (
-                                <div className="bg-white border rounded p-2 shadow text-sm">
-                                  <p className="font-semibold">{data.name}</p>
-                                  <p>n = {data.n}</p>
-                                  <p>Mean: {data.mean?.toFixed(0)}</p>
-                                  <p>SD: {data.std?.toFixed(0)}</p>
-                                  <p>SE: {data.se?.toFixed(0)}</p>
-                                  <p>95% CI: [{(data.mean - data.ci95)?.toFixed(0)}, {(data.mean + data.ci95)?.toFixed(0)}]</p>
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <Bar dataKey="mean" fill="#9333ea" name="Mean Spore Load">
-                          <ErrorBar dataKey="ci95" width={4} strokeWidth={2} stroke="#581c87" />
-                        </Bar>
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                    <div className="mt-4 overflow-x-auto">
-                      <table className="w-full text-sm border">
-                        <thead>
-                          <tr className="bg-gray-50 border-b">
-                            <th className="p-2 text-left">Group</th>
-                            <th className="p-2 text-right">n</th>
-                            <th className="p-2 text-right">Mean</th>
-                            <th className="p-2 text-right">SD</th>
-                            <th className="p-2 text-right">SE</th>
-                            <th className="p-2 text-right">95% CI</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sporeLoadChartResult.boxData.map((box) => (
-                            <tr key={box.name} className="border-b">
-                              <td className="p-2 font-medium">{box.name}</td>
-                              <td className="p-2 text-right">{box.n}</td>
-                              <td className="p-2 text-right">{box.mean?.toFixed(0)}</td>
-                              <td className="p-2 text-right">{box.std?.toFixed(0)}</td>
-                              <td className="p-2 text-right">{box.se?.toFixed(0)}</td>
-                              <td className="p-2 text-right">[{(box.mean - box.ci95)?.toFixed(0)}, {(box.mean + box.ci95)?.toFixed(0)}]</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {sporeLoadFacetLevels.map(level => {
-                      const facetResult = getSporeLoadChartData(level);
-                      return (
-                        <div key={level} className="border rounded-lg p-4">
-                          <h3 className="text-center font-semibold mb-3">{facetSporeLoadFactor}: {level}</h3>
-                          <ResponsiveContainer width="100%" height={300}>
-                            <ComposedChart 
-                              data={facetResult.boxData}
-                              margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
-                            >
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis 
-                                dataKey="name"
-                                angle={-45} 
-                                textAnchor="end" 
-                                height={80}
-                                fontSize={12}
-                                interval={0}
-                              />
-                              <YAxis fontSize={12} label={{ value: 'Mean ± 95% CI', angle: -90, position: 'insideLeft' }} />
-                              <Tooltip 
-                                content={({ active, payload }) => {
-                                  if (active && payload && payload.length) {
-                                    const data = payload[0].payload;
-                                    return (
-                                      <div className="bg-white border rounded p-2 shadow text-xs">
-                                        <p className="font-semibold">{data.name}</p>
-                                        <p>n={data.n}, Mean={data.mean?.toFixed(0)} ± {data.ci95?.toFixed(0)}</p>
-                                      </div>
-                                    );
-                                  }
-                                  return null;
-                                }}
-                              />
-                              <Bar dataKey="mean" fill="#9333ea" name="Mean">
-                                <ErrorBar dataKey="ci95" width={4} strokeWidth={2} stroke="#581c87" />
-                              </Bar>
-                            </ComposedChart>
-                          </ResponsiveContainer>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  Select at least one factor to display the chart
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <SporeLoadCard
+            experiment={experiment}
+            selectedSporeLoadGraphFactors={selectedSporeLoadGraphFactors}
+            toggleSporeLoadGraphFactor={toggleSporeLoadGraphFactor}
+            facetSporeLoadFactor={facetSporeLoadFactor}
+            setFacetSporeLoadFactor={setFacetSporeLoadFactor}
+            setSelectedSporeLoadGraphFactors={setSelectedSporeLoadGraphFactors}
+            excludeZeroSporeLoad={excludeZeroSporeLoad}
+            setExcludeZeroSporeLoad={setExcludeZeroSporeLoad}
+            sporeLoadChartResult={sporeLoadChartResult}
+            sporeLoadFacetLevels={sporeLoadFacetLevels}
+            getSporeLoadChartData={getSporeLoadChartData}
+          />
         </>
       )}
     </div>
