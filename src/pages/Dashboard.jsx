@@ -163,6 +163,7 @@ export default function Dashboard() {
   };
 
   const getFacetLevels = () => { if (!facetFactor) return null; return experiment?.factors?.find(f => f.name === facetFactor)?.levels || []; };
+  const getInfectionFacetLevels = () => { if (!facetInfectionFactor) return null; return experiment?.factors?.find(f => f.name === facetInfectionFactor)?.levels || []; };
   const getInfectionChartData = (filterByFacet = null) => {
     if (!experiment?.factors || selectedInfectionGraphFactors.length === 0) return [];
 
